@@ -1,0 +1,68 @@
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.springBeans
+.sts4-cache/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and temporary files
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+hs_err_pid*
+
+# Spring Boot / Java
+fesherprep-api/target/
+fesherprep-api/build/
+fesherprep-api/out/
+*.class
+
+# Next.js / Node.js
+fresherprep-web/node_modules/
+fresherprep-web/.next/
+fresherprep-web/out/
+fresherprep-web/build/
+fresherprep-web/coverage/
+fresherprep-web/.vercel/
+fresherprep-web/.pnp
+fresherprep-web/.pnp.*
+fresherprep-web/.yarn/*
+!fresherprep-web/.yarn/patches/
+!fresherprep-web/.yarn/plugins/
+!fresherprep-web/.yarn/releases/
+!fresherprep-web/.yarn/versions/
+
+# Node and TypeScript generated files
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Local certificates and keys
+*.pem
+*.key
+*.p12
+*.pfx
