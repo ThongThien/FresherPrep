@@ -1,0 +1,108 @@
+# 1. Users Tài khoản user
+- User 1 -> N [Learning Path, Lesson, Quiz, Refresh Token]
+- User liên kết với Lesson để lưu tiến độ thông qua bảng `lesson_progress`
+Vì mỗi User học một Lesson sẽ phát sinh các thông tin về tiến độ như thời gian học, lần xem cuối, phần trăm scroll,...
+- User liên kết với Quiz để lưu kết quả thông qua `quiz_attempts`
+Vì một User có thể làm cùng một Quiz nhiều lần và mỗi lần làm sẽ có kết quả riêng.
+
+# 2. Knowledge Tree
+`KnowledgeNode` là cây kiến thức của hệ thống để tổ chức và phân loại kiến thức mà người dùng sẽ học hoặc các câu hỏi thuộc về.
+KnowledgeNode có nhiều loại thông qua `node_type`, gồm `TECHNOLOGY`, `CATEGORY`, `TOPIC`, `SUBTOPIC`.
+Ví dụ một cây kiến thức có thể là Java → OOP → Inheritance → Method Overriding.
+- Một KnowledgeNode có thể có một node cha và một node cha có thể có nhiều node con. 
+Vì vậy đây là quan hệ 1-N tự tham chiếu trong chính bảng `knowledge_nodes`.
+Ví dụ Java có thể có nhiều node con như OOP, Collections, Generics,... Trong đó Java là node cha, còn các node này là node con.
+- Knowledge Tree chủ yếu trả lời câu hỏi: **kiến thức này thuộc phần nào của hệ thống?**
+Ví dụ một Lesson về String sẽ thuộc KnowledgeNode `String`, còn một Question về String cũng có thể thuộc KnowledgeNode `String`.
+
+# 3. Learning Path
+`Learning Path` là lộ trình học được xây dựng để hướng dẫn User học một nhóm kiến thức theo một mục tiêu cụ thể.
+
+- Khác với Knowledge Tree, Knowledge Tree chỉ mô tả cấu trúc kiến thức, còn Learning Path mô tả cách hệ thống tổ chức các Lesson thành một lộ trình học.
+Ví dụ hệ thống có thể thiết kế sẵn Learning Path `Java Backend Fresher`. Khi User chọn hoặc tham gia Learning Path này, hệ thống sẽ xác định những Lesson mà User cần học và thứ tự của các Lesson đó.
+- Một Learning Path thuộc một Technology trong `knowledge_nodes`.
+Ví dụ KnowledgeNode `Java` có thể có các Learning Path như `Java Backend Fresher` và `Java Advanced`.
+- Quan hệ giữa KnowledgeNode và LearningPath là 1-N: một Technology có thể có nhiều Learning Path, nhưng mỗi Learning Path hiện tại thuộc một Technology.
+
+- `learning_path_items` là bảng nối giữa Learning Path và Lesson.
+Một Learning Path có nhiều Lesson, ví dụ Java Backend Fresher có thể chứa OOP, Generics, Collections, Stream API,...
+Ngược lại, một Lesson cũng có thể được sử dụng trong nhiều Learning Path. 
+Vì vậy Learning Path và Lesson có quan hệ N-N, được biểu diễn thông qua `learning_path_items`.
+
+- `learning_path_items` không chỉ dùng để nối hai bảng mà còn lưu các thông tin riêng của Lesson trong từng Learning Path, ví dụ thứ tự học (`display_order`), Lesson có bắt buộc hay không (`required`), trọng số (`weight`),...
+
+Ví dụ cùng là Lesson `Java OOP`, nhưng trong Learning Path `Java Backend Fresher` nó có thể nằm ở vị trí thứ 2 và là Lesson bắt buộc. 
+Trong một Learning Path khác, Lesson này có thể nằm ở vị trí khác hoặc không bắt buộc.
+
+# 4. Lesson
+`Lesson` là nội dung học thực tế mà User đọc hoặc học trong hệ thống.
+Mỗi Lesson thuộc một `SUBTOPIC` trong Knowledge Tree.
+Ví dụ cây kiến thức là Java → OOP → Inheritance thì có thể có Lesson `Java Inheritance` thuộc KnowledgeNode `Inheritance`.
+- KnowledgeNode và Lesson có quan hệ 1-N: một KnowledgeNode có thể có nhiều Lesson, nhưng một Lesson hiện tại thuộc một Subtopic.
+- `lesson_prerequisites` dùng để biểu diễn quan hệ giữa các Lesson khi một Lesson yêu cầu một hoặc nhiều Lesson khác phải được học trước.
+Ví dụ muốn học `Inheritance` thì User nên học `OOP` trước.
+Đây là quan hệ N-N giữa chính bảng `lessons`: một Lesson có thể yêu cầu nhiều Lesson khác làm prerequisite, đồng thời một Lesson cũng có thể trở thành prerequisite của nhiều Lesson khác.
+- `lesson_progress` dùng để lưu tiến độ học của User đối với từng Lesson.
+Ví dụ User A học OOP được 80%, học Generics được 40% và học Collections được 100%.
+- Về bản chất User và Lesson là quan hệ N-N, vì một User có thể học nhiều Lesson và một Lesson có thể được nhiều User học. Quan hệ này được biểu diễn thông qua `lesson_progress`.
+- `lesson_progress` còn lưu các thông tin phát sinh trong quá trình học như active time, last viewed, scroll progress, thời điểm đạt điều kiện đã đọc,... Vì vậy nó không chỉ đơn thuần là bảng nối.
+
+# 5. Lesson Assessment
+- `lesson_assessments` dùng để biểu diễn việc một Lesson có bài Quiz đánh giá sau khi học hay không.
+Ví dụ User học Lesson `Java OOP`, sau đó có thể làm Quiz `Java OOP Test` để kiểm tra kiến thức.
+- Có thể hiểu nghiệp vụ là: Lesson → Assessment → Quiz.
+Trong thiết kế hiện tại, `lesson_id` của `lesson_assessments` là unique nên một Lesson chỉ có tối đa một Assessment.
+Điều này có nghĩa là một Lesson có thể không có Quiz đánh giá, hoặc có một Quiz đánh giá.
+Nếu sau này muốn một Lesson có nhiều Quiz, ví dụ Basic Test, Practice Test và Final Test, thì thiết kế bảng này sẽ cần thay đổi.
+
+# 6. Question
+- `questions` là định danh logic của một câu hỏi.
+Ví dụ hệ thống có Question 1 về kiến thức String. Question này thuộc một Subtopic trong Knowledge Tree, chẳng hạn KnowledgeNode `String`.
+- Question không trực tiếp lưu toàn bộ nội dung câu hỏi mà có thể có nhiều phiên bản thông qua `question_versions`.
+Một Question có thể có nhiều Question Version.
+Ví dụ Question 1 có Version 1, Version 2 và Version 3. Version 3 có thể là version đang được publish.
+Việc tách Question và Question Version giúp hệ thống có thể chỉnh sửa câu hỏi nhưng vẫn giữ được lịch sử các version cũ. Điều này đặc biệt quan trọng đối với Quiz Attempt vì một User có thể đã làm câu hỏi ở một version cũ.
+- Mỗi Question Version chứa nội dung câu hỏi, explanation và version number.
+- `question_options` lưu các đáp án của một Question Version.
+Một Question Version có nhiều Option. Ví dụ Version 3 có 4 đáp án A, B, C, D.
+Mỗi Option có nội dung, thông tin đúng/sai, vị trí và explanation.
+- Như vậy Question có thể hiểu theo cấu trúc: Question là câu hỏi logic, Question Version là phiên bản cụ thể của câu hỏi, còn Question Option là các đáp án thuộc phiên bản đó.
+
+# 7. Quiz
+- `quizzes` là đề kiểm tra mà User sẽ làm.
+Ví dụ hệ thống có Quiz `Java OOP Test`.
+- Một Quiz có thể xác định danh sách câu hỏi theo hai cách: cố định câu hỏi hoặc lấy câu hỏi theo Rule.
++ Với `quiz_fixed_questions`, Quiz được cấu hình với một danh sách Question cụ thể.
+Ví dụ Quiz `Java OOP Test` cố định gồm Question 1, Question 5, Question 10, Question 15,...
+Quan hệ là Quiz → `quiz_fixed_questions` → Question.
+Điều này có nghĩa là khi User làm Quiz này, hệ thống lấy các Question đã được cấu hình sẵn.
++ Với `quiz_rules`, Quiz không cố định từng Question mà chỉ định điều kiện để hệ thống lựa chọn Question.
+Ví dụ một Rule có thể yêu cầu lấy 10 câu thuộc KnowledgeNode `OOP`, có difficulty là `MEDIUM`.
+Khi User bắt đầu Quiz, hệ thống dựa vào Rule để tìm các Question phù hợp.
+- Rule có thể được cấu hình sẵn khi Admin tạo Quiz. Nếu sản phẩm muốn cho User tự chọn Knowledge, Difficulty và số lượng câu thì đó là một use case khác, cần thiết kế thêm phần generate quiz theo yêu cầu của User.
+
+# 8. User làm Quiz
+- `quiz_attempts` biểu diễn một lần User thực sự làm một Quiz.
+Cần phân biệt `Quiz` và `QuizAttempt`.
+Quiz là đề thi được định nghĩa trong hệ thống, còn QuizAttempt là một lần User thực hiện đề thi đó.
+Ví dụ hệ thống có Quiz `Java OOP Test`.
+User A làm Quiz này tạo ra Attempt 1 với kết quả 50%.
+User B làm Quiz này tạo ra Attempt 2 với kết quả 60%.
+User C làm Quiz này tạo ra Attempt 3 với kết quả 100%.
+User A có thể làm lại Quiz và tạo Attempt 4 với kết quả 90%.
+Vì vậy quan hệ giữa User và QuizAttempt là 1-N: một User có thể có nhiều Attempt.
+- Quan hệ giữa Quiz và QuizAttempt cũng là 1-N: một Quiz có thể được nhiều User làm và mỗi User có thể làm lại nhiều lần.
+- `quiz_attempt_questions` lưu những Question cụ thể được đưa vào một Attempt.
+- Điều này đặc biệt quan trọng đối với Quiz sử dụng Rule.
+Ví dụ Quiz có Rule yêu cầu lấy 10 câu MEDIUM thuộc OOP. Khi User bắt đầu Quiz, hệ thống có thể chọn Question 3, 5, 6, 7, 8,...
+Danh sách thực tế này được lưu vào `quiz_attempt_questions`.
+Một QuizAttempt có nhiều `quiz_attempt_questions`.
+Một Question Version cũng có thể xuất hiện trong nhiều `quiz_attempt_questions` của những Attempt khác nhau.
+- Bảng này tham chiếu đến `question_version` để đảm bảo Attempt lưu đúng phiên bản câu hỏi mà User thực sự đã làm.
+Ví dụ Question 3 hiện tại đang có Version 4. Sau này Question 3 được chỉnh sửa thành Version 5. Attempt cũ vẫn phải giữ Version 4, không được tự động chuyển sang Version 5.
+- Cuối cùng, `quiz_attempt_answers` lưu câu trả lời của User cho từng câu trong Attempt.
+Ví dụ Attempt 3 có Question 3, Question 5 và Question 6. User chọn đáp án B của Question 3, đáp án A của Question 5 và đáp án C của Question 6.
+- Các lựa chọn này được lưu trong `quiz_attempt_answers`, đồng thời hệ thống có thể lưu trạng thái đáp án đó đúng hay sai.
+Vì mỗi `quiz_attempt_question` hiện tại chỉ có tối đa một câu trả lời, một Attempt Question có tối đa một `quiz_attempt_answer`.
+-Có thể hiểu toàn bộ phần làm Quiz theo thứ tự:
+User chọn Quiz → tạo QuizAttempt → hệ thống xác định các Question thực tế → lưu vào QuizAttemptQuestion → User chọn Option → lưu vào QuizAttemptAnswer.
