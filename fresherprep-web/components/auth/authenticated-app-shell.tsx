@@ -75,6 +75,7 @@ export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) 
           status: "authenticated" as const,
           displayName: session.user.displayName,
           email: session.user.email,
+          role: session.user.role,
         }
       : session.status === "error"
         ? ({ status: "error" } as const)

@@ -18,7 +18,7 @@ export function Progress({
   ...props
 }: ProgressProps) {
   const normalizedValue = Math.min(100, Math.max(0, value));
-  const fillColor = tone === "success" ? "bg-success" : "bg-primary";
+  const fillColor = tone === "success" ? "bg-success" : "bg-primary-solid";
 
   return (
     <div className={cn("w-full", className)} {...props}>

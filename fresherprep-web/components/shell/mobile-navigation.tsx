@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { LearningNavigation } from "./navigation";
+import type { NavigationItem } from "./navigation-items";
 import { UserArea, type UserState } from "./user-area";
 
 interface MobileNavigationProps {
@@ -11,6 +12,7 @@ interface MobileNavigationProps {
   userState: UserState;
   onLogout?: () => void;
   logoutPending?: boolean;
+  items?: readonly NavigationItem[];
 }
 
 export function MobileNavigation({
@@ -19,6 +21,7 @@ export function MobileNavigation({
   userState,
   onLogout,
   logoutPending,
+  items,
 }: MobileNavigationProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -67,7 +70,7 @@ export function MobileNavigation({
           </button>
         </div>
 
-        <LearningNavigation onNavigate={onClose} className="flex-1 overflow-y-auto p-4" />
+        <LearningNavigation items={items} onNavigate={onClose} className="flex-1 overflow-y-auto p-4" />
 
         <div className="border-t border-border p-4">
           <UserArea state={userState} onLogout={onLogout} logoutPending={logoutPending} />

@@ -10,6 +10,7 @@ import {
   learningNavigation,
 } from "./navigation-items";
 import { UserArea, type UserState } from "./user-area";
+import { ThemeToggle } from "./theme-toggle";
 
 interface AppHeaderProps {
   userState: UserState;
@@ -49,7 +50,7 @@ export function AppHeader({
         >
           <span
             aria-hidden="true"
-            className="flex size-8 items-center justify-center rounded-md bg-primary text-xs font-bold tracking-tight text-white"
+            className="flex size-8 items-center justify-center rounded-md bg-primary-solid text-xs font-bold tracking-tight text-white"
           >
             FP
           </span>
@@ -62,13 +63,16 @@ export function AppHeader({
           </div>
         ) : null}
 
-        <div className="ml-auto hidden items-center sm:flex">
-          <UserArea
-            state={userState}
-            compact
-            onLogout={onLogout}
-            logoutPending={logoutPending}
-          />
+        <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
+          <div className="hidden sm:block">
+            <UserArea
+              state={userState}
+              compact
+              onLogout={onLogout}
+              logoutPending={logoutPending}
+            />
+          </div>
         </div>
       </div>
     </header>

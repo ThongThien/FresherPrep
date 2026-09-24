@@ -22,5 +22,6 @@ export const config = {
     "/knowledge/:path*",
     "/quizzes/:path*",
     "/progress/:path*",
+    "/admin/:path*",
   ],
 };

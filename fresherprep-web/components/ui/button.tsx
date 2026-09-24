@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 
 import { cn } from "@/lib/cn";
 
@@ -13,7 +13,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "border-primary bg-primary text-white shadow-button hover:border-primary-hover hover:bg-primary-hover active:bg-primary-active",
+    "border-primary-solid bg-primary-solid text-white shadow-button hover:border-primary-solid-hover hover:bg-primary-solid-hover active:bg-primary-solid-active",
   secondary:
     "border-border-strong bg-surface text-text shadow-button hover:border-primary/40 hover:bg-primary-subtle hover:text-primary",
   ghost:
@@ -28,7 +28,7 @@ const sizeClasses: Record<ButtonSize, string> = {
   lg: "min-h-11 px-5 text-base",
 };
 
-export function Button({
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   className,
   variant = "primary",
   size = "md",
@@ -37,9 +37,10 @@ export function Button({
   children,
   type = "button",
   ...props
-}: ButtonProps) {
+}, ref) {
   return (
     <button
+      ref={ref}
       type={type}
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-md border font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/25 active:translate-y-px disabled:pointer-events-none disabled:opacity-55",
@@ -55,7 +56,7 @@ export function Button({
       {children}
     </button>
   );
-}
+});
 
 function Spinner() {
   return (

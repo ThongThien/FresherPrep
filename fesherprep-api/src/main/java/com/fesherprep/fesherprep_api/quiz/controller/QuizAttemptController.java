@@ -3,7 +3,7 @@ package com.fesherprep.fesherprep_api.quiz.controller;
 import com.fesherprep.fesherprep_api.config.OpenApiConfiguration;
 import com.fesherprep.fesherprep_api.quiz.dto.QuizAttemptResponse;
 import com.fesherprep.fesherprep_api.quiz.dto.QuizAttemptSummaryResponse;
-import com.fesherprep.fesherprep_api.quiz.dto.SubmitQuizAnswerRequest;
+import com.fesherprep.fesherprep_api.quiz.dto.SubmitQuizAttemptRequest;
 import com.fesherprep.fesherprep_api.quiz.service.QuizService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -23,17 +23,12 @@ import java.util.UUID;
 public class QuizAttemptController {
     private final QuizService quizService;
 
-    @PostMapping("/{attemptId}/answers")
-    public QuizAttemptResponse submitAnswer(
-            @PathVariable UUID attemptId,
-            @Valid @RequestBody SubmitQuizAnswerRequest request
-    ) {
-        return quizService.submitAnswer(attemptId, request);
-    }
-
     @PostMapping("/{attemptId}/submit")
-    public QuizAttemptResponse submitAttempt(@PathVariable UUID attemptId) {
-        return quizService.submitAttempt(attemptId);
+    public QuizAttemptResponse submitAttempt(
+            @PathVariable UUID attemptId,
+            @Valid @RequestBody SubmitQuizAttemptRequest request
+    ) {
+        return quizService.submitAttempt(attemptId, request);
     }
 
     @GetMapping("/{attemptId}")

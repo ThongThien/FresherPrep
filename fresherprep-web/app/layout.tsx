@@ -2,6 +2,23 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+const themeScript = `
+(() => {
+  try {
+    const saved = localStorage.getItem("fresherprep-theme");
+    const preference = saved === "light" || saved === "dark" ? saved : "system";
+    const resolved = preference === "system"
+      ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : preference;
+    document.documentElement.dataset.theme = resolved;
+    document.documentElement.dataset.themePreference = preference;
+    document.documentElement.style.colorScheme = resolved;
+  } catch {
+    document.documentElement.dataset.theme = "light";
+  }
+})();
+`;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -24,8 +41,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="vi"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

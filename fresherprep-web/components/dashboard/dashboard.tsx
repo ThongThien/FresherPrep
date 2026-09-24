@@ -331,7 +331,9 @@ function RecentActivity({ lessons, attempts }: { lessons: LessonProgress[]; atte
             : "Quiz submitted"
           : "Quiz in progress",
       date: attempt.submittedAt ?? attempt.startedAt,
-      href: `/quizzes/${attempt.quizId}`,
+      href: attempt.status === "SUBMITTED"
+        ? `/quizzes/${attempt.quizId}/attempts/${attempt.id}/result`
+        : `/quizzes/${attempt.quizId}/attempts/${attempt.id}`,
       tone: attempt.passed ? "success" as const : "neutral" as const,
     }));
     return [...lessonItems, ...quizItems]
@@ -450,7 +452,7 @@ function ActionLink({ href, children }: { href: string; children: React.ReactNod
   return (
     <Link
       href={href}
-      className="inline-flex min-h-11 items-center justify-center rounded-md border border-primary bg-primary px-5 text-sm font-semibold text-white shadow-button transition-[background-color,border-color,transform] hover:border-primary-hover hover:bg-primary-hover active:translate-y-px focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/25"
+      className="inline-flex min-h-11 items-center justify-center rounded-md border border-primary-solid bg-primary-solid px-5 text-sm font-semibold text-white shadow-button transition-[background-color,border-color,transform] hover:border-primary-solid-hover hover:bg-primary-solid-hover active:translate-y-px focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/25"
     >
       {children}
     </Link>

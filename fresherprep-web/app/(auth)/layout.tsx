@@ -13,14 +13,17 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           >
             <span
               aria-hidden="true"
-              className="flex size-8 items-center justify-center rounded-md bg-primary text-xs font-bold tracking-tight text-white"
+              className="flex size-8 items-center justify-center rounded-md bg-primary-solid text-xs font-bold tracking-tight text-white"
             >
               FP
             </span>
-            <span className="text-base font-semibold tracking-tight text-text">FresherPrep</span>
+            <span className="text-base font-semibold tracking-tight text-text">
+              FresherPrep
+            </span>
           </Link>
           <p className="ml-auto hidden text-sm text-text-muted sm:block">
-            Java backend learning, focused and structured.
+            Java made simple, focused on the fundamentals you need for a backend
+            interview.
           </p>
         </div>
       </header>
@@ -30,7 +33,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       </main>
 
       <footer className="px-4 pb-6 text-center text-xs text-text-subtle">
-        Build practical knowledge for your first backend role.
+        Build practical knowledge for your first backend role. Built by an
+        anonymous unpaid intern, September 2026. hihi..
       </footer>
     </div>
   );

@@ -6,7 +6,7 @@ export type UserState =
   | { status: "loading" }
   | { status: "unavailable" }
   | { status: "error" }
-  | { status: "authenticated"; displayName: string; email: string };
+  | { status: "authenticated"; displayName: string; email: string; role: "USER" | "ADMIN" };
 
 interface UserAreaProps {
   state: UserState;

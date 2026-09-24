@@ -103,10 +103,18 @@ public class QuizAttempt extends BaseEntity {
      * Validate every choice before recording any answer; blank questions score zero.
      */
     public void submit(Map<QuizAttemptQuestion, QuestionOption> selections) {
+        submit(selections, Instant.now());
+    }
+
+    public void submit(
+            Map<QuizAttemptQuestion, QuestionOption> selections,
+            Instant submittedAt
+    ) {
         if (status != AttemptStatus.IN_PROGRESS) {
             throw new IllegalStateException("An attempt can only be submitted once");
         }
         Objects.requireNonNull(selections);
+        Objects.requireNonNull(submittedAt, "Submission time is required");
         Map<QuizAttemptQuestion, QuestionOption> resolved = new LinkedHashMap<>();
         for (var entry : selections.entrySet()) {
             QuizAttemptQuestion question = questions.stream()
@@ -119,8 +127,18 @@ public class QuizAttempt extends BaseEntity {
                 throw new IllegalArgumentException("Question was answered more than once");
             }
         }
-        resolved.forEach(QuizAttemptQuestion::recordAnswer);
-        submit(Instant.now());
+        resolved.forEach((question, option) -> {
+            if (question.getAnswer() != null
+                    && !question.getAnswer().getSelectedOption().hasSameIdentityAs(option)) {
+                throw new IllegalStateException("A persisted answer cannot be changed");
+            }
+        });
+        resolved.forEach((question, option) -> {
+            if (question.getAnswer() == null) {
+                question.recordAnswer(option);
+            }
+        });
+        completeSubmission(submittedAt);
     }
 
     public void recordAnswer(QuizAttemptQuestion attemptQuestion, QuestionOption selectedOption) {
@@ -138,11 +156,7 @@ public class QuizAttempt extends BaseEntity {
         question.recordAnswer(option);
     }
 
-    public void submit(Instant submittedAt) {
-        if (status != AttemptStatus.IN_PROGRESS) {
-            throw new IllegalStateException("An attempt can only be submitted once");
-        }
-        Objects.requireNonNull(submittedAt, "Submission time is required");
+    private void completeSubmission(Instant submittedAt) {
         long correct = questions.stream()
                 .map(QuizAttemptQuestion::getAnswer)
                 .filter(Objects::nonNull)

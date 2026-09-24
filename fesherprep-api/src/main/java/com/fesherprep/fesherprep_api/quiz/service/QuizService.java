@@ -78,32 +78,35 @@ public class QuizService {
 
     @PreAuthorize("isAuthenticated()")
     @Transactional
-    public QuizAttemptResponse submitAnswer(
-            UUID attemptId,
-            @Valid SubmitQuizAnswerRequest request
-    ) {
+    public QuizAttemptResponse submitAttempt(UUID attemptId, @Valid SubmitQuizAttemptRequest request) {
         User user = requireCurrentUser();
         QuizAttempt attempt = requireOwnedAttemptForUpdate(attemptId, user.getId());
-        QuizAttemptQuestion attemptQuestion = attempt.getQuestions().stream()
-                .filter(question -> question.getId().equals(request.attemptQuestionId()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Question is not in this attempt"));
-        QuestionOption option = attemptQuestion.getQuestionVersion().getOptions().stream()
-                .filter(candidate -> candidate.getId().equals(request.optionId()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Option is not in this attempt question"));
+        if (attempt.getStatus() == AttemptStatus.SUBMITTED) {
+            return QuizAttemptResponse.from(attempt);
+        }
 
-        attempt.recordAnswer(attemptQuestion, option);
-        answerRepository.saveAndFlush(attemptQuestion.getAnswer());
-        return QuizAttemptResponse.from(attempt);
-    }
+        Map<QuizAttemptQuestion, QuestionOption> selections = new LinkedHashMap<>();
+        for (SubmitQuizAnswerRequest answer : request.answers()) {
+            QuizAttemptQuestion attemptQuestion = attempt.getQuestions().stream()
+                    .filter(question -> question.getId().equals(answer.attemptQuestionId()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Question is not in this attempt"));
+            QuestionOption option = attemptQuestion.getQuestionVersion().getOptions().stream()
+                    .filter(candidate -> candidate.getId().equals(answer.optionId()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Option is not in this attempt question"));
+            if (selections.put(attemptQuestion, option) != null) {
+                throw new IllegalArgumentException("Question was answered more than once");
+            }
+        }
 
-    @PreAuthorize("isAuthenticated()")
-    @Transactional
-    public QuizAttemptResponse submitAttempt(UUID attemptId) {
-        User user = requireCurrentUser();
-        QuizAttempt attempt = requireOwnedAttemptForUpdate(attemptId, user.getId());
-        attempt.submit(clock.instant());
+        List<QuizAttemptQuestion> newlyAnswered = selections.keySet().stream()
+                .filter(question -> question.getAnswer() == null)
+                .toList();
+        attempt.submit(selections, clock.instant());
+        answerRepository.saveAll(newlyAnswered.stream()
+                .map(QuizAttemptQuestion::getAnswer)
+                .toList());
         attemptRepository.flush();
         return QuizAttemptResponse.from(attempt);
     }
