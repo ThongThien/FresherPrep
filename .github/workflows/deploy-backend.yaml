@@ -48,52 +48,36 @@ jobs:
           cache-to: type=gha,mode=max
 
       # ========================================
-      # 5. Prepare SSH Key
-      # ========================================
-      - name: Prepare SSH key
-        shell: bash
-        run: |
-          test -n "${{ secrets.VPS_SSH_KEY_B64 }}" || {
-            echo "ERROR: VPS_SSH_KEY_B64 is empty"
-            exit 1
-          }
-
-          echo "${{ secrets.VPS_SSH_KEY_B64 }}" \
-            | base64 -d \
-            > "$RUNNER_TEMP/fresherprep_deploy_key"
-
-          chmod 600 "$RUNNER_TEMP/fresherprep_deploy_key"
-
-          echo "SSH key fingerprint:"
-          ssh-keygen -lf "$RUNNER_TEMP/fresherprep_deploy_key"
-
-      # ========================================
-      # 6. Deploy to VPS
+      # 5. Deploy to VPS
       # ========================================
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
-          key_path: ${{ runner.temp }}/fresherprep_deploy_key
+          password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_PORT }}
 
           script: |
             set -e
 
-            echo "Pulling latest image..."
+            echo "========================================"
+            echo "Deploying FresherPrep Backend"
+            echo "========================================"
+
+            echo "1. Pulling latest Docker image..."
 
             docker pull ${{ secrets.DOCKER_USERNAME }}/fresherprep-api:latest
 
-            echo "Stopping old container..."
+            echo "2. Stopping old container..."
 
             docker stop fresherprep-api || true
 
-            echo "Removing old container..."
+            echo "3. Removing old container..."
 
             docker rm fresherprep-api || true
 
-            echo "Starting new container..."
+            echo "4. Starting new container..."
 
             docker run -d \
               --name fresherprep-api \
@@ -102,11 +86,11 @@ jobs:
               --restart unless-stopped \
               ${{ secrets.DOCKER_USERNAME }}/fresherprep-api:latest
 
-            echo "Waiting for application..."
+            echo "5. Waiting for application..."
 
             sleep 10
 
-            echo "Health check..."
+            echo "6. Health check..."
 
             curl \
               --fail \
@@ -115,9 +99,11 @@ jobs:
               http://127.0.0.1:8080/actuator/health
 
             echo ""
-            echo "Cleaning unused Docker images..."
+            echo "7. Cleaning unused Docker images..."
 
             docker image prune -f
 
             echo ""
+            echo "========================================"
             echo "Deployment successful!"
+            echo "========================================"
