@@ -47,7 +47,7 @@ export function ProfilePage() {
       : normalizedName.length > 100
         ? t("Display name cannot exceed 100 characters.")
         : null;
-  // aaa
+  // aaabbb
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (nameError || saving || normalizedName === user.displayName) return;
