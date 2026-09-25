@@ -39,4 +39,17 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, UUID> 
     List<QuizAttempt> findAllByUserIdAndQuizIdIn(UUID userId, Collection<UUID> quizIds);
 
     boolean existsByQuizId(UUID quizId);
+
+    long countByUserId(UUID userId);
+
+    long countByUserIdAndStatus(UUID userId, AttemptStatus status);
+
+    @Query("""
+            select count(attempt)
+            from QuizAttempt attempt
+            where attempt.user.id = :userId
+              and attempt.status = com.fesherprep.fesherprep_api.quiz.domain.AttemptStatus.SUBMITTED
+              and attempt.scorePercentage >= attempt.passPercentage
+            """)
+    long countPassedByUserId(@Param("userId") UUID userId);
 }

@@ -28,4 +28,8 @@ public interface LessonProgressRepository extends JpaRepository<LessonProgress, 
     List<LessonProgress> findAllByUserIdAndLessonIdIn(UUID userId, Collection<UUID> lessonIds);
 
     boolean existsByLessonId(UUID lessonId);
+
+    long countByUserId(UUID userId);
+
+    long countByUserIdAndReadQualifiedAtIsNotNull(UUID userId);
 }

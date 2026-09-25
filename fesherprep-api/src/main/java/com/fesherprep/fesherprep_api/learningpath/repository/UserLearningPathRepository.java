@@ -20,4 +20,6 @@ public interface UserLearningPathRepository extends JpaRepository<UserLearningPa
     );
 
     boolean existsByLearningPathId(UUID learningPathId);
+
+    long countByUserId(UUID userId);
 }

@@ -5,6 +5,7 @@ export interface CurrentUser {
   email: string;
   displayName: string;
   role: UserRole;
+  active: boolean;
   createdAt: string;
   updatedAt: string;
 }

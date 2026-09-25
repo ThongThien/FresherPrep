@@ -36,6 +36,51 @@ export interface AdminPage<T> {
   last: boolean;
 }
 
+export type UserRole = "USER" | "ADMIN";
+
+export interface AdminUserSummary {
+  id: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminLessonActivity {
+  lessonId: string;
+  lessonTitle: string;
+  activeSeconds: number;
+  maxScrollPercent: number;
+  readingQualified: boolean;
+  lastViewedAt: string;
+}
+
+export interface AdminQuizActivity {
+  attemptId: string;
+  quizId: string;
+  quizTitle: string;
+  status: "IN_PROGRESS" | "SUBMITTED";
+  scorePercentage: number | null;
+  passed: boolean | null;
+  startedAt: string;
+  submittedAt: string | null;
+}
+
+export interface AdminUserDetail {
+  account: AdminUserSummary;
+  joinedLearningPaths: number;
+  trackedLessons: number;
+  readingQualifiedLessons: number;
+  quizAttempts: number;
+  submittedQuizAttempts: number;
+  passedQuizAttempts: number;
+  failedQuizAttempts: number;
+  recentLessons: AdminLessonActivity[];
+  recentQuizAttempts: AdminQuizActivity[];
+}
+
 export interface LessonSummary {
   id: string;
   subtopicId: string;

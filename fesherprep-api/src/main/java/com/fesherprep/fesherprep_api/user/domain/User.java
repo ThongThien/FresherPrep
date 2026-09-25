@@ -42,6 +42,9 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 10)
     private UserRole role = UserRole.USER;
 
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean active = true;
+
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
@@ -62,6 +65,10 @@ public class User extends BaseEntity {
 
     public void changeRole(UserRole role) {
         this.role = Objects.requireNonNull(role, "role");
+    }
+
+    public void changeActive(boolean active) {
+        this.active = active;
     }
 
     @PrePersist

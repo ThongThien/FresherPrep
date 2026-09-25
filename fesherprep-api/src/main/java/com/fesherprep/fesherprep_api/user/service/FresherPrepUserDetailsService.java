@@ -26,6 +26,7 @@ public class FresherPrepUserDetailsService implements UserDetailsService {
                 .withUsername(user.getEmail())
                 .password(user.getPasswordHash())
                 .roles(user.getRole().name())
+                .disabled(!user.isActive())
                 .build();
     }
 

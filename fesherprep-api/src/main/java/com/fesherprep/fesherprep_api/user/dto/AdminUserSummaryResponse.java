@@ -6,7 +6,7 @@ import com.fesherprep.fesherprep_api.user.domain.UserRole;
 import java.time.Instant;
 import java.util.UUID;
 
-public record UserResponse(
+public record AdminUserSummaryResponse(
         UUID id,
         String email,
         String displayName,
@@ -15,8 +15,8 @@ public record UserResponse(
         Instant createdAt,
         Instant updatedAt
 ) {
-    public static UserResponse from(User user) {
-        return new UserResponse(
+    public static AdminUserSummaryResponse from(User user) {
+        return new AdminUserSummaryResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getDisplayName(),

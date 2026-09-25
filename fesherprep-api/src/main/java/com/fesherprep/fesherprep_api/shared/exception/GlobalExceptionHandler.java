@@ -15,6 +15,7 @@ import com.fesherprep.fesherprep_api.quiz.service.QuizAttemptNotFoundException;
 import com.fesherprep.fesherprep_api.quiz.service.QuizNotFoundException;
 import com.fesherprep.fesherprep_api.shared.dto.ApiErrorResponse;
 import com.fesherprep.fesherprep_api.user.service.EmailAlreadyUsedException;
+import com.fesherprep.fesherprep_api.user.service.UserNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -45,7 +46,8 @@ public class GlobalExceptionHandler {
             QuestionNotFoundException.class,
             QuestionVersionNotFoundException.class,
             QuizNotFoundException.class,
-            QuizAttemptNotFoundException.class
+            QuizAttemptNotFoundException.class,
+            UserNotFoundException.class
     })
     public ResponseEntity<ApiErrorResponse> handleNotFound(RuntimeException exception) {
         return response(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", exception.getMessage());

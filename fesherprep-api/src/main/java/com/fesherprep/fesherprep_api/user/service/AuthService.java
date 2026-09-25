@@ -72,7 +72,7 @@ public class AuthService {
     public TokenPairResponse refresh(@Valid RefreshTokenRequest request) {
         Instant now = clock.instant();
         RefreshToken token = refreshTokenRepository.findByTokenHashForUpdate(hashToken(request.refreshToken()))
-                .filter(candidate -> candidate.isActiveAt(now))
+                .filter(candidate -> candidate.isActiveAt(now) && candidate.getUser().isActive())
                 .orElseThrow(InvalidRefreshTokenException::new);
 
         token.revoke(now);
