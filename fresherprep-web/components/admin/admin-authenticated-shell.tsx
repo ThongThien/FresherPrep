@@ -8,6 +8,7 @@ import { CurrentUserProvider } from "@/components/auth/current-user-context";
 import { Button, Feedback } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { CurrentUser } from "@/lib/auth/types";
+import { useI18n } from "@/lib/i18n";
 
 import { AdminShell } from "./admin-shell";
 
@@ -17,6 +18,7 @@ type SessionState =
   | { status: "error"; message: string };
 
 export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const pathname = usePathname();
   const [session, setSession] = useState<SessionState>({ status: "loading" });
   const [requestKey, setRequestKey] = useState(0);
@@ -36,7 +38,7 @@ export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
         }
         const payload = await response.json() as { user?: CurrentUser };
         if (!payload.user) {
-          setSession({ status: "error", message: "The current account could not be loaded." });
+          setSession({ status: "error", message: t("The current account could not be loaded.") });
           return;
         }
         if (payload.user.role !== "ADMIN") {
@@ -47,10 +49,10 @@ export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setSession({ status: "error", message: "Unable to verify your admin account. Check your connection and try again." });
+        setSession({ status: "error", message: t("Unable to verify your admin account. Check your connection and try again.") });
       });
     return () => controller.abort();
-  }, [pathname, requestKey]);
+  }, [pathname, requestKey, t]);
 
   async function logout() {
     if (loggingOut) return;
@@ -61,7 +63,7 @@ export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
 
   if (session.status === "loading") return <AdminGateLoading />;
   if (session.status === "error") {
-    return <div className="min-h-dvh bg-background px-4 py-16"><div className="mx-auto max-w-xl"><Feedback tone="error" title="Admin workspace unavailable">{session.message}</Feedback><Button className="mt-4" variant="secondary" onClick={() => { setSession({ status: "loading" }); setRequestKey((value) => value + 1); }}>Try again</Button></div></div>;
+    return <div className="min-h-dvh bg-background px-4 py-16"><div className="mx-auto max-w-xl"><Feedback tone="error" title={t("Admin workspace unavailable")}>{session.message}</Feedback><Button className="mt-4" variant="secondary" onClick={() => { setSession({ status: "loading" }); setRequestKey((value) => value + 1); }}>{t("Try again")}</Button></div></div>;
   }
 
   const userState = { status: "authenticated" as const, displayName: session.user.displayName, email: session.user.email, role: session.user.role };
@@ -69,5 +71,6 @@ export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
 }
 
 function AdminGateLoading() {
-  return <div className="min-h-dvh bg-background" role="status"><span className="sr-only">Verifying admin access</span><div className="h-16 border-b border-border bg-surface" /><div className="mx-auto max-w-4xl animate-pulse space-y-5 px-4 py-10 motion-reduce:animate-none"><div className="h-8 w-52 rounded bg-surface-strong" /><div className="h-32 rounded-lg bg-surface" /></div></div>;
+  const { t } = useI18n();
+  return <div className="min-h-dvh bg-background" role="status"><span className="sr-only">{t("Verifying admin access")}</span><div className="h-16 border-b border-border bg-surface" /><div className="mx-auto max-w-4xl animate-pulse space-y-5 px-4 py-10 motion-reduce:animate-none"><div className="h-8 w-52 rounded bg-surface-strong" /><div className="h-32 rounded-lg bg-surface" /></div></div>;
 }

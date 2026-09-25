@@ -1,43 +1,12 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useI18n } from "@/lib/i18n";
+import { type ThemePreference, useThemePreference } from "@/lib/theme";
 
-type ThemePreference = "light" | "dark" | "system";
-
-const storageKey = "fresherprep-theme";
-const changeEvent = "fresherprep-theme-change";
 const order: ThemePreference[] = ["system", "light", "dark"];
-const labels: Record<ThemePreference, string> = {
-  light: "Light",
-  dark: "Dark",
-  system: "System",
-};
-
 export function ThemeToggle() {
-  const preference = useSyncExternalStore<ThemePreference>(
-    subscribe,
-    readPreference,
-    readServerPreference,
-  );
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => {
-      const resolved = preference === "system" ? (media.matches ? "dark" : "light") : preference;
-      document.documentElement.dataset.theme = resolved;
-      document.documentElement.dataset.themePreference = preference;
-      document.documentElement.style.colorScheme = resolved;
-    };
-
-    if (preference === "system") {
-      window.localStorage.removeItem(storageKey);
-      media.addEventListener("change", apply);
-    } else {
-      window.localStorage.setItem(storageKey, preference);
-    }
-    apply();
-    return () => media.removeEventListener("change", apply);
-  }, [preference]);
+  const { t } = useI18n();
+  const { preference, setPreference } = useThemePreference();
 
   const current = preference;
   const next = order[(order.indexOf(current) + 1) % order.length];
@@ -47,36 +16,16 @@ export function ThemeToggle() {
       type="button"
       onClick={() => setPreference(next)}
       className="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-text-muted shadow-input transition-colors hover:border-primary/35 hover:bg-surface-muted hover:text-text focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20"
-      aria-label={"Theme: " + labels[current] + ". Switch to " + labels[next] + "."}
-      title={"Theme: " + labels[current]}
+      aria-label={t("Theme: {{current}}. Switch to {{next}}.", { current: t(themeLabel(current)), next: t(themeLabel(next)) })}
+      title={t("Theme: {{current}}", { current: t(themeLabel(current)) })}
     >
       <ThemeIcon theme={current} />
     </button>
   );
 }
 
-function readPreference(): ThemePreference {
-  const saved = window.localStorage.getItem(storageKey);
-  return saved === "light" || saved === "dark" ? saved : "system";
-}
-
-function readServerPreference(): ThemePreference {
-  return "system";
-}
-
-function subscribe(onStoreChange: () => void) {
-  window.addEventListener("storage", onStoreChange);
-  window.addEventListener(changeEvent, onStoreChange);
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-    window.removeEventListener(changeEvent, onStoreChange);
-  };
-}
-
-function setPreference(preference: ThemePreference) {
-  if (preference === "system") window.localStorage.removeItem(storageKey);
-  else window.localStorage.setItem(storageKey, preference);
-  window.dispatchEvent(new Event(changeEvent));
+function themeLabel(theme: ThemePreference) {
+  return theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
 }
 
 function ThemeIcon({ theme }: { theme: ThemePreference }) {

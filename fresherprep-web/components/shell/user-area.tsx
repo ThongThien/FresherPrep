@@ -1,4 +1,9 @@
+"use client";
+
+import Link from "next/link";
+
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/lib/i18n";
 
 import { Button } from "@/components/ui";
 
@@ -6,7 +11,12 @@ export type UserState =
   | { status: "loading" }
   | { status: "unavailable" }
   | { status: "error" }
-  | { status: "authenticated"; displayName: string; email: string; role: "USER" | "ADMIN" };
+  | {
+      status: "authenticated";
+      displayName: string;
+      email: string;
+      role: "USER" | "ADMIN";
+    };
 
 interface UserAreaProps {
   state: UserState;
@@ -23,12 +33,13 @@ export function UserArea({
   onLogout,
   logoutPending = false,
 }: UserAreaProps) {
+  const { t } = useI18n();
   if (state.status === "loading") {
     return (
       <div
         className={cn("flex min-h-11 items-center gap-3", className)}
         role="status"
-        aria-label="Loading account"
+        aria-label={t("Loading account")}
       >
         <span className="size-9 animate-pulse rounded-full bg-surface-strong motion-reduce:animate-none" />
         {!compact ? (
@@ -42,17 +53,28 @@ export function UserArea({
   }
 
   const authenticated = state.status === "authenticated";
-  const title = authenticated ? state.displayName : "Account";
+  const title = authenticated ? state.displayName : t("Account");
   const description = authenticated
     ? state.email
     : state.status === "error"
-      ? "Account unavailable"
-      : "Ready for user integration";
+      ? t("Account unavailable")
+      : t("Ready for user integration");
   const initials = authenticated ? getInitials(state.displayName) : "FP";
 
   return (
-    <div className={cn(compact ? "flex items-center gap-2" : "space-y-3", className)}>
-      <div className="flex min-w-0 items-center gap-3">
+    <div
+      className={cn(
+        compact ? "flex items-center gap-2" : "space-y-3",
+        className,
+      )}
+    >
+      <Link
+        href={authenticated ? "/profile" : "/login"}
+        className="flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20"
+        aria-label={
+          authenticated ? t("Open profile and settings") : t("Open account")
+        }
+      >
         <span
           className="flex size-9 shrink-0 items-center justify-center rounded-full border border-primary/15 bg-primary-subtle text-xs font-bold text-primary-strong"
           aria-hidden="true"
@@ -61,24 +83,17 @@ export function UserArea({
         </span>
         {!compact ? (
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-text">{title}</span>
-            <span className="block truncate text-xs text-text-muted">{description}</span>
+            <span className="block truncate text-sm font-semibold text-text">
+              {title}
+            </span>
+            <span className="block truncate text-xs text-text-muted">
+              {description}
+            </span>
           </span>
         ) : (
           <span className="sr-only">{title}</span>
         )}
-      </div>
-      {authenticated && onLogout ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          loading={logoutPending}
-          onClick={onLogout}
-          className={compact ? "min-w-[5.5rem]" : "w-full"}
-        >
-          {logoutPending ? "Signing out..." : "Sign out"}
-        </Button>
-      ) : null}
+      </Link>
     </div>
   );
 }

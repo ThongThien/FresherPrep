@@ -3,6 +3,9 @@ package com.fesherprep.fesherprep_api.quiz.controller;
 import com.fesherprep.fesherprep_api.config.OpenApiConfiguration;
 import com.fesherprep.fesherprep_api.quiz.dto.*;
 import com.fesherprep.fesherprep_api.quiz.service.QuizService;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
+import com.fesherprep.fesherprep_api.quiz.domain.QuizCategory;
+import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +28,11 @@ public class QuizController {
 
     @GetMapping
     public Page<PublishedQuizResponse> getPublishedQuizzes(
+            @RequestParam(required = false) QuestionLanguage language,
+            @RequestParam(required = false) QuizCategory category,
             @PageableDefault(size = 20, sort = "title", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        return quizService.getPublishedQuizzes(pageable);
+        return quizService.getPublishedQuizzes(language, category, pageable);
     }
 
     @GetMapping("/{quizId}")
@@ -47,9 +52,12 @@ public class QuizController {
 
     @GetMapping("/admin")
     public Page<QuizResponse> getAllQuizzes(
+            @RequestParam(required = false) QuestionLanguage language,
+            @RequestParam(required = false) QuizCategory category,
+            @RequestParam(required = false) ContentStatus status,
             @PageableDefault(size = 20, sort = "title", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        return quizService.getAllQuizzes(pageable);
+        return quizService.getAllQuizzes(language, category, status, pageable);
     }
 
     @GetMapping("/admin/{quizId}")

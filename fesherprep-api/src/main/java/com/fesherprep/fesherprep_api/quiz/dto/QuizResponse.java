@@ -1,8 +1,10 @@
 package com.fesherprep.fesherprep_api.quiz.dto;
 
 import com.fesherprep.fesherprep_api.quiz.domain.*;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -14,6 +16,10 @@ public record QuizResponse(
         QuizType type,
         QuizSelectionMode selectionMode,
         int passPercentage,
+        QuestionLanguage language,
+        QuizCategory category,
+        int maximumScore,
+        BigDecimal passingScore,
         ContentStatus status,
         Instant createdAt,
         Instant updatedAt,
@@ -28,6 +34,13 @@ public record QuizResponse(
                 quiz.getType(),
                 quiz.getSelectionMode(),
                 quiz.getPassPercentage(),
+                quiz.getLanguage(),
+                quiz.getCategory(),
+                quiz.getMaximumScore(),
+                BigDecimal.valueOf(quiz.getMaximumScore())
+                        .multiply(BigDecimal.valueOf(quiz.getPassPercentage()))
+                        .divide(BigDecimal.valueOf(100))
+                        .stripTrailingZeros(),
                 quiz.getStatus(),
                 quiz.getCreatedAt(),
                 quiz.getUpdatedAt(),

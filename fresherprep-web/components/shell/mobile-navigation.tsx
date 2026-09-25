@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useI18n } from "@/lib/i18n";
 
 import { LearningNavigation } from "./navigation";
 import type { NavigationItem } from "./navigation-items";
@@ -24,6 +25,7 @@ export function MobileNavigation({
   items,
 }: MobileNavigationProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -55,16 +57,16 @@ export function MobileNavigation({
         <div className="flex h-16 items-center justify-between border-b border-border px-4">
           <div>
             <p id="mobile-navigation-title" className="text-sm font-semibold text-text">
-              Learning workspace
+              {t("Learning workspace")}
             </p>
-            <p className="mt-0.5 text-xs text-text-muted">Navigate FresherPrep</p>
+            <p className="mt-0.5 text-xs text-text-muted">{t("Navigate FresherPrep")}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             autoFocus
             className="inline-flex size-11 items-center justify-center rounded-md text-xl text-text-muted transition-colors hover:bg-surface-muted hover:text-text focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20"
-            aria-label="Close learning navigation"
+            aria-label={t("Close learning navigation")}
           >
             <span aria-hidden="true">×</span>
           </button>

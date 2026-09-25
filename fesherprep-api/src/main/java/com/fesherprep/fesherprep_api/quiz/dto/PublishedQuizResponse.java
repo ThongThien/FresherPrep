@@ -3,7 +3,10 @@ package com.fesherprep.fesherprep_api.quiz.dto;
 import com.fesherprep.fesherprep_api.quiz.domain.Quiz;
 import com.fesherprep.fesherprep_api.quiz.domain.QuizSelectionMode;
 import com.fesherprep.fesherprep_api.quiz.domain.QuizType;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
+import com.fesherprep.fesherprep_api.quiz.domain.QuizCategory;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public record PublishedQuizResponse(
@@ -12,7 +15,12 @@ public record PublishedQuizResponse(
         String title,
         QuizType type,
         QuizSelectionMode selectionMode,
-        int passPercentage
+        int passPercentage,
+        QuestionLanguage language,
+        QuizCategory category,
+        int maximumScore,
+        BigDecimal passingScore,
+        int questionCount
 ) {
     public static PublishedQuizResponse from(Quiz quiz) {
         return new PublishedQuizResponse(
@@ -21,7 +29,17 @@ public record PublishedQuizResponse(
                 quiz.getTitle(),
                 quiz.getType(),
                 quiz.getSelectionMode(),
-                quiz.getPassPercentage()
+                quiz.getPassPercentage(),
+                quiz.getLanguage(),
+                quiz.getCategory(),
+                quiz.getMaximumScore(),
+                BigDecimal.valueOf(quiz.getMaximumScore())
+                        .multiply(BigDecimal.valueOf(quiz.getPassPercentage()))
+                        .divide(BigDecimal.valueOf(100))
+                        .stripTrailingZeros(),
+                quiz.getSelectionMode() == QuizSelectionMode.FIXED
+                        ? quiz.getFixedQuestions().size()
+                        : quiz.getRules().stream().mapToInt(rule -> rule.getQuestionCount()).sum()
         );
     }
 }

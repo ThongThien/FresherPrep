@@ -5,6 +5,9 @@ import com.fesherprep.fesherprep_api.knowledge.domain.NodeType;
 import com.fesherprep.fesherprep_api.knowledge.repository.KnowledgeNodeRepository;
 import com.fesherprep.fesherprep_api.question.domain.Question;
 import com.fesherprep.fesherprep_api.question.domain.QuestionVersion;
+import com.fesherprep.fesherprep_api.question.domain.Difficulty;
+import com.fesherprep.fesherprep_api.question.domain.QuestionCategory;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.question.dto.*;
 import com.fesherprep.fesherprep_api.question.repository.QuestionRepository;
 import com.fesherprep.fesherprep_api.question.repository.QuestionVersionRepository;
@@ -31,8 +34,22 @@ public class QuestionService {
     private final KnowledgeNodeRepository knowledgeNodeRepository;
 
     @Transactional(readOnly = true)
-    public Page<QuestionResponse> getAllQuestions(Pageable pageable) {
-        return questionRepository.findAll(pageable).map(QuestionResponse::from);
+    public Page<QuestionResponse> getAllQuestions(
+            QuestionLanguage language,
+            QuestionCategory category,
+            UUID knowledgeNodeId,
+            Difficulty difficulty,
+            ContentStatus status,
+            Pageable pageable
+    ) {
+        return questionRepository.findAllFiltered(
+                language,
+                category,
+                knowledgeNodeId,
+                difficulty,
+                status,
+                pageable
+        ).map(QuestionResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -60,7 +77,13 @@ public class QuestionService {
         String code = normalizeCode(request.code());
         ensureUniqueCode(code, null);
 
-        Question question = new Question(subtopic, code, request.difficulty());
+        Question question = new Question(
+                subtopic,
+                code,
+                request.difficulty(),
+                languageOrDefault(request.language()),
+                categoryOrDefault(request.category())
+        );
         return QuestionResponse.from(saveQuestion(question, code));
     }
 
@@ -76,7 +99,13 @@ public class QuestionService {
             throw new IllegalStateException("A published question requires a published subtopic");
         }
 
-        question.updateMetadata(subtopic, code, request.difficulty());
+        question.updateMetadata(
+                subtopic,
+                code,
+                request.difficulty(),
+                request.language() == null ? question.getLanguage() : request.language(),
+                request.category() == null ? question.getCategory() : request.category()
+        );
         return QuestionResponse.from(saveQuestion(question, code));
     }
 
@@ -262,5 +291,13 @@ public class QuestionService {
         return Objects.requireNonNull(code, "Question code is required")
                 .strip()
                 .toUpperCase(Locale.ROOT);
+    }
+
+    private static QuestionLanguage languageOrDefault(QuestionLanguage language) {
+        return language == null ? QuestionLanguage.VI : language;
+    }
+
+    private static QuestionCategory categoryOrDefault(QuestionCategory category) {
+        return category == null ? QuestionCategory.TECHNICAL : category;
     }
 }

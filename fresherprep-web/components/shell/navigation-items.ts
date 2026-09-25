@@ -7,6 +7,7 @@ export const learningNavigation: readonly NavigationItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Learning paths", href: "/learning-paths" },
   { label: "Quizzes", href: "/quizzes" },
+  { label: "Learning Games", href: "/games" },
   { label: "Progress", href: "/progress" },
 ];
 

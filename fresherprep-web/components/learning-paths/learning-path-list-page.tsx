@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Badge, Button, Feedback, Progress } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n";
 import type { LearningPathListData, LearningPathListEntry } from "@/lib/learning-paths/types";
 
 type ListState =
@@ -13,6 +14,7 @@ type ListState =
   | { status: "error"; message: string };
 
 export function LearningPathListPage() {
+  const { t } = useI18n();
   const [page, setPage] = useState(0);
   const [requestVersion, setRequestVersion] = useState(0);
   const [state, setState] = useState<ListState>({ status: "loading" });
@@ -39,12 +41,12 @@ export function LearningPathListPage() {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setState({
           status: "error",
-          message: "Unable to load learning paths. Check your connection and try again.",
+          message: t("Unable to load learning paths. Check your connection and try again."),
         });
       });
 
     return () => controller.abort();
-  }, [page, requestVersion]);
+  }, [page, requestVersion, t]);
 
   function retry() {
     setState({ status: "loading" });
@@ -60,12 +62,12 @@ export function LearningPathListPage() {
   return (
     <div className="mx-auto w-full max-w-6xl">
       <header className="max-w-3xl">
-        <p className="text-sm font-medium text-primary">Structured curriculum</p>
+        <p className="text-sm font-medium text-primary">{t("Structured curriculum")}</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-text sm:text-3xl">
-          Learning Paths
+          {t("Learning Paths")}
         </h1>
         <p className="mt-3 text-sm leading-6 text-text-muted sm:text-base">
-          Follow an ordered Java learning plan, understand what is required, and continue from your current progress.
+          {t("Follow an ordered Java learning plan, understand what is required, and continue from your current progress.")}
         </p>
       </header>
 
@@ -73,8 +75,8 @@ export function LearningPathListPage() {
         {state.status === "loading" ? <LearningPathListSkeleton /> : null}
         {state.status === "error" ? (
           <div className="max-w-2xl">
-            <Feedback tone="error" title="Learning paths unavailable">{state.message}</Feedback>
-            <Button variant="secondary" className="mt-4" onClick={retry}>Try again</Button>
+            <Feedback tone="error" title={t("Learning paths unavailable")}>{state.message}</Feedback>
+            <Button variant="secondary" className="mt-4" onClick={retry}>{t("Try again")}</Button>
           </div>
         ) : null}
         {state.status === "ready" ? (
@@ -92,11 +94,12 @@ function LearningPathList({
   data: LearningPathListData;
   onPageChange: (page: number) => void;
 }) {
+  const { t } = useI18n();
   return (
     <>
       {data.membershipUnavailable ? (
-        <Feedback tone="warning" title="Personal progress is temporarily unavailable" className="mb-5">
-          You can still inspect published learning paths. Join and progress actions are hidden until account data is available.
+        <Feedback tone="warning" title={t("Personal progress is temporarily unavailable")} className="mb-5">
+          {t("You can still inspect published learning paths. Join and progress actions are hidden until account data is available.")}
         </Feedback>
       ) : null}
 
@@ -108,31 +111,31 @@ function LearningPathList({
         </div>
       ) : (
         <div className="rounded-lg border border-dashed border-border-strong bg-surface px-6 py-12 text-center">
-          <h2 className="text-lg font-semibold text-text">No published learning paths</h2>
+          <h2 className="text-lg font-semibold text-text">{t("No published learning paths")}</h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-text-muted">
-            Published curricula will appear here when they are available.
+            {t("Published curricula will appear here when they are available.")}
           </p>
         </div>
       )}
 
       {data.paths.totalPages > 1 ? (
-        <nav className="mt-6 flex items-center justify-between gap-4" aria-label="Learning path pages">
+        <nav className="mt-6 flex items-center justify-between gap-4" aria-label={t("Learning path pages")}>
           <Button
             variant="secondary"
             disabled={data.paths.first}
             onClick={() => onPageChange(data.paths.number - 1)}
           >
-            Previous
+            {t("Previous")}
           </Button>
           <p className="text-sm tabular-nums text-text-muted">
-            Page {data.paths.number + 1} of {data.paths.totalPages}
+            {t("Page {{page}} of {{total}}", { page: data.paths.number + 1, total: data.paths.totalPages })}
           </p>
           <Button
             variant="secondary"
             disabled={data.paths.last}
             onClick={() => onPageChange(data.paths.number + 1)}
           >
-            Next
+            {t("Next")}
           </Button>
         </nav>
       ) : null}
@@ -141,7 +144,8 @@ function LearningPathList({
 }
 
 function LearningPathRow({ entry }: { entry: LearningPathListEntry }) {
-  const action = entry.joined ? "Continue" : "View path";
+  const { t } = useI18n();
+  const action = entry.joined ? t("Continue") : t("View path");
 
   return (
     <li className="p-5 sm:p-6">
@@ -156,9 +160,9 @@ function LearningPathRow({ entry }: { entry: LearningPathListEntry }) {
                 {entry.path.name}
               </Link>
             </h2>
-            {entry.joined === true ? <Badge variant="info">Joined</Badge> : null}
-            {entry.joined === false ? <Badge>Available</Badge> : null}
-            {entry.joined === null ? <Badge variant="warning">Status unavailable</Badge> : null}
+            {entry.joined === true ? <Badge variant="info">{t("Joined")}</Badge> : null}
+            {entry.joined === false ? <Badge>{t("Available")}</Badge> : null}
+            {entry.joined === null ? <Badge variant="warning">{t("Status unavailable")}</Badge> : null}
           </div>
           <p className="mt-1 text-sm text-text-muted">{entry.path.technologyName}</p>
 
@@ -166,16 +170,16 @@ function LearningPathRow({ entry }: { entry: LearningPathListEntry }) {
             <div className="mt-5 max-w-2xl">
               <Progress
                 value={entry.progress.progressPercentage}
-                label="Required progress"
+                label={t("Required progress")}
                 showValue
                 tone={entry.progress.completed ? "success" : "primary"}
               />
               <p className="mt-2 text-xs text-text-subtle">
-                {entry.progress.completedRequiredItems} of {entry.progress.requiredItems} required lessons complete
+                {t("{{completed}} of {{total}} required lessons complete", { completed: entry.progress.completedRequiredItems, total: entry.progress.requiredItems })}
               </p>
             </div>
           ) : entry.progressUnavailable ? (
-            <p className="mt-4 text-sm text-text-muted">Progress is temporarily unavailable.</p>
+            <p className="mt-4 text-sm text-text-muted">{t("Progress is temporarily unavailable.")}</p>
           ) : null}
         </div>
 
@@ -191,9 +195,10 @@ function LearningPathRow({ entry }: { entry: LearningPathListEntry }) {
 }
 
 function LearningPathListSkeleton() {
+  const { t } = useI18n();
   return (
     <div className="animate-pulse overflow-hidden rounded-lg border border-border bg-surface motion-reduce:animate-none" role="status">
-      <span className="sr-only">Loading learning paths</span>
+      <span className="sr-only">{t("Loading learning paths")}</span>
       {[0, 1, 2].map((item) => (
         <div key={item} className="border-b border-border p-6 last:border-b-0">
           <div className="h-5 w-64 max-w-full rounded bg-surface-strong" />

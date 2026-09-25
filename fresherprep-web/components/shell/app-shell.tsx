@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { useI18n } from "@/lib/i18n";
 
 import { AppHeader } from "./app-header";
 import { LearningNavigation } from "./navigation";
@@ -18,6 +19,7 @@ interface AppShellProps {
 
 export function AppShell({ children, userState, onLogout, logoutPending }: AppShellProps) {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
+  const { t } = useI18n();
   const navigationItems =
     userState.status === "authenticated" && userState.role === "ADMIN"
       ? [...learningNavigation, adminNavigationEntry]
@@ -29,7 +31,7 @@ export function AppShell({ children, userState, onLogout, logoutPending }: AppSh
         href="#main-content"
         className="fixed left-4 top-3 z-50 -translate-y-20 rounded-md bg-primary-solid px-4 py-2 text-sm font-semibold text-white shadow-button transition-transform focus:translate-y-0 motion-reduce:transition-none"
       >
-        Skip to main content
+        {t("Skip to main content")}
       </a>
 
       <AppHeader
@@ -43,7 +45,7 @@ export function AppShell({ children, userState, onLogout, logoutPending }: AppSh
         <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-64 shrink-0 flex-col border-r border-border bg-surface lg:flex">
           <div className="px-5 pb-3 pt-6">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-subtle">
-              Learning
+              {t("Learning")}
             </p>
           </div>
           <LearningNavigation items={navigationItems} className="flex-1 overflow-y-auto px-3 pb-6" />

@@ -89,10 +89,17 @@ export interface QuizAttemptSummary {
 
 export type DashboardSection = "paths" | "pathProgress" | "lessons" | "quizAttempts";
 
+export interface AchievementProgress {
+  completedLessons: number | null;
+  submittedQuizzes: number | null;
+  passedQuizzes: number | null;
+}
+
 export interface DashboardData {
   paths: PageResponse<UserLearningPath>;
   latestPathProgress: LearningPathProgress | null;
   lessonProgress: PageResponse<LessonProgress>;
   quizAttempts: PageResponse<QuizAttemptSummary>;
+  achievementProgress: AchievementProgress;
   issues: DashboardSection[];
 }

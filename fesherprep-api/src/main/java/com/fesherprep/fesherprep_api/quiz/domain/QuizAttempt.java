@@ -1,6 +1,7 @@
 package com.fesherprep.fesherprep_api.quiz.domain;
 
 import com.fesherprep.fesherprep_api.question.domain.QuestionOption;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.question.domain.QuestionVersion;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import com.fesherprep.fesherprep_api.shared.persistence.BaseEntity;
@@ -44,6 +45,17 @@ public class QuizAttempt extends BaseEntity {
     private int passPercentage;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 8, updatable = false, columnDefinition = "varchar(8) default 'VI'")
+    private QuestionLanguage language;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 24, updatable = false, columnDefinition = "varchar(24) default 'TECHNICAL'")
+    private QuizCategory category;
+
+    @Column(name = "maximum_score", nullable = false, updatable = false, columnDefinition = "integer default 100")
+    private int maximumScore;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
     private AttemptStatus status = AttemptStatus.IN_PROGRESS;
 
@@ -76,6 +88,11 @@ public class QuizAttempt extends BaseEntity {
         List<QuestionVersion> selected = List.copyOf(selectedVersions);
         for (int index = 0; index < selected.size(); index++) {
             QuestionVersion version = selected.get(index);
+            if (version.getQuestion().getLanguage() != quiz.getLanguage()
+                    || quiz.getCategory() != QuizCategory.MIXED
+                    && !version.getQuestion().getCategory().name().equals(quiz.getCategory().name())) {
+                throw new IllegalArgumentException("Selected question metadata does not match the quiz");
+            }
             if (version.getQuestion().getStatus() != ContentStatus.PUBLISHED
                     || !version.hasSameIdentityAs(version.getQuestion().getPublishedVersion())) {
                 throw new IllegalArgumentException("Only the published version can enter a new attempt");
@@ -89,6 +106,9 @@ public class QuizAttempt extends BaseEntity {
         validateSelection(quiz, selected);
         this.quizTitle = quiz.getTitle();
         this.passPercentage = quiz.getPassPercentage();
+        this.language = quiz.getLanguage();
+        this.category = quiz.getCategory();
+        this.maximumScore = quiz.getMaximumScore();
         for (int index = 0; index < selected.size(); index++) {
             questions.add(new QuizAttemptQuestion(this, selected.get(index), index + 1));
         }
@@ -170,7 +190,29 @@ public class QuizAttempt extends BaseEntity {
 
     public boolean isPassed() {
         return status == AttemptStatus.SUBMITTED
-                && scorePercentage.compareTo(BigDecimal.valueOf(passPercentage)) >= 0;
+                && getScore().compareTo(getPassingScore()) >= 0;
+    }
+
+    public BigDecimal getScore() {
+        if (status != AttemptStatus.SUBMITTED) {
+            return null;
+        }
+        long correct = questions.stream()
+                .map(QuizAttemptQuestion::getAnswer)
+                .filter(Objects::nonNull)
+                .filter(QuizAttemptAnswer::isCorrect)
+                .count();
+        return BigDecimal.valueOf(correct)
+                .multiply(BigDecimal.valueOf(maximumScore))
+                .divide(BigDecimal.valueOf(questions.size()), 2, RoundingMode.HALF_UP)
+                .stripTrailingZeros();
+    }
+
+    public BigDecimal getPassingScore() {
+        return BigDecimal.valueOf(maximumScore)
+                .multiply(BigDecimal.valueOf(passPercentage))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP)
+                .stripTrailingZeros();
     }
 
     private static void validateSelection(Quiz quiz, List<QuestionVersion> selected) {

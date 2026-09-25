@@ -51,6 +51,18 @@ export async function requestCurrentUser(accessToken: string) {
   return { response, payload: await readResponseBody(response) };
 }
 
+export async function requestUpdateCurrentUser(accessToken: string, displayName: string) {
+  const response = await backendFetch("/api/users/me", {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ displayName }),
+  });
+  return { response, payload: await readResponseBody(response) };
+}
+
 export async function requestTokenRefresh(refreshToken: string) {
   const response = await backendFetch("/api/auth/refresh", {
     method: "POST",

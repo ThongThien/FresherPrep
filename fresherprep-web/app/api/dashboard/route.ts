@@ -56,8 +56,8 @@ async function loadDashboard(accessToken: string) {
   const headers = { Authorization: `Bearer ${accessToken}` };
   const results = await Promise.allSettled([
     fetchJson("/api/learning-paths/me?size=4&sort=createdAt,desc", headers),
-    fetchJson("/api/lessons/me/progress?size=8&sort=lastViewedAt,desc", headers),
-    fetchJson("/api/quiz-attempts?size=6&sort=createdAt,desc", headers),
+    fetchJson("/api/lessons/me/progress?size=100&sort=lastViewedAt,desc", headers),
+    fetchJson("/api/quiz-attempts?size=100&sort=createdAt,desc", headers),
   ]);
 
   if (results.some((result) => result.status === "fulfilled" && result.value.status === 401)) {
@@ -68,6 +68,17 @@ async function loadDashboard(accessToken: string) {
   const paths = pageResult<UserLearningPath>(results[0], "paths", issues);
   const lessonProgress = pageResult<LessonProgress>(results[1], "lessons", issues);
   const quizAttempts = pageResult<QuizAttemptSummary>(results[2], "quizAttempts", issues);
+  const achievementProgress = {
+    completedLessons: issues.includes("lessons")
+      ? null
+      : lessonProgress.content.filter((lesson) => lesson.completed).length,
+    submittedQuizzes: issues.includes("quizAttempts")
+      ? null
+      : quizAttempts.content.filter((attempt) => attempt.status === "SUBMITTED").length,
+    passedQuizzes: issues.includes("quizAttempts")
+      ? null
+      : quizAttempts.content.filter((attempt) => attempt.status === "SUBMITTED" && attempt.passed === true).length,
+  };
 
   let latestPathProgress: LearningPathProgress | null = null;
   const latestPath = paths.content[0]?.learningPath;
@@ -92,6 +103,7 @@ async function loadDashboard(accessToken: string) {
       latestPathProgress,
       lessonProgress,
       quizAttempts,
+      achievementProgress,
       issues,
     } satisfies DashboardData,
   };

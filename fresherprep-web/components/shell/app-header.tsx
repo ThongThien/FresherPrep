@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/lib/i18n";
 
 import {
   isNavigationItemActive,
@@ -11,6 +12,7 @@ import {
 } from "./navigation-items";
 import { UserArea, type UserState } from "./user-area";
 import { ThemeToggle } from "./theme-toggle";
+import { LanguageSwitcher } from "./language-switcher";
 
 interface AppHeaderProps {
   userState: UserState;
@@ -26,6 +28,7 @@ export function AppHeader({
   logoutPending,
 }: AppHeaderProps) {
   const pathname = usePathname();
+  const { t } = useI18n();
   const currentContext = learningNavigation.find((item) =>
     isNavigationItemActive(pathname, item.href),
   )?.label;
@@ -37,7 +40,7 @@ export function AppHeader({
           type="button"
           onClick={onOpenNavigation}
           className="mr-3 inline-flex size-11 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors hover:bg-surface-muted hover:text-text focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 lg:hidden"
-          aria-label="Open learning navigation"
+          aria-label={t("Open learning navigation")}
           aria-haspopup="dialog"
         >
           <MenuGlyph />
@@ -46,7 +49,7 @@ export function AppHeader({
         <Link
           href="/dashboard"
           className="flex shrink-0 items-center gap-2.5 rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20"
-          aria-label="FresherPrep dashboard"
+          aria-label={t("FresherPrep dashboard")}
         >
           <span
             aria-hidden="true"
@@ -59,11 +62,12 @@ export function AppHeader({
 
         {currentContext ? (
           <div className="ml-5 hidden items-center gap-3 border-l border-border pl-5 md:flex">
-            <span className="text-sm text-text-muted">{currentContext}</span>
+            <span className="text-sm text-text-muted">{t(currentContext)}</span>
           </div>
         ) : null}
 
         <div className="ml-auto flex items-center gap-2">
+          <LanguageSwitcher />
           <ThemeToggle />
           <div className="hidden sm:block">
             <UserArea

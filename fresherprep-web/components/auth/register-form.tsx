@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button, Feedback, FieldError, FieldHint, Input, Label } from "@/components/ui";
 import { readApiError, userFacingAuthMessage } from "@/lib/api/client";
 import { getSafeRedirectPath } from "@/lib/auth/redirects";
+import { useI18n } from "@/lib/i18n";
 
 import { PasswordField } from "./password-field";
 
@@ -14,6 +15,7 @@ interface RegisterFormProps {
 }
 
 export function RegisterForm({ nextPath }: RegisterFormProps) {
+  const { t } = useI18n();
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -48,7 +50,7 @@ export function RegisterForm({ nextPath }: RegisterFormProps) {
 
       window.location.assign(getSafeRedirectPath(nextPath));
     } catch {
-      setMessage("Unable to connect to FresherPrep. Check your connection and try again.");
+      setMessage(t("Unable to connect to FresherPrep. Check your connection and try again."));
     } finally {
       setSubmitting(false);
     }
@@ -57,13 +59,13 @@ export function RegisterForm({ nextPath }: RegisterFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {message ? (
-        <Feedback tone="error" title="Unable to create account">
+        <Feedback tone="error" title={t("Unable to create account")}>
           {message}
         </Feedback>
       ) : null}
 
       <div>
-        <Label htmlFor="displayName">Display name</Label>
+        <Label htmlFor="displayName">{t("Display name")}</Label>
         <Input
           id="displayName"
           name="displayName"
@@ -82,7 +84,7 @@ export function RegisterForm({ nextPath }: RegisterFormProps) {
       </div>
 
       <div>
-        <Label htmlFor="email">Email address</Label>
+        <Label htmlFor="email">{t("Email address")}</Label>
         <Input
           id="email"
           name="email"
@@ -99,7 +101,7 @@ export function RegisterForm({ nextPath }: RegisterFormProps) {
       </div>
 
       <div>
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">{t("Password")}</Label>
         <PasswordField
           id="password"
           name="password"
@@ -108,14 +110,14 @@ export function RegisterForm({ nextPath }: RegisterFormProps) {
           invalid={Boolean(fieldErrors.password)}
           describedBy={fieldErrors.password ? "password-error password-hint" : "password-hint"}
         />
-        <FieldHint id="password-hint">Use between 8 and 72 characters.</FieldHint>
+        <FieldHint id="password-hint">{t("Use between 8 and 72 characters.")}</FieldHint>
         {fieldErrors.password ? (
           <FieldError id="password-error">{fieldErrors.password}</FieldError>
         ) : null}
       </div>
 
       <Button type="submit" size="lg" loading={submitting} className="w-full">
-        {submitting ? "Creating account..." : "Create account"}
+        {submitting ? t("Creating account...") : t("Create account")}
       </Button>
     </form>
   );

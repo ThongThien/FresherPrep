@@ -5,6 +5,11 @@ export interface PublishedQuiz {
   type: string;
   selectionMode: "FIXED" | "RULE_BASED";
   passPercentage: number;
+  language: "VI" | "EN";
+  category: "TECHNICAL" | "GRAMMAR" | "VOCABULARY" | "TOEIC" | "MIXED";
+  maximumScore: number;
+  passingScore: number;
+  questionCount: number;
 }
 
 export interface AttemptOption {
@@ -31,8 +36,13 @@ export interface QuizAttempt {
   quizId: string;
   quizTitle: string;
   passPercentage: number;
+  language: "VI" | "EN";
+  category: "TECHNICAL" | "GRAMMAR" | "VOCABULARY" | "TOEIC" | "MIXED";
+  maximumScore: number;
+  passingScore: number;
   status: "IN_PROGRESS" | "SUBMITTED";
   scorePercentage: number | null;
+  score: number | null;
   passed: boolean | null;
   startedAt: string;
   submittedAt: string | null;

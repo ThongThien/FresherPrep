@@ -4,6 +4,7 @@ import com.fesherprep.fesherprep_api.knowledge.domain.KnowledgeNode;
 import com.fesherprep.fesherprep_api.knowledge.domain.NodeType;
 import com.fesherprep.fesherprep_api.question.domain.Difficulty;
 import com.fesherprep.fesherprep_api.question.domain.Question;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import com.fesherprep.fesherprep_api.shared.persistence.BaseEntity;
 import jakarta.persistence.*;
@@ -22,8 +23,11 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Table(name = "quizzes", indexes = @Index(name = "idx_quizzes_status_type", columnList = "status,type"))
-@Check(constraints = "pass_percentage between 0 and 100")
+@Table(name = "quizzes", indexes = {
+        @Index(name = "idx_quizzes_status_type", columnList = "status,type"),
+        @Index(name = "idx_quizzes_language_category_status", columnList = "language,category,status")
+})
+@Check(constraints = "pass_percentage between 0 and 100 and maximum_score > 0")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Quiz extends BaseEntity {
@@ -43,6 +47,17 @@ public class Quiz extends BaseEntity {
 
     @Column(name = "pass_percentage", nullable = false)
     private int passPercentage;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 8, columnDefinition = "varchar(8) default 'VI'")
+    private QuestionLanguage language = QuestionLanguage.VI;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 24, columnDefinition = "varchar(24) default 'TECHNICAL'")
+    private QuizCategory category = QuizCategory.TECHNICAL;
+
+    @Column(name = "maximum_score", nullable = false, columnDefinition = "integer default 100")
+    private int maximumScore = 100;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
@@ -69,6 +84,19 @@ public class Quiz extends BaseEntity {
         updateDetails(title, code, type, selectionMode, passPercentage);
     }
 
+    public Quiz(
+            String title,
+            String code,
+            QuizType type,
+            QuizSelectionMode selectionMode,
+            int passPercentage,
+            QuestionLanguage language,
+            QuizCategory category,
+            int maximumScore
+    ) {
+        updateDetails(title, code, type, selectionMode, passPercentage, language, category, maximumScore);
+    }
+
     public void updateDetails(
             String title,
             String code,
@@ -76,14 +104,44 @@ public class Quiz extends BaseEntity {
             QuizSelectionMode selectionMode,
             int passPercentage
     ) {
+        updateDetails(
+                title,
+                code,
+                type,
+                selectionMode,
+                passPercentage,
+                language == null ? QuestionLanguage.VI : language,
+                category == null ? QuizCategory.TECHNICAL : category,
+                maximumScore < 1 ? 100 : maximumScore
+        );
+    }
+
+    public void updateDetails(
+            String title,
+            String code,
+            QuizType type,
+            QuizSelectionMode selectionMode,
+            int passPercentage,
+            QuestionLanguage language,
+            QuizCategory category,
+            int maximumScore
+    ) {
         if (title == null || title.isBlank() || passPercentage < 0 || passPercentage > 100) {
             throw new IllegalArgumentException("Title and pass percentage (0-100) are required");
         }
         Objects.requireNonNull(type, "Quiz type is required");
         Objects.requireNonNull(selectionMode, "Selection mode is required");
-        if ((this.type != null && this.type != type || this.selectionMode != null && this.selectionMode != selectionMode)
+        Objects.requireNonNull(language, "Quiz language is required");
+        Objects.requireNonNull(category, "Quiz category is required");
+        if (maximumScore < 1) {
+            throw new IllegalArgumentException("Maximum score must be positive");
+        }
+        if ((this.type != null && this.type != type
+                || this.selectionMode != null && this.selectionMode != selectionMode
+                || this.language != null && this.language != language
+                || this.category != null && this.category != category)
                 && (!rules.isEmpty() || !fixedQuestions.isEmpty())) {
-            throw new IllegalStateException("Remove the current quiz configuration before changing type or mode");
+            throw new IllegalStateException("Remove the current quiz configuration before changing type, mode, language, or category");
         }
         this.title = title.strip();
         if (code != null) {
@@ -96,6 +154,9 @@ public class Quiz extends BaseEntity {
         this.type = type;
         this.selectionMode = selectionMode;
         this.passPercentage = passPercentage;
+        this.language = language;
+        this.category = category;
+        this.maximumScore = maximumScore;
     }
 
     public List<QuizRule> getRules() {
@@ -144,6 +205,11 @@ public class Quiz extends BaseEntity {
         }
         if (fixedQuestions.stream().anyMatch(item -> item.getPosition() == position)) {
             throw new IllegalArgumentException("Fixed question position is already in use");
+        }
+        if (question.getLanguage() != language
+                || category != QuizCategory.MIXED
+                && !question.getCategory().name().equals(category.name())) {
+            throw new IllegalArgumentException("Question language and category must match the quiz");
         }
         if (!fixedQuestions.isEmpty() && (type == QuizType.LESSON || type == QuizType.TOPIC)) {
             KnowledgeNode existing = fixedQuestions.getFirst().getQuestion().getSubtopic();

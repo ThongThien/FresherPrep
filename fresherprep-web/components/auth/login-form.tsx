@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button, Feedback, FieldError, Input, Label } from "@/components/ui";
 import { readApiError, userFacingAuthMessage } from "@/lib/api/client";
 import { getSafeRedirectPath } from "@/lib/auth/redirects";
+import { useI18n } from "@/lib/i18n";
 
 import { PasswordField } from "./password-field";
 
@@ -14,6 +15,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ nextPath }: LoginFormProps) {
+  const { t } = useI18n();
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -47,7 +49,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
 
       window.location.assign(getSafeRedirectPath(nextPath));
     } catch {
-      setMessage("Unable to connect to FresherPrep. Check your connection and try again.");
+      setMessage(t("Unable to connect to FresherPrep. Check your connection and try again."));
     } finally {
       setSubmitting(false);
     }
@@ -55,10 +57,10 @@ export function LoginForm({ nextPath }: LoginFormProps) {
 
   return (
     <form onSubmit={handleSubmit} noValidate={false} className="space-y-5">
-      {message ? <Feedback tone="error" title="Unable to sign in">{message}</Feedback> : null}
+      {message ? <Feedback tone="error" title={t("Unable to sign in")}>{message}</Feedback> : null}
 
       <div>
-        <Label htmlFor="email">Email address</Label>
+        <Label htmlFor="email">{t("Email address")}</Label>
         <Input
           id="email"
           name="email"
@@ -76,7 +78,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
       </div>
 
       <div>
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">{t("Password")}</Label>
         <PasswordField
           id="password"
           name="password"
@@ -91,7 +93,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
       </div>
 
       <Button type="submit" size="lg" loading={submitting} className="w-full">
-        {submitting ? "Signing in..." : "Sign in"}
+        {submitting ? t("Signing in...") : t("Sign in")}
       </Button>
     </form>
   );

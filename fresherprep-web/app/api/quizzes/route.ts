@@ -6,10 +6,17 @@ import { setAuthCookies } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
   const page = Math.max(0, Number.parseInt(request.nextUrl.searchParams.get("page") ?? "0", 10) || 0);
+  const language = request.nextUrl.searchParams.get("language");
+  const category = request.nextUrl.searchParams.get("category");
+  const params = new URLSearchParams({ page: String(page), size: "12", sort: "title,asc" });
+  if (language === "VI" || language === "EN") params.set("language", language);
+  if (category && ["TECHNICAL", "GRAMMAR", "VOCABULARY", "TOEIC", "MIXED"].includes(category)) {
+    params.set("category", category);
+  }
   try {
     const result = await authenticatedBackendRequest(
       request,
-      "/api/quizzes?page=" + page + "&size=12&sort=title,asc",
+      "/api/quizzes?" + params.toString(),
     );
     if (!result.authenticated) return result.response;
     if (!result.ok) return backendErrorResponse(result.status, result.payload);

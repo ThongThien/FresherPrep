@@ -4,6 +4,8 @@ import com.fesherprep.fesherprep_api.knowledge.domain.KnowledgeNode;
 import com.fesherprep.fesherprep_api.knowledge.repository.KnowledgeNodeRepository;
 import com.fesherprep.fesherprep_api.question.domain.Question;
 import com.fesherprep.fesherprep_api.question.domain.QuestionOption;
+import com.fesherprep.fesherprep_api.question.domain.QuestionCategory;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.question.domain.QuestionVersion;
 import com.fesherprep.fesherprep_api.quiz.domain.*;
 import com.fesherprep.fesherprep_api.quiz.dto.*;
@@ -43,8 +45,12 @@ public class QuizService {
 
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
-    public Page<PublishedQuizResponse> getPublishedQuizzes(Pageable pageable) {
-        return quizRepository.findAllByStatus(ContentStatus.PUBLISHED, pageable)
+    public Page<PublishedQuizResponse> getPublishedQuizzes(
+            QuestionLanguage language,
+            QuizCategory category,
+            Pageable pageable
+    ) {
+        return quizRepository.findPublishedFiltered(ContentStatus.PUBLISHED, language, category, pageable)
                 .map(PublishedQuizResponse::from);
     }
 
@@ -130,8 +136,13 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly = true)
-    public Page<QuizResponse> getAllQuizzes(Pageable pageable) {
-        return quizRepository.findAll(pageable).map(QuizResponse::from);
+    public Page<QuizResponse> getAllQuizzes(
+            QuestionLanguage language,
+            QuizCategory category,
+            ContentStatus status,
+            Pageable pageable
+    ) {
+        return quizRepository.findAllFiltered(language, category, status, pageable).map(QuizResponse::from);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -150,7 +161,10 @@ public class QuizService {
                 code,
                 request.type(),
                 request.selectionMode(),
-                request.passPercentage()
+                request.passPercentage(),
+                languageOrDefault(request.language()),
+                categoryOrDefault(request.category()),
+                scoreOrDefault(request.maximumScore())
         );
         return QuizResponse.from(saveQuiz(quiz, code));
     }
@@ -166,7 +180,10 @@ public class QuizService {
                 code,
                 request.type(),
                 request.selectionMode(),
-                request.passPercentage()
+                request.passPercentage(),
+                request.language() == null ? quiz.getLanguage() : request.language(),
+                request.category() == null ? quiz.getCategory() : request.category(),
+                request.maximumScore() == null ? quiz.getMaximumScore() : request.maximumScore()
         );
         return QuizResponse.from(saveQuiz(quiz, code));
     }
@@ -289,7 +306,7 @@ public class QuizService {
         List<QuestionVersion> selected = new ArrayList<>();
         for (QuizFixedQuestion item : quiz.getFixedQuestions()) {
             Question question = item.getQuestion();
-            if (!isEligibleQuestion(question)) {
+            if (!isEligibleQuestion(question, quiz)) {
                 throw new IllegalStateException(
                         "Fixed quiz contains an unpublished or invalid question: " + question.getCode()
                 );
@@ -328,6 +345,8 @@ public class QuizService {
         Set<UUID> subtopicIds = findDescendantNodeIds(rule.getKnowledgeNode().getId());
         return questionRepository.findEligibleQuestions(
                 subtopicIds,
+                rule.getQuiz().getLanguage(),
+                questionCategoryFilter(rule.getQuiz().getCategory()),
                 rule.getDifficulty(),
                 ContentStatus.PUBLISHED
         );
@@ -354,7 +373,7 @@ public class QuizService {
                 throw new IllegalStateException("A fixed quiz requires at least one question");
             }
             for (QuizFixedQuestion item : quiz.getFixedQuestions()) {
-                if (!isEligibleQuestion(item.getQuestion())) {
+                if (!isEligibleQuestion(item.getQuestion(), quiz)) {
                     throw new IllegalStateException("Publish every fixed question and its subtopic first");
                 }
             }
@@ -375,10 +394,13 @@ public class QuizService {
         }
     }
 
-    private static boolean isEligibleQuestion(Question question) {
+    private static boolean isEligibleQuestion(Question question, Quiz quiz) {
         return question.getStatus() == ContentStatus.PUBLISHED
                 && question.getPublishedVersion() != null
-                && question.getSubtopic().getStatus() == ContentStatus.PUBLISHED;
+                && question.getSubtopic().getStatus() == ContentStatus.PUBLISHED
+                && question.getLanguage() == quiz.getLanguage()
+                && (quiz.getCategory() == QuizCategory.MIXED
+                || question.getCategory().name().equals(quiz.getCategory().name()));
     }
 
     private QuizAttempt requireOwnedAttemptForUpdate(UUID attemptId, UUID userId) {
@@ -439,5 +461,21 @@ public class QuizService {
         return Objects.requireNonNull(code, "Quiz code is required")
                 .strip()
                 .toUpperCase(Locale.ROOT);
+    }
+
+    private static QuestionLanguage languageOrDefault(QuestionLanguage language) {
+        return language == null ? QuestionLanguage.VI : language;
+    }
+
+    private static QuizCategory categoryOrDefault(QuizCategory category) {
+        return category == null ? QuizCategory.TECHNICAL : category;
+    }
+
+    private static int scoreOrDefault(Integer maximumScore) {
+        return maximumScore == null ? 100 : maximumScore;
+    }
+
+    private static QuestionCategory questionCategoryFilter(QuizCategory category) {
+        return category == QuizCategory.MIXED ? null : QuestionCategory.valueOf(category.name());
     }
 }

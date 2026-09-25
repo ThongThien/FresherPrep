@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Badge, Button, Feedback, Progress } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n";
 import type {
   LearningPathDetailData,
   LearningPathItem,
@@ -19,6 +20,7 @@ type DetailState =
   | { status: "error"; message: string };
 
 export function LearningPathDetailPage({ pathId }: { pathId: string }) {
+  const { t } = useI18n();
   const [state, setState] = useState<DetailState>({ status: "loading" });
   const [requestVersion, setRequestVersion] = useState(0);
   const [joining, setJoining] = useState(false);
@@ -51,12 +53,12 @@ export function LearningPathDetailPage({ pathId }: { pathId: string }) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setState({
           status: "error",
-          message: "Unable to load this learning path. Check your connection and try again.",
+          message: t("Unable to load this learning path. Check your connection and try again."),
         });
       });
 
     return () => controller.abort();
-  }, [pathId, requestVersion]);
+  }, [pathId, requestVersion, t]);
 
   function retry() {
     setState({ status: "loading" });
@@ -86,7 +88,7 @@ export function LearningPathDetailPage({ pathId }: { pathId: string }) {
       setState({ status: "loading" });
       setRequestVersion((current) => current + 1);
     } catch {
-      setJoinError("Unable to join this learning path. Check your connection and try again.");
+      setJoinError(t("Unable to join this learning path. Check your connection and try again."));
     } finally {
       setJoining(false);
     }
@@ -97,10 +99,10 @@ export function LearningPathDetailPage({ pathId }: { pathId: string }) {
   if (state.status === "not-found") {
     return (
       <div className="mx-auto max-w-2xl py-10">
-        <p className="text-sm font-medium text-primary">Learning path</p>
-        <h1 className="mt-2 text-2xl font-semibold text-text">Learning path not found</h1>
+        <p className="text-sm font-medium text-primary">{t("Learning path")}</p>
+        <h1 className="mt-2 text-2xl font-semibold text-text">{t("Learning path not found")}</h1>
         <p className="mt-3 text-sm leading-6 text-text-muted">
-          This path may not exist or may no longer be published.
+          {t("This path may not exist or may no longer be published.")}
         </p>
         <BackLink className="mt-6 inline-flex" />
       </div>
@@ -110,9 +112,9 @@ export function LearningPathDetailPage({ pathId }: { pathId: string }) {
   if (state.status === "error") {
     return (
       <div className="mx-auto max-w-2xl py-10">
-        <Feedback tone="error" title="Learning path unavailable">{state.message}</Feedback>
+        <Feedback tone="error" title={t("Learning path unavailable")}>{state.message}</Feedback>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Button variant="secondary" onClick={retry}>Try again</Button>
+          <Button variant="secondary" onClick={retry}>{t("Try again")}</Button>
           <BackLink />
         </div>
       </div>
@@ -146,6 +148,7 @@ function LearningPathDetailContent({
   onJoin: () => void;
   onRetry: () => void;
 }) {
+  const { t } = useI18n();
   const orderedItems = useMemo(
     () => [...data.path.items].sort((a, b) => a.displayOrder - b.displayOrder),
     [data.path.items],
@@ -157,12 +160,12 @@ function LearningPathDetailContent({
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <nav aria-label="Breadcrumb">
+      <nav aria-label={t("Breadcrumb")}>
         <Link
           href="/learning-paths"
           className="inline-flex min-h-10 items-center rounded-sm text-sm font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20"
         >
-          <span aria-hidden="true">←</span>&nbsp; Learning Paths
+          <span aria-hidden="true">←</span>&nbsp; {t("Learning Paths")}
         </Link>
       </nav>
 
@@ -171,15 +174,15 @@ function LearningPathDetailContent({
           <div className="max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="info">{data.path.technologyName}</Badge>
-              {data.joined === true ? <Badge variant="success">Joined</Badge> : null}
-              {data.joined === false ? <Badge>Available</Badge> : null}
-              {data.joined === null ? <Badge variant="warning">Membership unavailable</Badge> : null}
+              {data.joined === true ? <Badge variant="success">{t("Joined")}</Badge> : null}
+              {data.joined === false ? <Badge>{t("Available")}</Badge> : null}
+              {data.joined === null ? <Badge variant="warning">{t("Membership unavailable")}</Badge> : null}
             </div>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight text-text sm:text-4xl">
               {data.path.name}
             </h1>
             <p className="mt-3 text-sm leading-6 text-text-muted sm:text-base">
-              A structured {data.path.technologyName} curriculum with {data.path.items.length} ordered {data.path.items.length === 1 ? "lesson" : "lessons"}.
+              {t("A structured {{technology}} curriculum with {{count}} ordered lessons.", { technology: data.path.technologyName, count: data.path.items.length })}
             </p>
           </div>
 
@@ -193,13 +196,13 @@ function LearningPathDetailContent({
         </div>
 
         {joinError ? (
-          <Feedback tone="error" title="Unable to join" className="mt-5 max-w-2xl">
+          <Feedback tone="error" title={t("Unable to join")} className="mt-5 max-w-2xl">
             {joinError}
           </Feedback>
         ) : null}
         {joinedNotice && data.joined === true ? (
-          <Feedback tone="success" title="Learning path joined" className="mt-5 max-w-2xl">
-            Your curriculum and progress tracking are ready.
+          <Feedback tone="success" title={t("Learning path joined")} className="mt-5 max-w-2xl">
+            {t("Your curriculum and progress tracking are ready.")}
           </Feedback>
         ) : null}
       </header>
@@ -207,23 +210,23 @@ function LearningPathDetailContent({
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
         <main>
           <div className="mb-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-subtle">Curriculum</p>
-            <h2 className="mt-1 text-xl font-semibold tracking-tight text-text">Ordered learning content</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-subtle">{t("Curriculum")}</p>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight text-text">{t("Ordered learning content")}</h2>
             <p className="mt-2 text-sm leading-6 text-text-muted">
-              Follow the display order. Required and optional lessons are identified separately.
+              {t("Follow the display order. Required and optional lessons are identified separately.")}
             </p>
           </div>
           <CurriculumList data={data} continueLessonId={continueLesson?.lessonId} />
         </main>
 
-        <aside className="space-y-5 lg:sticky lg:top-24" aria-label="Learning path progress">
+        <aside className="space-y-5 lg:sticky lg:top-24" aria-label={t("Learning path progress")}>
           <PathProgressSummary data={data} onRetry={onRetry} />
           <div className="rounded-lg border border-border bg-surface p-5">
-            <h2 className="text-sm font-semibold text-text">Curriculum structure</h2>
+            <h2 className="text-sm font-semibold text-text">{t("Curriculum structure")}</h2>
             <dl className="mt-4 space-y-3 text-sm">
-              <SummaryRow label="Total lessons" value={data.path.items.length} />
-              <SummaryRow label="Required" value={data.path.items.filter((item) => item.required).length} />
-              <SummaryRow label="Optional" value={data.path.items.filter((item) => !item.required).length} />
+              <SummaryRow label={t("Total lessons")} value={data.path.items.length} />
+              <SummaryRow label={t("Required")} value={data.path.items.filter((item) => item.required).length} />
+              <SummaryRow label={t("Optional")} value={data.path.items.filter((item) => !item.required).length} />
             </dl>
           </div>
         </aside>
@@ -245,28 +248,30 @@ function PrimaryPathAction({
   onJoin: () => void;
   onRetry: () => void;
 }) {
+  const { t } = useI18n();
   if (data.joined === false) {
-    return <Button size="lg" loading={joining} onClick={onJoin}>{joining ? "Joining..." : "Join learning path"}</Button>;
+    return <Button size="lg" loading={joining} onClick={onJoin}>{joining ? t("Joining...") : t("Join learning path")}</Button>;
   }
   if (data.joined === null) {
-    return <Button size="lg" variant="secondary" onClick={onRetry}>Retry membership</Button>;
+    return <Button size="lg" variant="secondary" onClick={onRetry}>{t("Retry membership")}</Button>;
   }
   if (continueLesson) {
-    return <ActionLink href={"/lessons/" + continueLesson.lessonId + "?pathId=" + encodeURIComponent(data.path.id)}>Continue learning</ActionLink>;
+    return <ActionLink href={"/lessons/" + continueLesson.lessonId + "?pathId=" + encodeURIComponent(data.path.id)}>{t("Continue learning")}</ActionLink>;
   }
   if (data.progress?.completed) {
-    return <ActionLink href={"/lessons/" + (data.path.items[0]?.lessonId ?? "") + "?pathId=" + encodeURIComponent(data.path.id)}>Review curriculum</ActionLink>;
+    return <ActionLink href={"/lessons/" + (data.path.items[0]?.lessonId ?? "") + "?pathId=" + encodeURIComponent(data.path.id)}>{t("Review curriculum")}</ActionLink>;
   }
-  return <Button size="lg" variant="secondary" disabled>No lesson available</Button>;
+  return <Button size="lg" variant="secondary" disabled>{t("No lesson available")}</Button>;
 }
 
 function PathProgressSummary({ data, onRetry }: { data: LearningPathDetailData; onRetry: () => void }) {
+  const { t } = useI18n();
   if (data.joined !== true) {
     return (
       <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
-        <h2 className="text-sm font-semibold text-text">Progress tracking</h2>
+        <h2 className="text-sm font-semibold text-text">{t("Progress tracking")}</h2>
         <p className="mt-2 text-sm leading-6 text-text-muted">
-          Join this path to track required lessons and completion.
+          {t("Join this path to track required lessons and completion.")}
         </p>
       </div>
     );
@@ -275,9 +280,9 @@ function PathProgressSummary({ data, onRetry }: { data: LearningPathDetailData; 
   if (!data.progress) {
     return (
       <div className="rounded-lg border border-warning/25 bg-warning-subtle p-5">
-        <h2 className="text-sm font-semibold text-warning-strong">Progress unavailable</h2>
-        <p className="mt-2 text-sm leading-6 text-warning-strong/85">Your curriculum remains available.</p>
-        <Button variant="secondary" size="sm" className="mt-3" onClick={onRetry}>Try again</Button>
+        <h2 className="text-sm font-semibold text-warning-strong">{t("Progress unavailable")}</h2>
+        <p className="mt-2 text-sm leading-6 text-warning-strong/85">{t("Your curriculum remains available.")}</p>
+        <Button variant="secondary" size="sm" className="mt-3" onClick={onRetry}>{t("Try again")}</Button>
       </div>
     );
   }
@@ -285,18 +290,18 @@ function PathProgressSummary({ data, onRetry }: { data: LearningPathDetailData; 
   return (
     <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-text">Your progress</h2>
-        {data.progress.completed ? <Badge variant="success">Completed</Badge> : null}
+        <h2 className="text-sm font-semibold text-text">{t("Your progress")}</h2>
+        {data.progress.completed ? <Badge variant="success">{t("Completed")}</Badge> : null}
       </div>
       <Progress
         className="mt-5"
         value={data.progress.progressPercentage}
-        label="Required progress"
+        label={t("Required progress")}
         showValue
         tone={data.progress.completed ? "success" : "primary"}
       />
       <p className="mt-3 text-xs leading-5 text-text-muted">
-        {data.progress.completedRequiredItems} of {data.progress.requiredItems} required lessons complete
+        {t("{{completed}} of {{total}} required lessons complete", { completed: data.progress.completedRequiredItems, total: data.progress.requiredItems })}
       </p>
     </div>
   );
@@ -338,20 +343,22 @@ function ActionLink({ href, children }: { href: string; children: React.ReactNod
 }
 
 function BackLink({ className = "" }: { className?: string }) {
+  const { t } = useI18n();
   return (
     <Link
       href="/learning-paths"
       className={`min-h-10 items-center rounded-md px-3 text-sm font-semibold text-primary hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${className}`}
     >
-      Back to learning paths
+      {t("Back to learning paths")}
     </Link>
   );
 }
 
 function LearningPathDetailSkeleton() {
+  const { t } = useI18n();
   return (
     <div className="mx-auto w-full max-w-6xl animate-pulse motion-reduce:animate-none" role="status">
-      <span className="sr-only">Loading learning path</span>
+      <span className="sr-only">{t("Loading learning path")}</span>
       <div className="h-4 w-32 rounded bg-surface-strong" />
       <div className="mt-8 h-10 w-96 max-w-full rounded bg-surface-strong" />
       <div className="mt-4 h-4 w-full max-w-2xl rounded bg-surface-strong" />

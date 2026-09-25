@@ -2,6 +2,8 @@ package com.fesherprep.fesherprep_api.quiz.dto;
 
 import com.fesherprep.fesherprep_api.quiz.domain.AttemptStatus;
 import com.fesherprep.fesherprep_api.quiz.domain.QuizAttempt;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
+import com.fesherprep.fesherprep_api.quiz.domain.QuizCategory;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -13,8 +15,13 @@ public record QuizAttemptResponse(
         UUID quizId,
         String quizTitle,
         int passPercentage,
+        QuestionLanguage language,
+        QuizCategory category,
+        int maximumScore,
+        BigDecimal passingScore,
         AttemptStatus status,
         BigDecimal scorePercentage,
+        BigDecimal score,
         Boolean passed,
         Instant startedAt,
         Instant submittedAt,
@@ -27,8 +34,13 @@ public record QuizAttemptResponse(
                 attempt.getQuiz().getId(),
                 attempt.getQuizTitle(),
                 attempt.getPassPercentage(),
+                attempt.getLanguage(),
+                attempt.getCategory(),
+                attempt.getMaximumScore(),
+                attempt.getPassingScore(),
                 attempt.getStatus(),
                 attempt.getScorePercentage(),
+                attempt.getScore(),
                 revealResult ? attempt.isPassed() : null,
                 attempt.getCreatedAt(),
                 attempt.getSubmittedAt(),

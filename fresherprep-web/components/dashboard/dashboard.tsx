@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useCurrentUser } from "@/components/auth";
 import { Badge, Button, Feedback, Progress } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
+import { useI18n, type Locale } from "@/lib/i18n";
 import type {
   DashboardData,
   DashboardSection as DashboardSectionKey,
@@ -21,6 +22,7 @@ type DashboardState =
 
 export function Dashboard() {
   const user = useCurrentUser();
+  const { t } = useI18n();
   const [state, setState] = useState<DashboardState>({ status: "loading" });
   const [requestVersion, setRequestVersion] = useState(0);
 
@@ -44,12 +46,12 @@ export function Dashboard() {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setState({
           status: "error",
-          message: "Unable to load your learning dashboard. Check your connection and try again.",
+          message: t("Unable to load your learning dashboard. Check your connection and try again."),
         });
       });
 
     return () => controller.abort();
-  }, [requestVersion]);
+  }, [requestVersion, t]);
 
   function retry() {
     setState({ status: "loading" });
@@ -61,22 +63,22 @@ export function Dashboard() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-10">
       <header>
-        <p className="text-sm font-medium text-primary">Learning dashboard</p>
+        <p className="text-sm font-medium text-primary">{t("Learning dashboard")}</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-text sm:text-3xl">
-          Welcome back, {user.displayName}
+          {t("Welcome back, {{name}}", { name: user.displayName })}
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted sm:text-base">
-          Pick up your Java learning from where you stopped and keep the next step clear.
+          {t("Pick up your Java learning from where you stopped and keep the next step clear.")}
         </p>
       </header>
 
       {state.status === "error" ? (
         <div className="max-w-2xl">
-          <Feedback tone="error" title="Dashboard unavailable">
+          <Feedback tone="error" title={t("Dashboard unavailable")}>
             {state.message}
           </Feedback>
           <Button variant="secondary" className="mt-4" onClick={retry}>
-            Try again
+            {t("Try again")}
           </Button>
         </div>
       ) : (
@@ -87,8 +89,9 @@ export function Dashboard() {
 }
 
 function DashboardContent({ data, onRetry }: { data: DashboardData; onRetry: () => void }) {
+  const { locale, t } = useI18n();
   const latestPath = data.paths.content[0];
-  const continueLesson = useMemo(() => selectContinueLesson(data), [data]);
+  const continueLesson = useMemo(() => selectContinueLesson(data, t, locale), [data, locale, t]);
 
   return (
     <>
@@ -101,13 +104,13 @@ function DashboardContent({ data, onRetry }: { data: DashboardData; onRetry: () 
       />
 
       <DashboardSection
-        eyebrow="Current progress"
-        title="Latest joined learning path"
-        description="Progress reflects required lesson weights calculated by FresherPrep."
-        action={<TextLink href="/learning-paths">All learning paths</TextLink>}
+        eyebrow={t("Current progress")}
+        title={t("Latest joined learning path")}
+        description={t("Progress reflects required lesson weights calculated by FresherPrep.")}
+        action={<TextLink href="/learning-paths">{t("All learning paths")}</TextLink>}
       >
         {data.issues.includes("paths") ? (
-          <SectionError message="Your learning paths could not be loaded." onRetry={onRetry} />
+          <SectionError message={t("Your learning paths could not be loaded.")} onRetry={onRetry} />
         ) : latestPath ? (
           <CurrentPath
             membership={latestPath}
@@ -116,43 +119,45 @@ function DashboardContent({ data, onRetry }: { data: DashboardData; onRetry: () 
           />
         ) : (
           <EmptyState
-            title="No learning path joined yet"
-            description="Choose a structured path to organize lessons and track required progress."
+            title={t("No learning path joined yet")}
+            description={t("Choose a structured path to organize lessons and track required progress.")}
             href="/learning-paths"
-            action="Browse learning paths"
+            action={t("Browse learning paths")}
           />
         )}
       </DashboardSection>
 
+      <Achievements data={data} onRetry={onRetry} />
+
       <div className="grid gap-10 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
         <DashboardSection
-          eyebrow="Your curriculum"
-          title="Learning paths"
-          description="Recently joined paths, kept compact so your next action stays visible."
-          action={<TextLink href="/learning-paths">Browse paths</TextLink>}
+          eyebrow={t("Your curriculum")}
+          title={t("Learning paths")}
+          description={t("Recently joined paths, kept compact so your next action stays visible.")}
+          action={<TextLink href="/learning-paths">{t("Browse paths")}</TextLink>}
         >
           {data.issues.includes("paths") ? (
-            <SectionError message="Learning paths are temporarily unavailable." onRetry={onRetry} />
+            <SectionError message={t("Learning paths are temporarily unavailable.")} onRetry={onRetry} />
           ) : data.paths.content.length ? (
             <LearningPathList paths={data.paths.content} />
           ) : (
             <EmptyState
-              title="Build your learning plan"
-              description="Join a published learning path to see it here."
+              title={t("Build your learning plan")}
+              description={t("Join a published learning path to see it here.")}
               href="/learning-paths"
-              action="Explore learning paths"
+              action={t("Explore learning paths")}
             />
           )}
         </DashboardSection>
 
         <DashboardSection
-          eyebrow="Recent work"
-          title="Learning activity"
-          description="Your latest lesson and quiz activity."
-          action={<TextLink href="/progress">View progress</TextLink>}
+          eyebrow={t("Recent work")}
+          title={t("Learning activity")}
+          description={t("Your latest lesson and quiz activity.")}
+          action={<TextLink href="/progress">{t("View progress")}</TextLink>}
         >
           {data.issues.includes("lessons") && data.issues.includes("quizAttempts") ? (
-            <SectionError message="Recent activity could not be loaded." onRetry={onRetry} />
+            <SectionError message={t("Recent activity could not be loaded.")} onRetry={onRetry} />
           ) : (
             <RecentActivity
               lessons={data.lessonProgress.content}
@@ -165,6 +170,146 @@ function DashboardContent({ data, onRetry }: { data: DashboardData; onRetry: () 
       <LearningStatistics data={data} />
     </>
   );
+}
+
+type AchievementSource = keyof DashboardData["achievementProgress"];
+
+interface AchievementDefinition {
+  id: string;
+  title: string;
+  description: string;
+  source: AchievementSource;
+  target: number;
+  icon: "book" | "stack" | "quiz" | "award";
+}
+
+function Achievements({ data, onRetry }: { data: DashboardData; onRetry: () => void }) {
+  const { t } = useI18n();
+  const definitions: AchievementDefinition[] = [
+    {
+      id: "first-lesson",
+      title: t("First Lesson"),
+      description: t("Complete your first lesson."),
+      source: "completedLessons",
+      target: 1,
+      icon: "book",
+    },
+    {
+      id: "ten-lessons",
+      title: t("10 Lessons Completed"),
+      description: t("Complete ten lessons in your learning journey."),
+      source: "completedLessons",
+      target: 10,
+      icon: "stack",
+    },
+    {
+      id: "first-quiz",
+      title: t("First Quiz"),
+      description: t("Submit your first quiz attempt."),
+      source: "submittedQuizzes",
+      target: 1,
+      icon: "quiz",
+    },
+    {
+      id: "quiz-master",
+      title: t("Quiz Master"),
+      description: t("Pass five quiz attempts."),
+      source: "passedQuizzes",
+      target: 5,
+      icon: "award",
+    },
+  ];
+  const unlocked = definitions.filter((item) => {
+    const value = data.achievementProgress[item.source];
+    return value !== null && value >= item.target;
+  }).length;
+  const unavailable = definitions.some((item) => data.achievementProgress[item.source] === null);
+
+  return (
+    <DashboardSection
+      eyebrow={t("Milestones")}
+      title={t("Achievements")}
+      description={t("Small milestones based on your actual lesson and quiz progress.")}
+      action={<Badge variant={unlocked > 0 ? "success" : "neutral"}>{t("{{count}} of {{total}} unlocked", { count: unlocked, total: definitions.length })}</Badge>}
+    >
+      {unavailable ? (
+        <div className="mb-4 flex flex-col gap-3 rounded-md border border-warning/25 bg-warning-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-warning-strong">{t("Some achievement progress is temporarily unavailable.")}</p>
+          <Button variant="secondary" size="sm" onClick={onRetry}>{t("Try again")}</Button>
+        </div>
+      ) : null}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {definitions.map((achievement) => (
+          <AchievementCard
+            key={achievement.id}
+            achievement={achievement}
+            current={data.achievementProgress[achievement.source]}
+          />
+        ))}
+      </div>
+    </DashboardSection>
+  );
+}
+
+function AchievementCard({ achievement, current }: { achievement: AchievementDefinition; current: number | null }) {
+  const { t } = useI18n();
+  const unlocked = current !== null && current >= achievement.target;
+  const progress = current === null ? 0 : Math.min(100, (current / achievement.target) * 100);
+
+  return (
+    <article
+      className={`rounded-lg border p-4 transition-[border-color,background-color] motion-reduce:transition-none ${
+        unlocked ? "border-success/30 bg-success-subtle" : "border-border bg-surface"
+      }`}
+      aria-label={`${achievement.title}: ${current === null ? t("Unavailable") : unlocked ? t("Unlocked") : t("Not yet unlocked")}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span
+          className={`flex size-10 shrink-0 items-center justify-center rounded-full border ${
+            unlocked
+              ? "border-success/25 bg-surface text-success-strong"
+              : "border-border bg-surface-muted text-text-subtle"
+          }`}
+          aria-hidden="true"
+        >
+          <AchievementIcon icon={achievement.icon} />
+        </span>
+        <Badge variant={unlocked ? "success" : "neutral"}>
+          {current === null ? t("Unavailable") : unlocked ? t("Unlocked") : t("In progress")}
+        </Badge>
+      </div>
+      <h3 className="mt-4 font-semibold text-text">{achievement.title}</h3>
+      <p className="mt-1 min-h-10 text-sm leading-5 text-text-muted">{achievement.description}</p>
+      {current !== null ? (
+        <div className="mt-4">
+          <Progress
+            value={progress}
+            label={t("{{current}} of {{target}}", { current: Math.min(current, achievement.target), target: achievement.target })}
+          />
+          <p className="mt-2 text-xs font-medium tabular-nums text-text-subtle">
+            {unlocked
+              ? t("Achievement unlocked")
+              : t("{{current}} / {{target}} complete", { current: Math.min(current, achievement.target), target: achievement.target })}
+          </p>
+        </div>
+      ) : (
+        <p className="mt-4 text-xs text-text-subtle">{t("Progress data could not be loaded.")}</p>
+      )}
+    </article>
+  );
+}
+
+function AchievementIcon({ icon }: { icon: AchievementDefinition["icon"] }) {
+  if (icon === "book") {
+    return <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current" strokeWidth="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z" /><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z" /></svg>;
+  }
+  if (icon === "stack") {
+    return <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current" strokeWidth="1.8"><path d="m4 7 8-4 8 4-8 4-8-4Z" /><path d="m4 12 8 4 8-4M4 17l8 4 8-4" /></svg>;
+  }
+  if (icon === "quiz") {
+    return <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current" strokeWidth="1.8"><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h5M8 16h3" /></svg>;
+  }
+  return <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current" strokeWidth="1.8"><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" /><path d="M8 6H5v2a3 3 0 0 0 3 3M16 6h3v2a3 3 0 0 1-3 3M12 13v4M8 21h8M9 17h6" /></svg>;
 }
 
 interface ContinueLesson {
@@ -189,6 +334,7 @@ function ContinueLearning({
   hasDataError: boolean;
   onRetry: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <section aria-labelledby="continue-learning-title">
       <div className="overflow-hidden rounded-lg border border-primary/20 bg-surface shadow-card">
@@ -196,7 +342,7 @@ function ContinueLearning({
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                Continue learning
+                {t("Continue learning")}
               </p>
               {lesson ? (
                 <>
@@ -204,26 +350,26 @@ function ContinueLearning({
                     <h2 id="continue-learning-title" className="text-xl font-semibold text-text sm:text-2xl">
                       {lesson.title}
                     </h2>
-                    {lesson.completed ? <Badge variant="success">Completed</Badge> : null}
+                    {lesson.completed ? <Badge variant="success">{t("Completed")}</Badge> : null}
                   </div>
                   <p className="mt-2 text-sm leading-6 text-text-muted">{lesson.context}</p>
                   {lesson.position && lesson.total ? (
                     <p className="mt-3 text-xs font-medium text-text-subtle">
-                      Lesson {lesson.position} of {lesson.total}
+                      {t("Lesson {{position}} of {{total}}", { position: lesson.position, total: lesson.total })}
                     </p>
                   ) : null}
                 </>
               ) : (
                 <>
                   <h2 id="continue-learning-title" className="mt-3 text-xl font-semibold text-text sm:text-2xl">
-                    {pathCompleted ? "Your latest path is complete" : "Choose your next learning path"}
+                    {pathCompleted ? t("Your latest path is complete") : t("Choose your next learning path")}
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
                     {pathCompleted
-                      ? "Review completed lessons or select another path when you are ready."
+                      ? t("Review completed lessons or select another path when you are ready.")
                       : hasJoinedPath
-                        ? "This path has no available lesson to continue right now."
-                        : "Join a published path to get an ordered lesson plan and reliable progress tracking."}
+                        ? t("This path has no available lesson to continue right now.")
+                        : t("Join a published path to get an ordered lesson plan and reliable progress tracking.")}
                   </p>
                 </>
               )}
@@ -232,12 +378,12 @@ function ContinueLearning({
             <div className="shrink-0">
               {lesson ? (
                 <ActionLink href={`/lessons/${lesson.id}`}>
-                  {lesson.completed ? "Review lesson" : "Continue lesson"}
+                  {lesson.completed ? t("Review lesson") : t("Continue lesson")}
                 </ActionLink>
               ) : hasDataError ? (
-                <Button variant="secondary" onClick={onRetry}>Try again</Button>
+                <Button variant="secondary" onClick={onRetry}>{t("Try again")}</Button>
               ) : (
-                <ActionLink href="/learning-paths">Browse learning paths</ActionLink>
+                <ActionLink href="/learning-paths">{t("Browse learning paths")}</ActionLink>
               )}
             </div>
           </div>
@@ -256,6 +402,7 @@ function CurrentPath({
   progress: DashboardData["latestPathProgress"];
   progressUnavailable: boolean;
 }) {
+  const { t } = useI18n();
   const path = membership.learningPath;
 
   return (
@@ -264,24 +411,24 @@ function CurrentPath({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-semibold text-text">{path.name}</h3>
-            {progress?.completed ? <Badge variant="success">Completed</Badge> : <Badge>In progress</Badge>}
+            {progress?.completed ? <Badge variant="success">{t("Completed")}</Badge> : <Badge>{t("In progress")}</Badge>}
           </div>
           <p className="mt-1 text-sm text-text-muted">{path.technologyName}</p>
         </div>
-        <TextLink href={`/learning-paths/${path.id}`}>View path</TextLink>
+        <TextLink href={`/learning-paths/${path.id}`}>{t("View path")}</TextLink>
       </div>
 
       {progress ? (
         <div className="mt-6">
-          <Progress value={progress.progressPercentage} label="Required progress" showValue />
+          <Progress value={progress.progressPercentage} label={t("Required progress")} showValue />
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-text-muted">
-            <span>{progress.completedRequiredItems} of {progress.requiredItems} required lessons complete</span>
-            <span>{progress.completedItems} of {progress.totalItems} total lessons complete</span>
+            <span>{t("{{completed}} of {{total}} required lessons complete", { completed: progress.completedRequiredItems, total: progress.requiredItems })}</span>
+            <span>{t("{{completed}} of {{total}} total lessons complete", { completed: progress.completedItems, total: progress.totalItems })}</span>
           </div>
         </div>
       ) : progressUnavailable ? (
         <p className="mt-5 border-t border-border pt-4 text-sm text-text-muted">
-          Progress is temporarily unavailable. The learning path is still accessible.
+          {t("Progress is temporarily unavailable. The learning path is still accessible.")}
         </p>
       ) : null}
     </div>
@@ -289,6 +436,7 @@ function CurrentPath({
 }
 
 function LearningPathList({ paths }: { paths: DashboardData["paths"]["content"] }) {
+  const { locale, t } = useI18n();
   return (
     <ul className="divide-y divide-border rounded-lg border border-border bg-surface shadow-card">
       {paths.map((membership) => (
@@ -301,10 +449,10 @@ function LearningPathList({ paths }: { paths: DashboardData["paths"]["content"] 
               {membership.learningPath.name}
             </Link>
             <p className="mt-1 text-sm text-text-muted">
-              {membership.learningPath.technologyName} · Joined {formatDate(membership.joinedAt)}
+              {t("{{technology}} · Joined {{date}}", { technology: membership.learningPath.technologyName, date: formatDate(membership.joinedAt, locale) })}
             </p>
           </div>
-          <TextLink href={`/learning-paths/${membership.learningPath.id}`}>View</TextLink>
+          <TextLink href={`/learning-paths/${membership.learningPath.id}`}>{t("View")}</TextLink>
         </li>
       ))}
     </ul>
@@ -312,11 +460,12 @@ function LearningPathList({ paths }: { paths: DashboardData["paths"]["content"] 
 }
 
 function RecentActivity({ lessons, attempts }: { lessons: LessonProgress[]; attempts: QuizAttemptSummary[] }) {
+  const { locale, t } = useI18n();
   const activities = useMemo(() => {
     const lessonItems = lessons.map((lesson) => ({
       id: `lesson-${lesson.lessonId}`,
       title: lesson.lessonTitle,
-      label: lesson.completed ? "Lesson completed" : "Lesson viewed",
+      label: lesson.completed ? t("Lesson completed") : t("Lesson viewed"),
       date: lesson.lastViewedAt,
       href: `/lessons/${lesson.lessonId}`,
       tone: lesson.completed ? "success" as const : "neutral" as const,
@@ -327,9 +476,9 @@ function RecentActivity({ lessons, attempts }: { lessons: LessonProgress[]; atte
       label:
         attempt.status === "SUBMITTED"
           ? attempt.passed
-            ? "Quiz passed"
-            : "Quiz submitted"
-          : "Quiz in progress",
+            ? t("Quiz passed")
+            : t("Quiz submitted")
+          : t("Quiz in progress"),
       date: attempt.submittedAt ?? attempt.startedAt,
       href: attempt.status === "SUBMITTED"
         ? `/quizzes/${attempt.quizId}/attempts/${attempt.id}/result`
@@ -339,15 +488,15 @@ function RecentActivity({ lessons, attempts }: { lessons: LessonProgress[]; atte
     return [...lessonItems, ...quizItems]
       .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
       .slice(0, 6);
-  }, [attempts, lessons]);
+  }, [attempts, lessons, t]);
 
   if (!activities.length) {
     return (
       <EmptyState
-        title="No recent activity"
-        description="Start a lesson or quiz and your latest work will appear here."
+        title={t("No recent activity")}
+        description={t("Start a lesson or quiz and your latest work will appear here.")}
         href="/learning-paths"
-        action="Start learning"
+        action={t("Start learning")}
       />
     );
   }
@@ -364,7 +513,7 @@ function RecentActivity({ lessons, attempts }: { lessons: LessonProgress[]; atte
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <Badge variant={activity.tone}>{activity.label}</Badge>
                 <time dateTime={activity.date} className="text-xs text-text-subtle">
-                  {formatDate(activity.date)}
+                  {formatDate(activity.date, locale)}
                 </time>
               </div>
             </div>
@@ -376,17 +525,18 @@ function RecentActivity({ lessons, attempts }: { lessons: LessonProgress[]; atte
 }
 
 function LearningStatistics({ data }: { data: DashboardData }) {
+  const { t } = useI18n();
   const stats = [
-    { label: "Paths joined", value: data.issues.includes("paths") ? "—" : data.paths.totalElements },
-    { label: "Lessons started", value: data.issues.includes("lessons") ? "—" : data.lessonProgress.totalElements },
-    { label: "Quiz attempts", value: data.issues.includes("quizAttempts") ? "—" : data.quizAttempts.totalElements },
+    { label: t("Paths joined"), value: data.issues.includes("paths") ? "—" : data.paths.totalElements },
+    { label: t("Lessons started"), value: data.issues.includes("lessons") ? "—" : data.lessonProgress.totalElements },
+    { label: t("Quiz attempts"), value: data.issues.includes("quizAttempts") ? "—" : data.quizAttempts.totalElements },
   ];
 
   return (
     <DashboardSection
-      eyebrow="At a glance"
-      title="Learning statistics"
-      description="Simple totals supported directly by your learning history."
+      eyebrow={t("At a glance")}
+      title={t("Learning statistics")}
+      description={t("Simple totals supported directly by your learning history.")}
     >
       <dl className="grid divide-y divide-border rounded-lg border border-border bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {stats.map((stat) => (
@@ -440,10 +590,11 @@ function EmptyState({ title, description, href, action }: { title: string; descr
 }
 
 function SectionError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const { t } = useI18n();
   return (
     <div className="rounded-lg border border-danger/20 bg-danger-subtle p-5">
       <p className="text-sm font-medium text-danger-strong">{message}</p>
-      <Button variant="secondary" size="sm" className="mt-3" onClick={onRetry}>Try again</Button>
+      <Button variant="secondary" size="sm" className="mt-3" onClick={onRetry}>{t("Try again")}</Button>
     </div>
   );
 }
@@ -471,9 +622,10 @@ function TextLink({ href, children, className = "" }: { href: string; children: 
 }
 
 function DashboardSkeleton() {
+  const { t } = useI18n();
   return (
     <div className="mx-auto w-full max-w-6xl animate-pulse space-y-10 motion-reduce:animate-none" role="status">
-      <span className="sr-only">Loading dashboard</span>
+      <span className="sr-only">{t("Loading dashboard")}</span>
       <div className="space-y-3">
         <div className="h-4 w-32 rounded bg-surface-strong" />
         <div className="h-8 w-72 max-w-full rounded bg-surface-strong" />
@@ -484,6 +636,12 @@ function DashboardSkeleton() {
         <div className="h-6 w-52 rounded bg-surface-strong" />
         <div className="h-44 rounded-lg border border-border bg-surface" />
       </div>
+      <div className="space-y-4">
+        <div className="h-6 w-44 rounded bg-surface-strong" />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((item) => <div key={item} className="h-52 rounded-lg border border-border bg-surface" />)}
+        </div>
+      </div>
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="h-64 rounded-lg border border-border bg-surface" />
         <div className="h-64 rounded-lg border border-border bg-surface" />
@@ -492,21 +650,21 @@ function DashboardSkeleton() {
   );
 }
 
-function selectContinueLesson(data: DashboardData): ContinueLesson | null {
+function selectContinueLesson(data: DashboardData, t: (key: string, values?: Record<string, string | number>) => string, locale: Locale): ContinueLesson | null {
   const latest = data.lessonProgress.content[0];
   const pathLessons = [...(data.latestPathProgress?.lessons ?? [])].sort(
     (a, b) => a.displayOrder - b.displayOrder,
   );
 
-  if (latest && !latest.completed) return fromLessonProgress(latest, pathLessons);
+  if (latest && !latest.completed) return fromLessonProgress(latest, pathLessons, t, locale);
 
   const nextPathLesson = pathLessons.find((lesson) => !lesson.completed);
-  if (nextPathLesson) return fromPathLesson(nextPathLesson, pathLessons);
+  if (nextPathLesson) return fromPathLesson(nextPathLesson, pathLessons, t);
 
-  return latest ? fromLessonProgress(latest, pathLessons) : null;
+  return latest ? fromLessonProgress(latest, pathLessons, t, locale) : null;
 }
 
-function fromLessonProgress(lesson: LessonProgress, pathLessons: LearningPathLessonProgress[]): ContinueLesson {
+function fromLessonProgress(lesson: LessonProgress, pathLessons: LearningPathLessonProgress[], t: (key: string, values?: Record<string, string | number>) => string, locale: Locale): ContinueLesson {
   const pathIndex = pathLessons.findIndex((item) => item.lessonId === lesson.lessonId);
   return {
     id: lesson.lessonId,
@@ -515,19 +673,19 @@ function fromLessonProgress(lesson: LessonProgress, pathLessons: LearningPathLes
     position: pathIndex >= 0 ? pathIndex + 1 : undefined,
     total: pathIndex >= 0 ? pathLessons.length : undefined,
     context: lesson.completed
-      ? `Completed lesson · Last viewed ${formatDate(lesson.lastViewedAt)}`
-      : `Last viewed ${formatDate(lesson.lastViewedAt)} · ${lesson.maxScrollPercent}% maximum scroll`,
+      ? t("Completed lesson · Last viewed {{date}}", { date: formatDate(lesson.lastViewedAt, locale) })
+      : t("Last viewed {{date}} · {{percent}}% maximum scroll", { date: formatDate(lesson.lastViewedAt, locale), percent: lesson.maxScrollPercent }),
   };
 }
 
-function fromPathLesson(lesson: LearningPathLessonProgress, pathLessons: LearningPathLessonProgress[]): ContinueLesson {
+function fromPathLesson(lesson: LearningPathLessonProgress, pathLessons: LearningPathLessonProgress[], t: (key: string) => string): ContinueLesson {
   return {
     id: lesson.lessonId,
     title: lesson.lessonTitle,
     completed: lesson.completed,
     position: pathLessons.findIndex((item) => item.lessonId === lesson.lessonId) + 1,
     total: pathLessons.length,
-    context: lesson.required ? "Next required lesson in your latest joined path" : "Next lesson in your latest joined path",
+    context: lesson.required ? t("Next required lesson in your latest joined path") : t("Next lesson in your latest joined path"),
   };
 }
 
@@ -535,8 +693,8 @@ function hasAnyIssue(data: DashboardData, sections: DashboardSectionKey[]) {
   return sections.some((section) => data.issues.includes(section));
 }
 
-function formatDate(value: string) {
+function formatDate(value: string, locale: Locale) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Recently";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(date);
+  if (Number.isNaN(date.getTime())) return locale === "vi" ? "Gần đây" : "Recently";
+  return new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en", { month: "short", day: "numeric", year: "numeric" }).format(date);
 }

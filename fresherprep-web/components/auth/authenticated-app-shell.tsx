@@ -8,6 +8,7 @@ import { AppShell } from "@/components/shell";
 import { Button, Feedback } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { CurrentUser } from "@/lib/auth/types";
+import { useI18n } from "@/lib/i18n";
 
 import { CurrentUserProvider } from "./current-user-context";
 
@@ -22,6 +23,7 @@ type SessionState =
 
 export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) {
   const pathname = usePathname();
+  const { t } = useI18n();
   const [session, setSession] = useState<SessionState>({ status: "loading" });
   const [loggingOut, setLoggingOut] = useState(false);
   const [sessionRequest, setSessionRequest] = useState(0);
@@ -43,7 +45,7 @@ export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) 
 
         const payload = (await response.json()) as { user?: CurrentUser };
         if (!payload.user) {
-          setSession({ status: "error", message: "The current account could not be loaded." });
+          setSession({ status: "error", message: t("The current account could not be loaded.") });
           return;
         }
         setSession({ status: "authenticated", user: payload.user });
@@ -52,12 +54,12 @@ export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) 
         if (error instanceof DOMException && error.name === "AbortError") return;
         setSession({
           status: "error",
-          message: "Unable to verify your account. Check your connection and try again.",
+          message: t("Unable to verify your account. Check your connection and try again."),
         });
       });
 
     return () => controller.abort();
-  }, [pathname, sessionRequest]);
+  }, [pathname, sessionRequest, t]);
 
   async function logout() {
     if (loggingOut) return;
@@ -84,12 +86,17 @@ export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) 
   return (
     <AppShell userState={userState} onLogout={logout} logoutPending={loggingOut}>
       {session.status === "authenticated" ? (
-        <CurrentUserProvider user={session.user}>{children}</CurrentUserProvider>
+        <CurrentUserProvider
+          user={session.user}
+          updateUser={(user) => setSession({ status: "authenticated", user })}
+        >
+          {children}
+        </CurrentUserProvider>
       ) : null}
-      {session.status === "loading" ? <WorkspaceLoading /> : null}
+      {session.status === "loading" ? <WorkspaceLoading label={t("Loading learning workspace")} /> : null}
       {session.status === "error" ? (
         <div className="mx-auto max-w-xl py-12">
-          <Feedback tone="error" title="Account unavailable">
+          <Feedback tone="error" title={t("Account unavailable")}>
             {session.message}
           </Feedback>
           <Button
@@ -100,7 +107,7 @@ export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) 
               setSessionRequest((current) => current + 1);
             }}
           >
-            Try again
+            {t("Try again")}
           </Button>
         </div>
       ) : null}
@@ -108,10 +115,10 @@ export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) 
   );
 }
 
-function WorkspaceLoading() {
+function WorkspaceLoading({ label }: { label: string }) {
   return (
     <div className="mx-auto max-w-3xl animate-pulse space-y-5 py-4 motion-reduce:animate-none" role="status">
-      <span className="sr-only">Loading learning workspace</span>
+      <span className="sr-only">{label}</span>
       <div className="h-7 w-52 rounded bg-surface-strong" />
       <div className="h-4 w-full max-w-xl rounded bg-surface-strong" />
       <div className="mt-8 h-36 rounded-lg border border-border bg-surface" />

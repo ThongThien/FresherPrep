@@ -3,6 +3,10 @@ package com.fesherprep.fesherprep_api.question.controller;
 import com.fesherprep.fesherprep_api.config.OpenApiConfiguration;
 import com.fesherprep.fesherprep_api.question.dto.*;
 import com.fesherprep.fesherprep_api.question.service.QuestionService;
+import com.fesherprep.fesherprep_api.question.domain.Difficulty;
+import com.fesherprep.fesherprep_api.question.domain.QuestionCategory;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
+import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +30,14 @@ public class QuestionController {
 
     @GetMapping
     public Page<QuestionResponse> getAllQuestions(
+            @RequestParam(required = false) QuestionLanguage language,
+            @RequestParam(required = false) QuestionCategory category,
+            @RequestParam(required = false) UUID knowledgeNodeId,
+            @RequestParam(required = false) Difficulty difficulty,
+            @RequestParam(required = false) ContentStatus status,
             @PageableDefault(size = 20, sort = "code", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        return questionService.getAllQuestions(pageable);
+        return questionService.getAllQuestions(language, category, knowledgeNodeId, difficulty, status, pageable);
     }
 
     @GetMapping("/{questionId}")

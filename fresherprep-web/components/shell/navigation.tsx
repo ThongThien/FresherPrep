@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/lib/i18n";
 
 import {
   isNavigationItemActive,
@@ -23,9 +24,10 @@ export function LearningNavigation({
   className,
 }: LearningNavigationProps) {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
-    <nav aria-label="Learning navigation" className={className}>
+    <nav aria-label={t("Learning navigation")} className={className}>
       <ul className="space-y-1">
         {items.map((item) => {
           const active = isNavigationItemActive(pathname, item.href);
@@ -49,8 +51,8 @@ export function LearningNavigation({
                     active ? "bg-primary" : "group-hover:bg-text-subtle",
                   )}
                 />
-                <span>{item.label}</span>
-                {active ? <span className="sr-only">(current page)</span> : null}
+                <span>{t(item.label)}</span>
+                {active ? <span className="sr-only">{t("(current page)")}</span> : null}
               </Link>
             </li>
           );

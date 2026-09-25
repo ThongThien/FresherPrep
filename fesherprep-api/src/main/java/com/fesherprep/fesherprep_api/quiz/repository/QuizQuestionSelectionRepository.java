@@ -2,6 +2,8 @@ package com.fesherprep.fesherprep_api.quiz.repository;
 
 import com.fesherprep.fesherprep_api.question.domain.Difficulty;
 import com.fesherprep.fesherprep_api.question.domain.Question;
+import com.fesherprep.fesherprep_api.question.domain.QuestionCategory;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
@@ -25,10 +27,14 @@ public interface QuizQuestionSelectionRepository extends Repository<Question, UU
               and question.publishedVersion is not null
               and question.subtopic.status = :status
               and question.subtopic.id in :subtopicIds
+              and question.language = :language
+              and (:category is null or question.category = :category)
               and (:difficulty is null or question.difficulty = :difficulty)
             """)
     List<Question> findEligibleQuestions(
             @Param("subtopicIds") Set<UUID> subtopicIds,
+            @Param("language") QuestionLanguage language,
+            @Param("category") QuestionCategory category,
             @Param("difficulty") Difficulty difficulty,
             @Param("status") ContentStatus status
     );

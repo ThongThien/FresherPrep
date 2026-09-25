@@ -2,6 +2,8 @@ package com.fesherprep.fesherprep_api.question.dto;
 
 import com.fesherprep.fesherprep_api.question.domain.Difficulty;
 import com.fesherprep.fesherprep_api.question.domain.Question;
+import com.fesherprep.fesherprep_api.question.domain.QuestionCategory;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 
 import java.time.Instant;
@@ -12,6 +14,8 @@ public record QuestionResponse(
         UUID subtopicId,
         String code,
         Difficulty difficulty,
+        QuestionLanguage language,
+        QuestionCategory category,
         ContentStatus status,
         UUID publishedVersionId,
         Instant createdAt,
@@ -23,6 +27,8 @@ public record QuestionResponse(
                 question.getSubtopic().getId(),
                 question.getCode(),
                 question.getDifficulty(),
+                question.getLanguage(),
+                question.getCategory(),
                 question.getStatus(),
                 question.getPublishedVersion() == null ? null : question.getPublishedVersion().getId(),
                 question.getCreatedAt(),

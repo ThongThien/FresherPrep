@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Input } from "@/components/ui";
+import { useI18n } from "@/lib/i18n";
 
 interface PasswordFieldProps {
   id: string;
@@ -22,6 +23,7 @@ export function PasswordField({
   disabled,
 }: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
+  const { t } = useI18n();
 
   return (
     <div className="relative">
@@ -43,9 +45,9 @@ export function PasswordField({
         onClick={() => setVisible((current) => !current)}
         disabled={disabled}
         className="absolute inset-y-0 right-0 px-3 text-xs font-semibold text-text-muted transition-colors hover:text-text focus-visible:rounded-sm disabled:opacity-50"
-        aria-label={visible ? "Hide password" : "Show password"}
+        aria-label={visible ? t("Hide password") : t("Show password")}
       >
-        {visible ? "Hide" : "Show"}
+        {visible ? t("Hide") : t("Show")}
       </button>
     </div>
   );

@@ -16,7 +16,10 @@ import java.time.Instant;
 import java.util.Objects;
 
 @Entity
-@Table(name = "questions", indexes = @Index(name = "idx_questions_selection", columnList = "subtopic_id,status,difficulty"))
+@Table(name = "questions", indexes = {
+        @Index(name = "idx_questions_selection", columnList = "subtopic_id,status,difficulty"),
+        @Index(name = "idx_questions_admin_filter", columnList = "language,category,status,difficulty")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Question extends BaseEntity {
@@ -32,6 +35,14 @@ public class Question extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private Difficulty difficulty;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 8, columnDefinition = "varchar(8) default 'VI'")
+    private QuestionLanguage language = QuestionLanguage.VI;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16, columnDefinition = "varchar(16) default 'TECHNICAL'")
+    private QuestionCategory category = QuestionCategory.TECHNICAL;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
@@ -51,15 +62,39 @@ public class Question extends BaseEntity {
     }
 
     public Question(KnowledgeNode subtopic, String code, Difficulty difficulty) {
+        this(subtopic, code, difficulty, QuestionLanguage.VI, QuestionCategory.TECHNICAL);
+    }
+
+    public Question(
+            KnowledgeNode subtopic,
+            String code,
+            Difficulty difficulty,
+            QuestionLanguage language,
+            QuestionCategory category
+    ) {
         assignSubtopic(subtopic);
         changeCode(code);
         this.difficulty = Objects.requireNonNull(difficulty, "Difficulty is required");
+        this.language = Objects.requireNonNull(language, "Question language is required");
+        this.category = Objects.requireNonNull(category, "Question category is required");
     }
 
     public void updateMetadata(KnowledgeNode subtopic, String code, Difficulty difficulty) {
+        updateMetadata(subtopic, code, difficulty, QuestionLanguage.VI, QuestionCategory.TECHNICAL);
+    }
+
+    public void updateMetadata(
+            KnowledgeNode subtopic,
+            String code,
+            Difficulty difficulty,
+            QuestionLanguage language,
+            QuestionCategory category
+    ) {
         assignSubtopic(subtopic);
         changeCode(code);
         this.difficulty = Objects.requireNonNull(difficulty, "Difficulty is required");
+        this.language = Objects.requireNonNull(language, "Question language is required");
+        this.category = Objects.requireNonNull(category, "Question category is required");
     }
 
     public void changeStatus(ContentStatus status) {
