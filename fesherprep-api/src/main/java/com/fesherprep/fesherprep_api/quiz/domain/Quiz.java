@@ -27,7 +27,7 @@ import java.util.UUID;
         @Index(name = "idx_quizzes_status_type", columnList = "status,type"),
         @Index(name = "idx_quizzes_language_category_status", columnList = "language,category,status")
 })
-@Check(constraints = "pass_percentage between 0 and 100 and maximum_score > 0")
+@Check(constraints = "pass_percentage between 0 and 100 and maximum_score > 0 and (duration_seconds is null or duration_seconds > 0)")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Quiz extends BaseEntity {
@@ -58,6 +58,9 @@ public class Quiz extends BaseEntity {
 
     @Column(name = "maximum_score", nullable = false, columnDefinition = "integer default 100")
     private int maximumScore = 100;
+
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
@@ -94,7 +97,15 @@ public class Quiz extends BaseEntity {
             QuizCategory category,
             int maximumScore
     ) {
-        updateDetails(title, code, type, selectionMode, passPercentage, language, category, maximumScore);
+        updateDetails(title, code, type, selectionMode, passPercentage, language, category, maximumScore, null);
+    }
+
+    public Quiz(
+            String title, String code, QuizType type, QuizSelectionMode selectionMode,
+            int passPercentage, QuestionLanguage language, QuizCategory category,
+            int maximumScore, Integer durationSeconds
+    ) {
+        updateDetails(title, code, type, selectionMode, passPercentage, language, category, maximumScore, durationSeconds);
     }
 
     public void updateDetails(
@@ -112,7 +123,8 @@ public class Quiz extends BaseEntity {
                 passPercentage,
                 language == null ? QuestionLanguage.VI : language,
                 category == null ? QuizCategory.TECHNICAL : category,
-                maximumScore < 1 ? 100 : maximumScore
+                maximumScore < 1 ? 100 : maximumScore,
+                durationSeconds
         );
     }
 
@@ -126,6 +138,20 @@ public class Quiz extends BaseEntity {
             QuizCategory category,
             int maximumScore
     ) {
+        updateDetails(title, code, type, selectionMode, passPercentage, language, category, maximumScore, durationSeconds);
+    }
+
+    public void updateDetails(
+            String title,
+            String code,
+            QuizType type,
+            QuizSelectionMode selectionMode,
+            int passPercentage,
+            QuestionLanguage language,
+            QuizCategory category,
+            int maximumScore,
+            Integer durationSeconds
+    ) {
         if (title == null || title.isBlank() || passPercentage < 0 || passPercentage > 100) {
             throw new IllegalArgumentException("Title and pass percentage (0-100) are required");
         }
@@ -135,6 +161,9 @@ public class Quiz extends BaseEntity {
         Objects.requireNonNull(category, "Quiz category is required");
         if (maximumScore < 1) {
             throw new IllegalArgumentException("Maximum score must be positive");
+        }
+        if (durationSeconds != null && durationSeconds < 1) {
+            throw new IllegalArgumentException("Quiz duration must be positive");
         }
         if ((this.type != null && this.type != type
                 || this.selectionMode != null && this.selectionMode != selectionMode
@@ -157,6 +186,7 @@ public class Quiz extends BaseEntity {
         this.language = language;
         this.category = category;
         this.maximumScore = maximumScore;
+        this.durationSeconds = durationSeconds;
     }
 
     public List<QuizRule> getRules() {

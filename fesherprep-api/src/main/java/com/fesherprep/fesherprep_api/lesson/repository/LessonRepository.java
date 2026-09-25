@@ -24,6 +24,9 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
             Pageable pageable
     );
 
+    @EntityGraph(attributePaths = "subtopic")
+    Page<Lesson> findAllBySubtopicId(UUID subtopicId, Pageable pageable);
+
     @Override
     @EntityGraph(attributePaths = "subtopic")
     Page<Lesson> findAll(Pageable pageable);

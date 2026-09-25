@@ -1,6 +1,7 @@
 package com.fesherprep.fesherprep_api.quiz.repository;
 
 import com.fesherprep.fesherprep_api.quiz.domain.QuizAttempt;
+import com.fesherprep.fesherprep_api.quiz.domain.AttemptStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -17,6 +18,10 @@ import java.util.UUID;
 
 public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, UUID> {
     Optional<QuizAttempt> findByIdAndUserId(UUID id, UUID userId);
+
+    Optional<QuizAttempt> findFirstByUserIdAndQuizIdAndStatusOrderByCreatedAtDesc(
+            UUID userId, UUID quizId, AttemptStatus status
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select attempt from QuizAttempt attempt where attempt.id = :id and attempt.user.id = :userId")

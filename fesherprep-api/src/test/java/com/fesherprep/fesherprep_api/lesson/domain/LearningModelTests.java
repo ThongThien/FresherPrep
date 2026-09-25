@@ -18,18 +18,18 @@ class LearningModelTests {
     private static final Instant START = Instant.parse("2026-09-23T00:00:00Z");
 
     @Test
-    void readingRequiresBothTimeAndScrollAndKeepsFirstQualificationTime() {
+    void readingQualificationUsesScrollWhileTimeRemainsAnalytics() {
         LessonProgress progress = progress();
 
         progress.recordReading(15, 90, START.plusSeconds(15));
-        assertNull(progress.getReadQualifiedAt(), "Scroll alone is insufficient");
+        assertEquals(START.plusSeconds(15), progress.getReadQualifiedAt());
 
         progress.recordReading(15, 20, START.plusSeconds(30));
-        assertEquals(START.plusSeconds(30), progress.getReadQualifiedAt());
+        assertEquals(START.plusSeconds(15), progress.getReadQualifiedAt());
         assertEquals(90, progress.getMaxScrollPercent(), "Scrolling back must preserve the highest position");
 
         progress.recordReading(10, 100, START.plusSeconds(40));
-        assertEquals(START.plusSeconds(30), progress.getReadQualifiedAt());
+        assertEquals(START.plusSeconds(15), progress.getReadQualifiedAt());
         assertEquals(40, progress.getActiveSeconds());
     }
 

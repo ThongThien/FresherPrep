@@ -25,7 +25,7 @@ const expectedParent: Record<KnowledgeNodeType, KnowledgeNodeType | null> = {
   SUBTOPIC: "TOPIC",
 };
 const statuses: ContentStatus[] = ["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"];
-const emptyForm = { type: "TECHNOLOGY" as KnowledgeNodeType, parentId: "", name: "", slug: "", displayOrder: 0 };
+const emptyForm = { type: "TECHNOLOGY" as KnowledgeNodeType, parentId: "", name: "", displayOrder: 0 };
 
 export function KnowledgeManagement() {
   const { t } = useI18n();
@@ -75,7 +75,6 @@ export function KnowledgeManagement() {
       type: node.type,
       parentId: node.parentId ?? "",
       name: node.name,
-      slug: node.slug,
       displayOrder: node.displayOrder,
     });
     clearMessages();
@@ -85,7 +84,6 @@ export function KnowledgeManagement() {
     event.preventDefault();
     const errors: Record<string, string> = {};
     if (!form.name.trim()) errors.name = t("Name is required.");
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug)) errors.slug = t("Use lowercase letters, numbers, and hyphens.");
     if (form.displayOrder < 0) errors.displayOrder = t("Display order cannot be negative.");
     if (parentType && !form.parentId) errors.parentId = t("Select a {{type}} parent.", { type: parentType.toLowerCase() });
     setValidation(errors);
@@ -99,7 +97,6 @@ export function KnowledgeManagement() {
         type: form.type,
         parentId: form.parentId || null,
         name: form.name.trim(),
-        slug: form.slug.trim(),
         displayOrder: form.displayOrder,
       };
       const saved = await adminRequest<KnowledgeNode>(
@@ -227,11 +224,7 @@ export function KnowledgeManagement() {
                 <Input id="node-name" maxLength={150} aria-invalid={Boolean(validation.name)} value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
                 {validation.name ? <FieldError>{validation.name}</FieldError> : null}
               </div>
-              <div>
-                <Label htmlFor="node-slug">{t("Slug")}</Label>
-                <Input id="node-slug" maxLength={180} aria-invalid={Boolean(validation.slug)} value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value.toLowerCase() }))} />
-                {validation.slug ? <FieldError>{validation.slug}</FieldError> : null}
-              </div>
+              {selectedId ? <p className="rounded-md bg-surface-muted px-3 py-2 text-xs text-text-muted">{t("System slug")}: <span className="font-mono text-text">{nodes.find((node) => node.id === selectedId)?.slug}</span></p> : <p className="text-xs text-text-muted">{t("Slug is generated automatically after creation.")}</p>}
               <div>
                 <Label htmlFor="node-order">{t("Display order")}</Label>
                 <Input id="node-order" type="number" min={0} aria-invalid={Boolean(validation.displayOrder)} value={form.displayOrder} onChange={(event) => setForm((current) => ({ ...current, displayOrder: Number(event.target.value) }))} />

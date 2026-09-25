@@ -160,6 +160,7 @@ export interface QuizDetail {
   language: QuestionLanguage;
   category: QuizCategory;
   maximumScore: number;
+  durationSeconds: number | null;
   passingScore: number;
   status: ContentStatus;
   createdAt: string;

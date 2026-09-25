@@ -9,6 +9,7 @@ import { useI18n } from "@/lib/i18n";
 import type { LessonDetailData, LessonProgress } from "@/lib/lessons/types";
 
 import { LessonContent } from "./lesson-content";
+import { LessonAssessmentPanel } from "./lesson-assessment-panel";
 
 export function LessonPage({ lessonId, pathId }: { lessonId: string; pathId?: string }) {
   const { t } = useI18n();
@@ -16,6 +17,7 @@ export function LessonPage({ lessonId, pathId }: { lessonId: string; pathId?: st
   const [error, setError] = useState<string>();
   const [progress, setProgress] = useState<LessonProgress>();
   const [syncError, setSyncError] = useState<string>();
+  const [displayedActiveSeconds, setDisplayedActiveSeconds] = useState(0);
   const [reload, setReload] = useState(0);
   const progressRef = useRef<LessonProgress | undefined>(undefined);
   const pendingSeconds = useRef(0);
@@ -38,6 +40,7 @@ export function LessonPage({ lessonId, pathId }: { lessonId: string; pathId?: st
       progressRef.current = value;
       maxScroll.current = value.maxScrollPercent;
       setProgress(value);
+      setDisplayedActiveSeconds(value.activeSeconds);
       setSyncError(undefined);
     } catch {
       setSyncError(t("Reading progress could not be started. Try again while reading."));
@@ -87,6 +90,7 @@ export function LessonPage({ lessonId, pathId }: { lessonId: string; pathId?: st
       progressRef.current = value;
       maxScroll.current = Math.max(maxScroll.current, value.maxScrollPercent);
       setProgress(value);
+      setDisplayedActiveSeconds(value.activeSeconds + pendingSeconds.current);
       setSyncError(undefined);
     } catch (reason) {
       pendingSeconds.current += activeSeconds;
@@ -105,11 +109,15 @@ export function LessonPage({ lessonId, pathId }: { lessonId: string; pathId?: st
       if (document.visibilityState === "visible") viewedAt.current = Date.now();
       else { recordElapsed(); void flush(); viewedAt.current = undefined; }
     };
-    const interval = window.setInterval(() => void flush(), 20000);
+    const syncInterval = window.setInterval(() => void flush(), 20000);
+    const timerInterval = window.setInterval(() => {
+      recordElapsed();
+      setDisplayedActiveSeconds((progressRef.current?.activeSeconds ?? 0) + pendingSeconds.current);
+    }, 1000);
     scroll();
     window.addEventListener("scroll", scroll, { passive: true });
     document.addEventListener("visibilitychange", visibility);
-    return () => { recordElapsed(); void flush(); window.clearInterval(interval); window.removeEventListener("scroll", scroll); document.removeEventListener("visibilitychange", visibility); };
+    return () => { recordElapsed(); void flush(); window.clearInterval(syncInterval); window.clearInterval(timerInterval); window.removeEventListener("scroll", scroll); document.removeEventListener("visibilitychange", visibility); };
   }, [flush, progress, recordElapsed]);
 
   if (error === "NOT_FOUND") return <div className="mx-auto max-w-2xl py-10"><h1 className="text-2xl font-semibold text-text">{t("Lesson not found")}</h1><p className="mt-3 text-text-muted">{t("This lesson may no longer be published.")}</p><Link className="mt-5 inline-flex text-sm font-semibold text-primary" href="/learning-paths">{t("Back to learning paths")}</Link></div>;
@@ -118,7 +126,6 @@ export function LessonPage({ lessonId, pathId }: { lessonId: string; pathId?: st
 
   const { lesson, pathContext } = data;
   const lessonHref = (id: string) => "/lessons/" + id + (pathContext ? "?pathId=" + encodeURIComponent(pathContext.id) : "");
-  const time = progress ? Math.min(100, progress.activeSeconds / Math.max(1, lesson.minimumReadSeconds) * 100) : 0;
   const scroll = progress ? Math.min(100, progress.maxScrollPercent / Math.max(1, lesson.requiredScrollPercent) * 100) : 0;
   return <div className="mx-auto w-full max-w-6xl">
     <nav aria-label={t("Breadcrumb")} className="flex min-h-10 flex-wrap items-center gap-2 text-sm"><Link className="font-semibold text-primary" href="/learning-paths">{t("Learning Paths")}</Link>{pathContext ? <><span>/</span><Link className="font-semibold text-primary" href={"/learning-paths/" + pathContext.id}>{pathContext.name}</Link></> : null}<span>/</span><span className="text-text-muted">{lesson.title}</span></nav>
@@ -126,10 +133,11 @@ export function LessonPage({ lessonId, pathId }: { lessonId: string; pathId?: st
       <main className="min-w-0"><header className="border-b border-border pb-7"><div className="flex gap-2"><Badge variant="info">{t("Lesson")}</Badge>{progress?.completed ? <Badge variant="success">{t("Completed")}</Badge> : null}{progress?.readQualified && !progress.completed ? <Badge variant="success">{t("Reading qualified")}</Badge> : null}</div><h1 className="mt-4 text-3xl font-semibold tracking-tight text-text sm:text-4xl">{lesson.title}</h1></header>
       {lesson.prerequisites.length ? <section className="mt-6 border-l-4 border-primary/45 bg-primary-subtle px-5 py-4" aria-labelledby="lesson-prerequisites"><h2 id="lesson-prerequisites" className="text-sm font-semibold text-text">{t("Before this lesson")}</h2><ul className="mt-3 flex flex-wrap gap-4">{lesson.prerequisites.map((item) => <li key={item.id}><Link className="inline-flex min-h-10 items-center text-sm font-semibold text-primary" href={lessonHref(item.id)}>{item.title}</Link></li>)}</ul></section> : null}
       <div className="mt-8"><LessonContent content={lesson.content} /></div>
-      <footer className="mt-12 border-t border-border pt-6"><h2 className="text-lg font-semibold text-text">{t("Next steps")}</h2>{progress?.completed ? <Feedback className="mt-4" tone="success" title={t("Lesson completed")}>{t("Your completion has been recorded.")}</Feedback> : progress?.readQualified && progress.assessmentRequired ? <Feedback className="mt-4" tone="info" title={t("Reading requirement met")}>{t("Complete the assessment to finish this lesson.")}</Feedback> : <p className="mt-2 text-sm text-text-muted">{t("Your progress is saved as you read.")}</p>}<div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">{pathContext?.previous ? <Link className="inline-flex min-h-10 items-center text-sm font-semibold text-primary" href={lessonHref(pathContext.previous.id)}>{t("Previous: {{title}}", { title: pathContext.previous.title })}</Link> : <span />}{progress?.assessmentRequired && progress.assessmentQuizId && progress.readQualified && !progress.completed ? <Link className="inline-flex min-h-10 items-center justify-center rounded-md bg-primary-solid px-4 py-2 text-sm font-semibold text-white" href={"/quizzes/" + progress.assessmentQuizId}>{t("Go to assessment")}</Link> : pathContext?.next ? <Link className="inline-flex min-h-10 items-center justify-center rounded-md border border-border-strong px-4 py-2 text-sm font-semibold text-text" href={lessonHref(pathContext.next.id)}>{t("Next: {{title}}", { title: pathContext.next.title })}</Link> : null}</div></footer></main>
-      <aside className="space-y-5 lg:sticky lg:top-24"><section className="rounded-lg border border-border bg-surface p-5 shadow-card"><div className="flex justify-between"><h2 className="text-sm font-semibold text-text">{t("Reading progress")}</h2>{progress?.readQualified ? <span className="text-sm font-semibold text-success-strong">{t("Qualified")}</span> : null}</div><div className="mt-5 space-y-5"><Progress value={time} label={t("Active reading time")} showValue /><p className="-mt-3 text-xs text-text-muted">{t("{{current}} of {{required}} required", { current: formatTime(progress?.activeSeconds ?? 0, t), required: formatTime(lesson.minimumReadSeconds, t) })}</p><Progress value={scroll} label={t("Lesson explored")} showValue /><p className="-mt-3 text-xs text-text-muted">{t("{{current}}% of {{required}}% required", { current: progress?.maxScrollPercent ?? 0, required: lesson.requiredScrollPercent })}</p></div>{progress?.assessmentRequired ? <p className="mt-5 border-t border-border pt-4 text-sm text-text-muted">{t("Assessment: {{status}}", { status: t(progress.assessmentStatus.toLowerCase().replace("_", " ")) })}</p> : null}</section>{syncError ? <Feedback tone="warning" title={t("Progress needs attention")}><p>{syncError}</p><Button className="mt-3" size="sm" variant="secondary" onClick={() => void (progressRef.current ? flush() : startProgress())}>{t("Retry sync")}</Button></Feedback> : null}</aside>
+      {progress?.assessmentRequired && progress.assessmentQuizId && !progress.completed ? <LessonAssessmentPanel quizId={progress.assessmentQuizId} onCompleted={startProgress} /> : null}
+      <footer className="mt-12 border-t border-border pt-6"><h2 className="text-lg font-semibold text-text">{t("Next steps")}</h2>{progress?.completed ? <Feedback className="mt-4" tone="success" title={t("Lesson completed")}>{t("Your completion has been recorded.")}</Feedback> : progress?.assessmentRequired ? <Feedback className="mt-4" tone="info" title={t("Complete the assessment")}>{t("Pass the assessment to finish this lesson. Reading time does not block you.")}</Feedback> : <p className="mt-2 text-sm text-text-muted">{t("Your progress is saved as you read.")}</p>}<div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">{pathContext?.previous ? <Link className="inline-flex min-h-10 items-center text-sm font-semibold text-primary" href={lessonHref(pathContext.previous.id)}>{t("Previous: {{title}}", { title: pathContext.previous.title })}</Link> : <span />}{progress?.completed && pathContext?.next ? <Link className="inline-flex min-h-10 items-center justify-center rounded-md border border-border-strong px-4 py-2 text-sm font-semibold text-text" href={lessonHref(pathContext.next.id)}>{t("Next: {{title}}", { title: pathContext.next.title })}</Link> : null}</div></footer></main>
+      <aside className="space-y-5 lg:sticky lg:top-24"><section className="rounded-lg border border-border bg-surface p-5 shadow-card"><div className="flex justify-between"><h2 className="text-sm font-semibold text-text">{t("Reading progress")}</h2>{progress?.readQualified ? <span className="text-sm font-semibold text-success-strong">{t("Explored")}</span> : null}</div><div className="mt-5"><p className="text-xs font-medium text-text-muted">{t("Time spent")}</p><p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-text" aria-live="off">{formatClock(displayedActiveSeconds)}</p><p className="mt-1 text-xs text-text-muted">{t("Tracked while this page is active. It does not affect completion.")}</p><Progress className="mt-5" value={scroll} label={t("Lesson explored")} showValue /><p className="mt-2 text-xs text-text-muted">{t("{{current}}% of {{required}}%", { current: progress?.maxScrollPercent ?? 0, required: lesson.requiredScrollPercent })}</p></div>{progress?.assessmentRequired ? <p className="mt-5 border-t border-border pt-4 text-sm text-text-muted">{t("Assessment: {{status}}", { status: t(progress.assessmentStatus.toLowerCase().replace("_", " ")) })}</p> : null}</section>{syncError ? <Feedback tone="warning" title={t("Progress needs attention")}><p>{syncError}</p><Button className="mt-3" size="sm" variant="secondary" onClick={() => void (progressRef.current ? flush() : startProgress())}>{t("Retry sync")}</Button></Feedback> : null}</aside>
     </div>
   </div>;
 }
 
-function formatTime(seconds: number, t: (key: string, values?: Record<string, string | number>) => string) { const minutes = Math.floor(seconds / 60); return minutes ? t("{{minutes}} min {{seconds}} sec", { minutes, seconds: seconds % 60 }) : t("{{seconds}} sec", { seconds }); }
+function formatClock(seconds: number) { const safe = Math.max(0, Math.floor(seconds)); return String(Math.floor(safe / 60)).padStart(2, "0") + ":" + String(safe % 60).padStart(2, "0"); }

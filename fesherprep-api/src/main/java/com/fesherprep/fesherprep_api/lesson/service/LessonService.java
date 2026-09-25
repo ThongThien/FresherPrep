@@ -12,6 +12,7 @@ import com.fesherprep.fesherprep_api.lesson.repository.LessonProgressRepository;
 import com.fesherprep.fesherprep_api.lesson.repository.LessonRepository;
 import com.fesherprep.fesherprep_api.quiz.repository.LessonAssessmentRepository;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
+import com.fesherprep.fesherprep_api.shared.util.ContentIdentityGenerator;
 import com.fesherprep.fesherprep_api.user.domain.User;
 import com.fesherprep.fesherprep_api.user.repository.UserRepository;
 import jakarta.validation.Valid;
@@ -43,6 +44,7 @@ public class LessonService {
     private final LessonAssessmentRepository assessmentRepository;
     private final LessonCompletionService completionService;
     private final Clock clock;
+    private final ContentIdentityGenerator identityGenerator;
 
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
@@ -146,8 +148,12 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly = true)
-    public Page<LessonSummaryResponse> getAllLessons(Pageable pageable) {
-        return lessonRepository.findAll(pageable).map(LessonSummaryResponse::from);
+    public Page<LessonSummaryResponse> getAllLessons(UUID subtopicId, Pageable pageable) {
+        if (subtopicId != null) requireSubtopic(subtopicId);
+        return (subtopicId == null
+                ? lessonRepository.findAll(pageable)
+                : lessonRepository.findAllBySubtopicId(subtopicId, pageable))
+                .map(LessonSummaryResponse::from);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -160,8 +166,7 @@ public class LessonService {
     @Transactional
     public LessonDetailResponse createLesson(@Valid CreateLessonRequest request) {
         KnowledgeNode subtopic = requireSubtopic(request.subtopicId());
-        String slug = normalizeSlug(request.slug());
-        ensureUniqueSlug(slug, null);
+        String slug = generateUniqueSlug(request.title());
 
         Lesson lesson = new Lesson(
                 subtopic,
@@ -180,8 +185,7 @@ public class LessonService {
     public LessonDetailResponse updateLesson(UUID lessonId, @Valid UpdateLessonRequest request) {
         Lesson lesson = requireLesson(lessonId);
         KnowledgeNode subtopic = requireSubtopic(request.subtopicId());
-        String slug = normalizeSlug(request.slug());
-        ensureUniqueSlug(slug, lessonId);
+        String slug = lesson.getSlug();
 
         if (lesson.getStatus() == ContentStatus.PUBLISHED
                 && subtopic.getStatus() != ContentStatus.PUBLISHED) {
@@ -430,13 +434,12 @@ public class LessonService {
                 ));
     }
 
-    private void ensureUniqueSlug(String slug, UUID currentId) {
-        boolean exists = currentId == null
-                ? lessonRepository.existsBySlug(slug)
-                : lessonRepository.existsBySlugAndIdNot(slug, currentId);
-        if (exists) {
-            throw new DuplicateLessonSlugException(slug);
+    private String generateUniqueSlug(String title) {
+        for (int attempt = 0; attempt < 20; attempt++) {
+            String slug = identityGenerator.slug(title, 220);
+            if (!lessonRepository.existsBySlug(slug)) return slug;
         }
+        throw new IllegalStateException("Could not generate a unique lesson slug");
     }
 
     private Lesson save(Lesson lesson, String slug) {

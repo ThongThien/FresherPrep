@@ -22,7 +22,7 @@ import { useI18n } from "@/lib/i18n";
 const quizTypes: QuizType[] = ["LESSON", "TOPIC", "MIXED", "READINESS"];
 const selectionModes: QuizSelectionMode[] = ["FIXED", "RULE_BASED"];
 const quizCategories: QuizCategory[] = ["TECHNICAL", "GRAMMAR", "VOCABULARY", "TOEIC", "MIXED"];
-const emptyForm = { code: "", title: "", type: "LESSON" as QuizType, selectionMode: "FIXED" as QuizSelectionMode, passPercentage: 70, language: "VI" as QuestionLanguage, category: "TECHNICAL" as QuizCategory, maximumScore: 100 };
+const emptyForm = { code: "", title: "", type: "LESSON" as QuizType, selectionMode: "FIXED" as QuizSelectionMode, passPercentage: 80, language: "VI" as QuestionLanguage, category: "TECHNICAL" as QuizCategory, maximumScore: 100, durationSeconds: null as number | null };
 
 export function QuizManagement() {
   const { t } = useI18n();
@@ -74,7 +74,7 @@ export function QuizManagement() {
     try {
       const quiz = await adminRequest<QuizDetail>(`quizzes/${quizId}`);
       setSelected(quiz);
-      setForm({ code: quiz.code, title: quiz.title, type: quiz.type, selectionMode: quiz.selectionMode, passPercentage: quiz.passPercentage, language: quiz.language, category: quiz.category, maximumScore: quiz.maximumScore });
+      setForm({ code: quiz.code, title: quiz.title, type: quiz.type, selectionMode: quiz.selectionMode, passPercentage: quiz.passPercentage, language: quiz.language, category: quiz.category, maximumScore: quiz.maximumScore, durationSeconds: quiz.durationSeconds });
       setValidation({});
     } catch (reason) { setError(messageOf(reason)); }
   }
@@ -151,6 +151,7 @@ export function QuizManagement() {
             <div><Label htmlFor="quiz-category">{t("Category")}</Label><Select id="quiz-category" value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value as QuizCategory }))}>{quizCategories.map((category) => <option key={category} value={category}>{t(category)}</option>)}</Select></div>
             <div><Label htmlFor="quiz-pass">{t("Pass percentage")}</Label><Input id="quiz-pass" type="number" min={0} max={100} aria-invalid={Boolean(validation.passPercentage)} value={form.passPercentage} onChange={(event) => setForm((current) => ({ ...current, passPercentage: Number(event.target.value) }))} />{validation.passPercentage ? <FieldError>{validation.passPercentage}</FieldError> : null}</div>
             <div><Label htmlFor="quiz-maximum-score">{t("Maximum score")}</Label><Input id="quiz-maximum-score" type="number" min={1} aria-invalid={Boolean(validation.maximumScore)} value={form.maximumScore} onChange={(event) => setForm((current) => ({ ...current, maximumScore: Number(event.target.value) }))} />{validation.maximumScore ? <FieldError>{validation.maximumScore}</FieldError> : <p className="mt-1 text-xs text-text-muted">{t("Passing score: {{score}}", { score: form.maximumScore * form.passPercentage / 100 })}</p>}</div>
+            <div><Label htmlFor="quiz-duration">{t("Time limit (minutes)")}</Label><Input id="quiz-duration" type="number" min={1} value={form.durationSeconds ? Math.ceil(form.durationSeconds / 60) : ""} placeholder={t("No time limit")} onChange={(event) => setForm((current) => ({ ...current, durationSeconds: event.target.value ? Number(event.target.value) * 60 : null }))} /></div>
             <div className="self-end"><Button type="submit" loading={pending}>{selected ? t("Save quiz") : t("Create quiz")}</Button></div>
           </form>
           {selected ? <div className="mt-7 border-t border-border pt-6"><div className="flex flex-wrap gap-2">{selected.status === "DRAFT" ? <Button size="sm" variant="secondary" disabled={pending} onClick={() => void mutate(`quizzes/${selected.id}/status`, "PATCH", t("Quiz submitted for review."), { status: "REVIEW" })}>{t("Submit for review")}</Button> : null}{selected.status === "REVIEW" ? <><Button size="sm" variant="secondary" disabled={pending} onClick={() => void mutate(`quizzes/${selected.id}/status`, "PATCH", t("Quiz moved to draft."), { status: "DRAFT" })}>{t("Move to draft")}</Button><Button size="sm" disabled={pending} onClick={() => void mutate(`quizzes/${selected.id}/publish`, "POST", t("Quiz published."))}>{t("Publish")}</Button></> : null}{selected.status === "PUBLISHED" ? <Button size="sm" variant="secondary" disabled={pending} onClick={() => void mutate(`quizzes/${selected.id}/archive`, "POST", t("Quiz archived."))}>{t("Archive")}</Button> : null}{selected.status === "ARCHIVED" ? <Button size="sm" variant="secondary" disabled={pending} onClick={() => void mutate(`quizzes/${selected.id}/status`, "PATCH", t("Quiz moved to draft."), { status: "DRAFT" })}>{t("Move to draft")}</Button> : null}</div><Button className="mt-5" size="sm" variant="danger" loading={pending} onClick={() => void deleteQuiz()}>{t("Delete quiz")}</Button></div> : null}

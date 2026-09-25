@@ -79,8 +79,10 @@ public class LessonProgress extends BaseEntity {
         activeSeconds = Math.addExact(activeSeconds, acceptedActiveSeconds);
         maxScrollPercent = Math.max(maxScrollPercent, scrollPercent);
         lastViewedAt = viewedAt;
-        if (readQualifiedAt == null && activeSeconds >= lesson.getMinimumReadSeconds()
-                && maxScrollPercent >= lesson.getRequiredScrollPercent()) {
+        // Active time is analytics only. Reaching the configured content depth marks
+        // reading as qualified; an assessment, when present, remains authoritative
+        // for lesson completion.
+        if (readQualifiedAt == null && maxScrollPercent >= lesson.getRequiredScrollPercent()) {
             readQualifiedAt = viewedAt;
         }
     }

@@ -55,6 +55,9 @@ public class QuizAttempt extends BaseEntity {
     @Column(name = "maximum_score", nullable = false, updatable = false, columnDefinition = "integer default 100")
     private int maximumScore;
 
+    @Column(name = "duration_seconds", updatable = false)
+    private Integer durationSeconds;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
     private AttemptStatus status = AttemptStatus.IN_PROGRESS;
@@ -109,6 +112,7 @@ public class QuizAttempt extends BaseEntity {
         this.language = quiz.getLanguage();
         this.category = quiz.getCategory();
         this.maximumScore = quiz.getMaximumScore();
+        this.durationSeconds = quiz.getDurationSeconds();
         for (int index = 0; index < selected.size(); index++) {
             questions.add(new QuizAttemptQuestion(this, selected.get(index), index + 1));
         }
@@ -213,6 +217,12 @@ public class QuizAttempt extends BaseEntity {
                 .multiply(BigDecimal.valueOf(passPercentage))
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP)
                 .stripTrailingZeros();
+    }
+
+    public Instant getExpiresAt() {
+        return durationSeconds == null || getCreatedAt() == null
+                ? null
+                : getCreatedAt().plusSeconds(durationSeconds);
     }
 
     private static void validateSelection(Quiz quiz, List<QuestionVersion> selected) {

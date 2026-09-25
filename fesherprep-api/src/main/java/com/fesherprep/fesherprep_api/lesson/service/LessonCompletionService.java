@@ -94,7 +94,7 @@ public class LessonCompletionService {
         } else {
             status = AssessmentProgressStatus.NOT_STARTED;
         }
-        return new LessonCompletionResult(readingQualified, true, quizId, status, readingQualified && passed);
+        return new LessonCompletionResult(readingQualified, true, quizId, status, passed);
     }
 
     public record LessonCompletionResult(

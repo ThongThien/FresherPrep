@@ -14,12 +14,12 @@ import type {
   QuizSummary,
 } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
+import { AdminPagination } from "./admin-ui";
 
 const statuses: ContentStatus[] = ["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"];
 const emptyForm = {
   subtopicId: "",
   title: "",
-  slug: "",
   content: "",
   displayOrder: 0,
   minimumReadSeconds: 60,
@@ -29,6 +29,7 @@ const emptyForm = {
 export function LessonManagement() {
   const { t } = useI18n();
   const [lessons, setLessons] = useState<LessonSummary[]>([]);
+  const [relationLessons, setRelationLessons] = useState<LessonSummary[]>([]);
   const [subtopics, setSubtopics] = useState<KnowledgeNode[]>([]);
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
   const [detail, setDetail] = useState<LessonDetail>();
@@ -40,18 +41,21 @@ export function LessonManagement() {
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [validation, setValidation] = useState<Record<string, string>>({});
+  const [selectedSubtopicId, setSelectedSubtopicId] = useState("");
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const loadLists = useCallback(async () => {
+  const loadReferences = useCallback(async () => {
     setLoading(true);
     setError(undefined);
     try {
-      const [lessonPage, nodes, quizPage] = await Promise.all([
-        adminRequest<AdminPage<LessonSummary>>("lessons?page=0&size=200&sort=title,asc"),
+      const [nodes, quizPage] = await Promise.all([
         adminRequest<KnowledgeNode[]>("knowledge/nodes"),
         adminRequest<AdminPage<QuizSummary>>("quizzes?page=0&size=200&sort=title,asc"),
       ]);
-      setLessons(lessonPage.content);
-      setSubtopics(nodes.filter((node) => node.type === "SUBTOPIC"));
+      const available = nodes.filter((node) => node.type === "SUBTOPIC");
+      setSubtopics(available);
+      setSelectedSubtopicId((current) => current || available[0]?.id || "");
       setQuizzes(quizPage.content);
     } catch (reason) {
       setError(messageOf(reason));
@@ -60,10 +64,26 @@ export function LessonManagement() {
     }
   }, []);
 
+  const loadLessons = useCallback(async () => {
+    if (!selectedSubtopicId) { setLessons([]); setTotalPages(0); return; }
+    setLoading(true);
+    try {
+      const result = await adminRequest<AdminPage<LessonSummary>>(`lessons?subtopicId=${encodeURIComponent(selectedSubtopicId)}&page=${page}&size=20&sort=displayOrder,asc`);
+      setLessons(result.content);
+      setTotalPages(result.totalPages);
+    } catch (reason) { setError(messageOf(reason)); }
+    finally { setLoading(false); }
+  }, [page, selectedSubtopicId]);
+
   useEffect(() => {
-    const timer = window.setTimeout(() => void loadLists(), 0);
+    const timer = window.setTimeout(() => void loadReferences(), 0);
     return () => window.clearTimeout(timer);
-  }, [loadLists]);
+  }, [loadReferences]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadLessons(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadLessons]);
 
   const visibleLessons = useMemo(() => lessons.filter((lesson) =>
     `${lesson.title} ${lesson.slug}`.toLowerCase().includes(query.toLowerCase()),
@@ -73,16 +93,17 @@ export function LessonManagement() {
     setError(undefined);
     setSuccess(undefined);
     try {
-      const [selected, selectedAssessment] = await Promise.all([
+      const [selected, selectedAssessment, relationPage] = await Promise.all([
         adminRequest<LessonDetail>(`lessons/${lessonId}`),
         adminOptional<LessonAssessment>(`lessons/${lessonId}/assessment`),
+        adminRequest<AdminPage<LessonSummary>>("lessons?page=0&size=200&sort=title,asc"),
       ]);
       setDetail(selected);
       setAssessment(selectedAssessment);
+      setRelationLessons(relationPage.content);
       setForm({
         subtopicId: selected.subtopicId,
         title: selected.title,
-        slug: selected.slug,
         content: selected.content,
         displayOrder: selected.displayOrder,
         minimumReadSeconds: selected.minimumReadSeconds,
@@ -97,7 +118,7 @@ export function LessonManagement() {
   function startCreate() {
     setDetail(undefined);
     setAssessment(undefined);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, subtopicId: selectedSubtopicId });
     setError(undefined);
     setSuccess(undefined);
     setValidation({});
@@ -108,7 +129,6 @@ export function LessonManagement() {
     const errors: Record<string, string> = {};
     if (!form.subtopicId) errors.subtopicId = "Select a subtopic.";
     if (!form.title.trim()) errors.title = "Title is required.";
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug)) errors.slug = "Use lowercase letters, numbers, and hyphens.";
     if (!form.content.trim()) errors.content = "Lesson content is required.";
     if (form.displayOrder < 0) errors.displayOrder = "Display order cannot be negative.";
     if (form.minimumReadSeconds < 1) errors.minimumReadSeconds = "Minimum read time must be at least one second.";
@@ -120,12 +140,12 @@ export function LessonManagement() {
     setError(undefined);
     setSuccess(undefined);
     try {
-      const payload = { ...form, title: form.title.trim(), slug: form.slug.trim(), content: form.content.trim() };
+      const payload = { ...form, subtopicId: selectedSubtopicId, title: form.title.trim(), content: form.content.trim() };
       const saved = await adminRequest<LessonDetail>(
         detail ? `lessons/${detail.id}` : "lessons",
         { method: detail ? "PUT" : "POST", ...jsonBody(payload) },
       );
-      await loadLists();
+      await loadLessons();
       await selectLesson(saved.id);
       setSuccess(detail ? "Lesson updated." : "Lesson created.");
     } catch (reason) {
@@ -145,7 +165,7 @@ export function LessonManagement() {
         ...jsonBody({ status }),
       });
       setDetail(saved);
-      await loadLists();
+      await loadLessons();
       setSuccess(`Status changed to ${status.toLowerCase()}.`);
     } catch (reason) {
       setError(messageOf(reason));
@@ -161,7 +181,7 @@ export function LessonManagement() {
     try {
       await adminRequest<void>(`lessons/${detail.id}`, { method: "DELETE" });
       startCreate();
-      await loadLists();
+      await loadLessons();
       setSuccess("Lesson deleted.");
     } catch (reason) {
       setError(messageOf(reason));
@@ -180,25 +200,28 @@ export function LessonManagement() {
     <div className="mx-auto max-w-7xl">
       <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Lessons")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Maintain content, reading requirements, prerequisites, and assessment links.")}</p></div>
-        <Button onClick={startCreate}>{t("New lesson")}</Button>
+        <Button disabled={!selectedSubtopicId} onClick={startCreate}>{t("New lesson")}</Button>
       </header>
       {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
       {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)]">
         <Card><CardContent>
+          <Label htmlFor="lesson-parent">{t("Parent subtopic")}</Label>
+          <Select id="lesson-parent" value={selectedSubtopicId} onChange={(event) => { setSelectedSubtopicId(event.target.value); setPage(0); setQuery(""); setDetail(undefined); setAssessment(undefined); }}><option value="">{t("Select subtopic")}</option>{subtopics.map((node) => <option key={node.id} value={node.id}>{node.name} ({node.status})</option>)}</Select>
           <Label htmlFor="lesson-search">{t("Search lessons")}</Label>
           <Input id="lesson-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Title or slug")} />
           {loading ? <p className="py-10 text-center text-sm text-text-muted">{t("Loading lessons...")}</p> : visibleLessons.length ? <ul className="mt-5 space-y-2">{visibleLessons.map((lesson) => <li key={lesson.id}><button type="button" onClick={() => void selectLesson(lesson.id)} className={`w-full rounded-md border p-3 text-left transition-colors hover:border-primary/30 hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${detail?.id === lesson.id ? "border-primary/40 bg-primary-subtle" : "border-border"}`}><span className="flex items-start justify-between gap-2"><span className="font-semibold text-text">{lesson.title}</span><LessonStatus status={lesson.status} /></span><span className="mt-1 block text-xs text-text-muted">{lesson.slug} · {t("order {{order}}", { order: lesson.displayOrder })}</span></button></li>)}</ul> : <p className="py-10 text-center text-sm text-text-muted">{t("No matching lessons.")}</p>}
+          <AdminPagination page={page} totalPages={totalPages} disabled={loading} onPageChange={setPage} />
         </CardContent></Card>
 
         <div className="space-y-6">
           <Card><CardContent>
             <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-text">{detail ? t("Edit lesson") : t("Create lesson")}</h2><p className="mt-1 text-sm text-text-muted">{t("Content is stored as the backend lesson content string.")}</p></div>{detail ? <LessonStatus status={detail.status} /> : null}</div>
             <form className="mt-6 grid gap-5 sm:grid-cols-2" onSubmit={submit} noValidate>
-              <Field label={t("Subtopic")} htmlFor="lesson-subtopic" error={validation.subtopicId}><Select id="lesson-subtopic" aria-invalid={Boolean(validation.subtopicId)} value={form.subtopicId} onChange={(event) => setForm((current) => ({ ...current, subtopicId: event.target.value }))}><option value="">{t("Select subtopic")}</option>{subtopics.map((node) => <option key={node.id} value={node.id}>{node.name} ({node.status})</option>)}</Select></Field>
+              <div><Label>{t("Subtopic")}</Label><p className="mt-2 text-sm font-medium text-text">{subtopics.find((node) => node.id === selectedSubtopicId)?.name ?? t("Select subtopic")}</p></div>
               <Field label={t("Title")} htmlFor="lesson-title" error={validation.title}><Input id="lesson-title" maxLength={200} aria-invalid={Boolean(validation.title)} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} /></Field>
-              <Field label={t("Slug")} htmlFor="lesson-slug" error={validation.slug}><Input id="lesson-slug" maxLength={220} aria-invalid={Boolean(validation.slug)} value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value.toLowerCase() }))} /></Field>
+              <div><Label>{t("System slug")}</Label><p className="mt-2 font-mono text-xs text-text-muted">{detail?.slug ?? t("Generated automatically after creation")}</p></div>
               <Field label={t("Display order")} htmlFor="lesson-order" error={validation.displayOrder}><Input id="lesson-order" type="number" min={0} aria-invalid={Boolean(validation.displayOrder)} value={form.displayOrder} onChange={(event) => setForm((current) => ({ ...current, displayOrder: Number(event.target.value) }))} /></Field>
               <Field label={t("Minimum read seconds")} htmlFor="lesson-read-time" error={validation.minimumReadSeconds}><Input id="lesson-read-time" type="number" min={1} aria-invalid={Boolean(validation.minimumReadSeconds)} value={form.minimumReadSeconds} onChange={(event) => setForm((current) => ({ ...current, minimumReadSeconds: Number(event.target.value) }))} /></Field>
               <Field label={t("Required scroll percent")} htmlFor="lesson-scroll" error={validation.requiredScrollPercent}><Input id="lesson-scroll" type="number" min={1} max={100} aria-invalid={Boolean(validation.requiredScrollPercent)} value={form.requiredScrollPercent} onChange={(event) => setForm((current) => ({ ...current, requiredScrollPercent: Number(event.target.value) }))} /></Field>
@@ -208,7 +231,7 @@ export function LessonManagement() {
             {detail ? <div className="mt-7 border-t border-border pt-6"><h3 className="text-sm font-semibold text-text">{t("Publishing status")}</h3><div className="mt-3 flex flex-wrap gap-2">{statuses.map((status) => <Button key={status} size="sm" variant="secondary" disabled={pending || detail.status === status} onClick={() => void changeStatus(status)}>{t(status)}</Button>)}</div><Button className="mt-6" size="sm" variant="danger" loading={pending} onClick={() => void deleteLesson()}>{t("Delete lesson")}</Button></div> : null}
           </CardContent></Card>
 
-          {detail ? <LessonRelations key={detail.id} lesson={detail} allLessons={lessons} quizzes={quizzes} assessment={assessment} pending={pending} setPending={setPending} onChanged={reloadDetail} onError={setError} /> : null}
+          {detail ? <LessonRelations key={detail.id} lesson={detail} allLessons={relationLessons} quizzes={quizzes} assessment={assessment} pending={pending} setPending={setPending} onChanged={reloadDetail} onError={setError} /> : null}
         </div>
       </div>
     </div>

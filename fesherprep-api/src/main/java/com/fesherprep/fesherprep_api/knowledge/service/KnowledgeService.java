@@ -5,6 +5,7 @@ import com.fesherprep.fesherprep_api.knowledge.domain.NodeType;
 import com.fesherprep.fesherprep_api.knowledge.dto.*;
 import com.fesherprep.fesherprep_api.knowledge.repository.KnowledgeNodeRepository;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
+import com.fesherprep.fesherprep_api.shared.util.ContentIdentityGenerator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -20,6 +21,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class KnowledgeService {
     private final KnowledgeNodeRepository knowledgeNodeRepository;
+    private final ContentIdentityGenerator identityGenerator;
 
     @Transactional(readOnly = true)
     public List<KnowledgeTreeNodeResponse> getPublishedTree() {
@@ -102,8 +104,7 @@ public class KnowledgeService {
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public KnowledgeNodeResponse createNode(@Valid CreateKnowledgeNodeRequest request) {
-        String slug = normalizeSlug(request.slug());
-        ensureUniqueSlug(slug, null);
+        String slug = generateUniqueSlug(request.name());
         KnowledgeNode parent = resolveParent(request.parentId());
 
         KnowledgeNode node = new KnowledgeNode(
@@ -120,8 +121,7 @@ public class KnowledgeService {
     @Transactional
     public KnowledgeNodeResponse updateNode(UUID id, @Valid UpdateKnowledgeNodeRequest request) {
         KnowledgeNode node = requireNode(id);
-        String slug = normalizeSlug(request.slug());
-        ensureUniqueSlug(slug, id);
+        String slug = node.getSlug();
         KnowledgeNode parent = resolveParent(request.parentId());
 
         validateChildrenForType(node, request.type());
@@ -217,13 +217,12 @@ public class KnowledgeService {
         }
     }
 
-    private void ensureUniqueSlug(String slug, UUID currentId) {
-        boolean exists = currentId == null
-                ? knowledgeNodeRepository.existsBySlug(slug)
-                : knowledgeNodeRepository.existsBySlugAndIdNot(slug, currentId);
-        if (exists) {
-            throw new DuplicateKnowledgeSlugException(slug);
+    private String generateUniqueSlug(String name) {
+        for (int attempt = 0; attempt < 20; attempt++) {
+            String slug = identityGenerator.slug(name, 180);
+            if (!knowledgeNodeRepository.existsBySlug(slug)) return slug;
         }
+        throw new IllegalStateException("Could not generate a unique knowledge slug");
     }
 
     private KnowledgeNode save(KnowledgeNode node, String slug) {

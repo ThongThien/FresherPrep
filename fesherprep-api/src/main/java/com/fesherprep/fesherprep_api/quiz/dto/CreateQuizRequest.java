@@ -14,6 +14,7 @@ public record CreateQuizRequest(
         @Min(0) @Max(100) int passPercentage,
         QuestionLanguage language,
         QuizCategory category,
-        @Min(1) Integer maximumScore
+        @Min(1) Integer maximumScore,
+        @Positive Integer durationSeconds
 ) {
 }

@@ -76,9 +76,10 @@ public class LessonController {
 
     @GetMapping("/admin")
     public Page<LessonSummaryResponse> getAllLessons(
+            @RequestParam(required = false) UUID subtopicId,
             @PageableDefault(size = 20, sort = { "displayOrder", "title" }) Pageable pageable
     ) {
-        return lessonService.getAllLessons(pageable);
+        return lessonService.getAllLessons(subtopicId, pageable);
     }
 
     @GetMapping("/admin/{lessonId}")

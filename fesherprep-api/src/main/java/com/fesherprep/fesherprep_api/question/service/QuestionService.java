@@ -12,6 +12,7 @@ import com.fesherprep.fesherprep_api.question.dto.*;
 import com.fesherprep.fesherprep_api.question.repository.QuestionRepository;
 import com.fesherprep.fesherprep_api.question.repository.QuestionVersionRepository;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
+import com.fesherprep.fesherprep_api.shared.util.ContentIdentityGenerator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -32,6 +33,7 @@ public class QuestionService {
     private final QuestionRepository questionRepository;
     private final QuestionVersionRepository versionRepository;
     private final KnowledgeNodeRepository knowledgeNodeRepository;
+    private final ContentIdentityGenerator identityGenerator;
 
     @Transactional(readOnly = true)
     public Page<QuestionResponse> getAllQuestions(
@@ -74,8 +76,7 @@ public class QuestionService {
     @Transactional
     public QuestionResponse createQuestion(@Valid CreateQuestionRequest request) {
         KnowledgeNode subtopic = requireSubtopic(request.subtopicId());
-        String code = normalizeCode(request.code());
-        ensureUniqueCode(code, null);
+        String code = generateUniqueCode(subtopic.getSlug());
 
         Question question = new Question(
                 subtopic,
@@ -91,8 +92,7 @@ public class QuestionService {
     public QuestionResponse updateQuestion(UUID questionId, @Valid UpdateQuestionRequest request) {
         Question question = requireQuestion(questionId);
         KnowledgeNode subtopic = requireSubtopic(request.subtopicId());
-        String code = normalizeCode(request.code());
-        ensureUniqueCode(code, questionId);
+        String code = question.getCode();
 
         if (question.getStatus() == ContentStatus.PUBLISHED
                 && subtopic.getStatus() != ContentStatus.PUBLISHED) {
@@ -262,13 +262,12 @@ public class QuestionService {
         return node;
     }
 
-    private void ensureUniqueCode(String code, UUID currentQuestionId) {
-        boolean exists = currentQuestionId == null
-                ? questionRepository.existsByCode(code)
-                : questionRepository.existsByCodeAndIdNot(code, currentQuestionId);
-        if (exists) {
-            throw new DuplicateQuestionCodeException(code);
+    private String generateUniqueCode(String subtopicSlug) {
+        for (int attempt = 0; attempt < 20; attempt++) {
+            String code = identityGenerator.code(subtopicSlug, 50);
+            if (!questionRepository.existsByCode(code)) return code;
         }
+        throw new IllegalStateException("Could not generate a unique question code");
     }
 
     private Question saveQuestion(Question question, String code) {
@@ -285,12 +284,6 @@ public class QuestionService {
         } catch (DataIntegrityViolationException exception) {
             throw new IllegalArgumentException("Question version number already exists", exception);
         }
-    }
-
-    private static String normalizeCode(String code) {
-        return Objects.requireNonNull(code, "Question code is required")
-                .strip()
-                .toUpperCase(Locale.ROOT);
     }
 
     private static QuestionLanguage languageOrDefault(QuestionLanguage language) {

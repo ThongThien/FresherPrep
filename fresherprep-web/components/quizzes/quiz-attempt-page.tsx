@@ -17,6 +17,7 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [error, setError] = useState<string>();
   const [reload, setReload] = useState(0);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
@@ -32,11 +33,17 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
         if (value.quizId !== quizId) return setError(t("This attempt does not belong to the requested quiz."));
         if (value.status === "SUBMITTED") return router.replace("/quizzes/" + quizId + "/attempts/" + attemptId + "/result");
         setAttempt(value);
-        setAnswers(Object.fromEntries(
+        setRemainingSeconds(value.expiresAt ? secondsUntil(value.expiresAt) : null);
+        const serverAnswers = Object.fromEntries(
           value.questions
             .filter((item) => item.selectedOptionId)
             .map((item) => [item.id, item.selectedOptionId as string]),
-        ));
+        );
+        const storageKey = "fresherprep-attempt-" + value.id;
+        try {
+          const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "{}") as Record<string, string>;
+          setAnswers({ ...saved, ...serverAnswers });
+        } catch { setAnswers(serverAnswers); }
         setError(undefined);
       }).catch((reason: unknown) => {
         if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(t("Unable to restore this attempt."));
@@ -50,6 +57,24 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
     [answers, attempt],
   );
   const selectedOptionId = question ? answers[question.id] : undefined;
+
+  useEffect(() => {
+    if (!attempt) return;
+    sessionStorage.setItem("fresherprep-attempt-" + attempt.id, JSON.stringify(answers));
+  }, [answers, attempt]);
+
+  useEffect(() => {
+    if (!attempt?.expiresAt) return;
+    const update = () => setRemainingSeconds(secondsUntil(attempt.expiresAt as string));
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [attempt?.expiresAt]);
+
+  useEffect(() => {
+    if (remainingSeconds === 0 && attempt && !submitInFlightRef.current) void submitAttempt();
+  // submitAttempt intentionally uses the latest component state.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remainingSeconds]);
 
   function goToQuestion(index: number) {
     setCurrent(index);
@@ -94,6 +119,7 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
         setError(t("The attempt was not completed. You can safely try again."));
         return;
       }
+      sessionStorage.removeItem("fresherprep-attempt-" + attempt.id);
       router.replace("/quizzes/" + quizId + "/attempts/" + attempt.id + "/result");
     } catch { setError(t("Unable to submit this attempt. You can safely try again.")); }
     finally {
@@ -107,13 +133,14 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
   if (!attempt && error) return <Message title={t("Attempt unavailable")} message={error} retry={() => setReload((value) => value + 1)} />;
   if (!attempt || !question) return <div className="mx-auto max-w-5xl animate-pulse motion-reduce:animate-none" role="status"><span className="sr-only">{t("Loading quiz attempt")}</span><div className="h-8 w-2/3 rounded bg-surface-strong" /><div className="mt-8 h-80 rounded-lg bg-surface" /></div>;
 
+  const expired = remainingSeconds === 0;
   return <div className="mx-auto max-w-5xl">
-    <header className="border-b border-border pb-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Assessment in progress")}</p><h1 className="mt-2 text-2xl font-semibold text-text">{attempt.quizTitle}</h1></div><Badge>{t("{{answered}} of {{total}} answered", { answered, total: attempt.questions.length })}</Badge></div><Progress className="mt-5" value={answered / attempt.questions.length * 100} label={t("Answer progress")} showValue /></header>
+    <header className="border-b border-border pb-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Assessment in progress")}</p><h1 className="mt-2 text-2xl font-semibold text-text">{attempt.quizTitle}</h1></div><div className="flex items-center gap-2">{remainingSeconds !== null ? <Badge variant={remainingSeconds <= 60 ? "warning" : "neutral"}>{t("Time remaining: {{time}}", { time: formatCountdown(remainingSeconds) })}</Badge> : null}<Badge>{t("{{answered}} of {{total}} answered", { answered, total: attempt.questions.length })}</Badge></div></div><Progress className="mt-5" value={answered / attempt.questions.length * 100} label={t("Answer progress")} showValue /></header>
     <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start">
       <main className="rounded-lg border border-border bg-surface p-5 shadow-card sm:p-7" aria-labelledby="question-title">
         <p className="text-sm font-semibold text-primary">{t("Question {{current}} of {{total}}", { current: current + 1, total: attempt.questions.length })}</p>
         <h2 id="question-title" className="mt-3 text-xl font-semibold leading-8 text-text">{question.content}</h2>
-        <fieldset className="mt-6 space-y-3" disabled={submitting}>
+        <fieldset className="mt-6 space-y-3" disabled={submitting || expired}>
           <legend className="sr-only">{t("Choose one answer")}</legend>
           {question.options.map((option) => {
             const checked = selectedOptionId === option.id;
@@ -123,7 +150,7 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
             </label>;
           })}
         </fieldset>
-        {error ? <Feedback className="mt-5" tone="error" title={t("Request failed")}>{error}</Feedback> : null}
+        {expired ? <Feedback className="mt-5" tone="warning" title={t("Time is up")}>{t("Your current answers are being submitted.")}</Feedback> : null}{error ? <Feedback className="mt-5" tone="error" title={t("Request failed")}>{error}</Feedback> : null}
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between"><Button className="w-full sm:w-auto" variant="secondary" disabled={current === 0 || submitting} onClick={() => goToQuestion(current - 1)}>{t("Previous")}</Button><Button className="w-full sm:w-auto" variant="secondary" disabled={current === attempt.questions.length - 1 || submitting} onClick={() => goToQuestion(current + 1)}>{t("Next")}</Button></div>
       </main>
       <aside className="space-y-5 lg:sticky lg:top-24"><section className="rounded-lg border border-border bg-surface p-4"><h2 className="text-sm font-semibold text-text">{t("Questions")}</h2><div className="mt-4 grid grid-cols-5 gap-2 lg:grid-cols-4">{attempt.questions.map((item, index) => { const itemAnswered = Boolean(answers[item.id]); return <button key={item.id} type="button" disabled={submitting} aria-label={t(itemAnswered ? "Question {{number}}, answered" : "Question {{number}}, unanswered", { number: index + 1 })} aria-current={index === current ? "step" : undefined} className={"min-h-10 rounded-md border text-sm font-semibold " + (index === current ? "border-primary-solid bg-primary-solid text-white" : itemAnswered ? "border-success/30 bg-success-subtle text-success-strong" : "border-border text-text-muted")} onClick={() => goToQuestion(index)}>{index + 1}<span className="sr-only">{t(itemAnswered ? "answered" : "unanswered")}</span></button>; })}</div><div className="mt-4 space-y-1 text-xs text-text-muted"><p>{t("Answered: {{count}}", { count: answered })}</p><p>{t("Unanswered: {{count}}", { count: attempt.questions.length - answered })}</p></div></section><Button className="w-full" variant="secondary" disabled={submitting} onClick={() => setConfirming(true)}>{t("Submit quiz")}</Button></aside>
@@ -135,4 +162,12 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
 function Message({ title, message, retry }: { title: string; message: string; retry?: () => void }) {
   const { t } = useI18n();
   return <div className="mx-auto max-w-2xl py-10"><h1 className="text-2xl font-semibold text-text">{title}</h1><p className="mt-3 text-sm text-text-muted">{message}</p><div className="mt-5 flex gap-3">{retry ? <Button variant="secondary" onClick={retry}>{t("Try again")}</Button> : null}<Link className="inline-flex min-h-10 items-center text-sm font-semibold text-primary" href="/learning-paths">{t("Back to learning")}</Link></div></div>;
+}
+
+function formatCountdown(seconds: number) {
+  return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
+}
+
+function secondsUntil(expiresAt: string) {
+  return Math.max(0, Math.ceil((Date.parse(expiresAt) - Date.now()) / 1000));
 }

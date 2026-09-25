@@ -15,6 +15,7 @@ import java.util.Objects;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LessonAssessment extends BaseEntity {
+    public static final int PASS_PERCENTAGE = 80;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "lesson_id", nullable = false)
     private Lesson lesson;
@@ -28,6 +29,9 @@ public class LessonAssessment extends BaseEntity {
         this.quiz = Objects.requireNonNull(quiz);
         if (quiz.getType() != QuizType.LESSON) {
             throw new IllegalArgumentException("Lesson assessment requires a lesson quiz");
+        }
+        if (quiz.getPassPercentage() != PASS_PERCENTAGE) {
+            throw new IllegalArgumentException("Lesson assessment pass percentage must be 80");
         }
         if (quiz.getSelectionMode() == QuizSelectionMode.FIXED) {
             if (quiz.getFixedQuestions().isEmpty() || quiz.getFixedQuestions().stream()

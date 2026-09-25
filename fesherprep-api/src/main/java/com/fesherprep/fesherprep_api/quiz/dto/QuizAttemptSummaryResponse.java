@@ -19,6 +19,8 @@ public record QuizAttemptSummaryResponse(
         BigDecimal scorePercentage,
         BigDecimal score,
         int maximumScore,
+        Integer durationSeconds,
+        Instant expiresAt,
         Boolean passed,
         Instant startedAt,
         Instant submittedAt
@@ -35,6 +37,8 @@ public record QuizAttemptSummaryResponse(
                 attempt.getScorePercentage(),
                 attempt.getScore(),
                 attempt.getMaximumScore(),
+                attempt.getDurationSeconds(),
+                attempt.getExpiresAt(),
                 submitted ? attempt.isPassed() : null,
                 attempt.getCreatedAt(),
                 attempt.getSubmittedAt()

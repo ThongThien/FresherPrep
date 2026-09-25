@@ -8,6 +8,7 @@ export interface PublishedQuiz {
   language: "VI" | "EN";
   category: "TECHNICAL" | "GRAMMAR" | "VOCABULARY" | "TOEIC" | "MIXED";
   maximumScore: number;
+  durationSeconds: number | null;
   passingScore: number;
   questionCount: number;
 }
@@ -39,6 +40,8 @@ export interface QuizAttempt {
   language: "VI" | "EN";
   category: "TECHNICAL" | "GRAMMAR" | "VOCABULARY" | "TOEIC" | "MIXED";
   maximumScore: number;
+  durationSeconds: number | null;
+  expiresAt: string | null;
   passingScore: number;
   status: "IN_PROGRESS" | "SUBMITTED";
   scorePercentage: number | null;

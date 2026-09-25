@@ -76,6 +76,13 @@ public class QuizService {
         User user = requireCurrentUser();
         Quiz quiz = quizRepository.findForStart(quizId, ContentStatus.PUBLISHED)
                 .orElseThrow(() -> new QuizNotFoundException(quizId));
+        Optional<QuizAttempt> activeAttempt = attemptRepository
+                .findFirstByUserIdAndQuizIdAndStatusOrderByCreatedAtDesc(
+                        user.getId(), quizId, AttemptStatus.IN_PROGRESS
+                );
+        if (activeAttempt.isPresent()) {
+            return QuizAttemptResponse.from(activeAttempt.get());
+        }
         List<QuestionVersion> versions = selectVersions(quiz);
 
         QuizAttempt attempt = attemptRepository.saveAndFlush(new QuizAttempt(user, quiz, versions));
@@ -164,7 +171,8 @@ public class QuizService {
                 request.passPercentage(),
                 languageOrDefault(request.language()),
                 categoryOrDefault(request.category()),
-                scoreOrDefault(request.maximumScore())
+                scoreOrDefault(request.maximumScore()),
+                request.durationSeconds()
         );
         return QuizResponse.from(saveQuiz(quiz, code));
     }
@@ -173,6 +181,11 @@ public class QuizService {
     @Transactional
     public QuizResponse updateQuiz(UUID quizId, @Valid UpdateQuizRequest request) {
         Quiz quiz = requireQuiz(quizId);
+        if (quizRepository.isUsedByLessonAssessment(quizId)
+                && (request.type() != QuizType.LESSON
+                || request.passPercentage() != LessonAssessment.PASS_PERCENTAGE)) {
+            throw new IllegalStateException("A lesson assessment must remain a lesson quiz with an 80% pass threshold");
+        }
         String code = normalizeCode(request.code());
         ensureUniqueCode(code, quizId);
         quiz.updateDetails(
@@ -183,7 +196,8 @@ public class QuizService {
                 request.passPercentage(),
                 request.language() == null ? quiz.getLanguage() : request.language(),
                 request.category() == null ? quiz.getCategory() : request.category(),
-                request.maximumScore() == null ? quiz.getMaximumScore() : request.maximumScore()
+                request.maximumScore() == null ? quiz.getMaximumScore() : request.maximumScore(),
+                request.durationSeconds()
         );
         return QuizResponse.from(saveQuiz(quiz, code));
     }

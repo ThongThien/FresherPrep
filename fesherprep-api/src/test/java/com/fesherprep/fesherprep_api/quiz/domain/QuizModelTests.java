@@ -138,6 +138,9 @@ class QuizModelTests {
         assertThrows(IllegalArgumentException.class, () -> new LessonAssessment(wrongLesson, lessonQuiz));
         Lesson correctLesson = new Lesson(hashMap, "HashMap", "hashmap-lesson", "HashMap basics", 0, 60, 80);
         assertEquals(80, new LessonAssessment(correctLesson, lessonQuiz).getPassPercentage());
+        Quiz wrongThreshold = new Quiz("HashMap check", QuizType.LESSON, QuizSelectionMode.FIXED, 70);
+        wrongThreshold.addQuestion(first.getQuestion());
+        assertThrows(IllegalArgumentException.class, () -> new LessonAssessment(correctLesson, wrongThreshold));
     }
 
     @Test

@@ -6,12 +6,13 @@ import { Badge, Button, Card, CardContent, Feedback, FieldError, Input, Label, S
 import { adminRequest, jsonBody } from "@/lib/admin/client";
 import type { AdminPage, ContentStatus, Difficulty, KnowledgeNode, Question, QuestionCategory, QuestionLanguage, QuestionVersion } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
+import { AdminPagination } from "./admin-ui";
 
 type OptionDraft = { position: number; content: string; correct: boolean; explanation: string };
 const difficulties: Difficulty[] = ["EASY", "MEDIUM", "HARD"];
 const languages: QuestionLanguage[] = ["VI", "EN"];
 const categories: QuestionCategory[] = ["TECHNICAL", "GRAMMAR", "VOCABULARY", "TOEIC"];
-const emptyQuestion = { subtopicId: "", code: "", difficulty: "EASY" as Difficulty, language: "VI" as QuestionLanguage, category: "TECHNICAL" as QuestionCategory };
+const emptyQuestion = { subtopicId: "", difficulty: "EASY" as Difficulty, language: "VI" as QuestionLanguage, category: "TECHNICAL" as QuestionCategory };
 const emptyOptions = (): OptionDraft[] => [1, 2, 3, 4].map((position) => ({ position, content: "", correct: position === 1, explanation: "" }));
 
 export function QuestionManagement() {
@@ -25,8 +26,6 @@ export function QuestionManagement() {
   const [versionForm, setVersionForm] = useState({ content: "", explanation: "", options: emptyOptions() });
   const [revisionSource, setRevisionSource] = useState<string>();
   const [query, setQuery] = useState("");
-  const [languageFilter, setLanguageFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
   const [knowledgeFilter, setKnowledgeFilter] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -35,34 +34,45 @@ export function QuestionManagement() {
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [validation, setValidation] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const loadLists = useCallback(async () => {
+  const loadNodes = useCallback(async () => {
+    try {
+      const nodes = await adminRequest<KnowledgeNode[]>("knowledge/nodes");
+      const available = nodes.filter((node) => node.type === "SUBTOPIC");
+      setSubtopics(available);
+      setKnowledgeFilter((current) => current || available[0]?.id || "");
+    } catch (reason) { setError(messageOf(reason)); }
+  }, []);
+
+  const loadQuestions = useCallback(async () => {
+    if (!knowledgeFilter) { setQuestions([]); setTotalPages(0); return; }
     setLoading(true);
     setError(undefined);
     try {
-      const params = new URLSearchParams({ page: "0", size: "100", sort: "code,asc" });
-      if (languageFilter) params.set("language", languageFilter);
-      if (categoryFilter) params.set("category", categoryFilter);
-      if (knowledgeFilter) params.set("knowledgeNodeId", knowledgeFilter);
+      const params = new URLSearchParams({ page: String(page), size: "20", sort: "code,asc", knowledgeNodeId: knowledgeFilter });
       if (difficultyFilter) params.set("difficulty", difficultyFilter);
       if (statusFilter) params.set("status", statusFilter);
-      const [page, nodes] = await Promise.all([
-        adminRequest<AdminPage<Question>>(`questions?${params.toString()}`),
-        adminRequest<KnowledgeNode[]>("knowledge/nodes"),
-      ]);
-      setQuestions(page.content);
-      setSubtopics(nodes.filter((node) => node.type === "SUBTOPIC"));
+      const result = await adminRequest<AdminPage<Question>>(`questions?${params.toString()}`);
+      setQuestions(result.content);
+      setTotalPages(result.totalPages);
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
       setLoading(false);
     }
-  }, [categoryFilter, difficultyFilter, knowledgeFilter, languageFilter, statusFilter]);
+  }, [difficultyFilter, knowledgeFilter, page, statusFilter]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void loadLists(), 0);
+    const timer = window.setTimeout(() => void loadNodes(), 0);
     return () => window.clearTimeout(timer);
-  }, [loadLists]);
+  }, [loadNodes]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadQuestions(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadQuestions]);
 
   const visible = useMemo(() => questions.filter((question) =>
     `${question.code} ${question.language} ${question.category} ${question.difficulty} ${question.status}`.toLowerCase().includes(query.toLowerCase()),
@@ -79,7 +89,7 @@ export function QuestionManagement() {
       setSelected(question);
       setVersions(questionVersions);
       setSelectedVersionId(question.publishedVersionId ?? questionVersions[0]?.id);
-      setForm({ subtopicId: question.subtopicId, code: question.code, difficulty: question.difficulty, language: question.language, category: question.category });
+      setForm({ subtopicId: question.subtopicId, difficulty: question.difficulty, language: question.language, category: question.category });
       resetVersionEditor();
       setValidation({});
     } catch (reason) {
@@ -91,7 +101,7 @@ export function QuestionManagement() {
     setSelected(undefined);
     setVersions([]);
     setSelectedVersionId(undefined);
-    setForm(emptyQuestion);
+    setForm({ ...emptyQuestion, subtopicId: knowledgeFilter });
     resetVersionEditor();
     clearMessages();
   }
@@ -100,7 +110,6 @@ export function QuestionManagement() {
     event.preventDefault();
     const errors: Record<string, string> = {};
     if (!form.subtopicId) errors.subtopicId = "Select a subtopic.";
-    if (!form.code.trim()) errors.code = "Question code is required.";
     setValidation(errors);
     if (Object.keys(errors).length) return;
     setPending(true);
@@ -109,9 +118,9 @@ export function QuestionManagement() {
     try {
       const saved = await adminRequest<Question>(
         selected ? `questions/${selected.id}` : "questions",
-        { method: selected ? "PUT" : "POST", ...jsonBody({ ...form, code: form.code.trim().toUpperCase() }) },
+        { method: selected ? "PUT" : "POST", ...jsonBody({ ...form, subtopicId: knowledgeFilter }) },
       );
-      await loadLists();
+      await loadQuestions();
       await selectQuestion(saved.id);
       setSuccess(selected ? "Question metadata updated." : "Question created. Add its first immutable version next.");
     } catch (reason) { setError(messageOf(reason)); } finally { setPending(false); }
@@ -129,7 +138,7 @@ export function QuestionManagement() {
     try {
       await adminRequest<void>(`questions/${selected.id}`, { method: "DELETE" });
       startCreate();
-      await loadLists();
+      await loadQuestions();
       setSuccess("Question deleted.");
     } catch (reason) { setError(messageOf(reason)); } finally { setPending(false); }
   }
@@ -194,7 +203,7 @@ export function QuestionManagement() {
     setError(undefined);
     try {
       await adminRequest(path, { method, ...(body ? jsonBody(body) : {}) });
-      await loadLists();
+      await loadQuestions();
       await selectQuestion(selected.id);
       setSuccess(message);
     } catch (reason) { setError(messageOf(reason)); } finally { setPending(false); }
@@ -207,27 +216,25 @@ export function QuestionManagement() {
   function clearMessages() { setError(undefined); setSuccess(undefined); setValidation({}); }
 
   return <div className="mx-auto max-w-7xl">
-    <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Questions")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Manage question metadata and immutable content versions.")}</p></div><Button onClick={startCreate}>{t("New question")}</Button></header>
+    <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Questions")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Manage question metadata and immutable content versions.")}</p></div><Button disabled={!knowledgeFilter} onClick={startCreate}>{t("New question")}</Button></header>
     {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
     {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
     <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)]">
       <Card><CardContent><Label htmlFor="question-search">{t("Search questions")}</Label><Input id="question-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Code, language, category, difficulty, or status")} />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <FilterSelect label={t("Language")} value={languageFilter} onChange={setLanguageFilter} options={languages.map((value) => ({ value, label: t(value) }))} />
-          <FilterSelect label={t("Category")} value={categoryFilter} onChange={setCategoryFilter} options={categories.map((value) => ({ value, label: t(value) }))} />
-          <FilterSelect label={t("Knowledge")} value={knowledgeFilter} onChange={setKnowledgeFilter} options={subtopics.map((node) => ({ value: node.id, label: node.name }))} />
-          <FilterSelect label={t("Difficulty")} value={difficultyFilter} onChange={setDifficultyFilter} options={difficulties.map((value) => ({ value, label: t(value) }))} />
-          <FilterSelect label={t("Status")} value={statusFilter} onChange={setStatusFilter} options={["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"].map((value) => ({ value, label: t(value) }))} />
+          <FilterSelect label={t("Parent subtopic")} value={knowledgeFilter} onChange={(value) => { setKnowledgeFilter(value); setPage(0); setQuery(""); setSelected(undefined); }} options={subtopics.map((node) => ({ value: node.id, label: node.name }))} includeAll={false} />
+          <FilterSelect label={t("Difficulty")} value={difficultyFilter} onChange={(value) => { setDifficultyFilter(value); setPage(0); }} options={difficulties.map((value) => ({ value, label: t(value) }))} />
+          <FilterSelect label={t("Status")} value={statusFilter} onChange={(value) => { setStatusFilter(value); setPage(0); }} options={["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"].map((value) => ({ value, label: t(value) }))} />
         </div>
-        {loading ? <p className="py-10 text-center text-sm text-text-muted">{t("Loading questions...")}</p> : visible.length ? <ul className="mt-5 space-y-2">{visible.map((question) => <li key={question.id}><button type="button" onClick={() => void selectQuestion(question.id)} className={`w-full rounded-md border p-3 text-left hover:border-primary/30 hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${selected?.id === question.id ? "border-primary/40 bg-primary-subtle" : "border-border"}`}><span className="flex items-start justify-between gap-2"><span className="font-semibold text-text">{question.code}</span><Status status={question.status} /></span><span className="mt-1 block text-xs text-text-muted">{t(question.language)} · {t(question.category)} · {t(question.difficulty)}{question.publishedVersionId ? t(" - published version available") : t(" - no published version")}</span></button></li>)}</ul> : <p className="py-10 text-center text-sm text-text-muted">{t("No matching questions.")}</p>}</CardContent></Card>
+        {loading ? <p className="py-10 text-center text-sm text-text-muted">{t("Loading questions...")}</p> : visible.length ? <ul className="mt-5 space-y-2">{visible.map((question) => <li key={question.id}><button type="button" onClick={() => void selectQuestion(question.id)} className={`w-full rounded-md border p-3 text-left hover:border-primary/30 hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${selected?.id === question.id ? "border-primary/40 bg-primary-subtle" : "border-border"}`}><span className="flex items-start justify-between gap-2"><span className="font-semibold text-text">{question.code}</span><Status status={question.status} /></span><span className="mt-1 block text-xs text-text-muted">{t(question.language)} · {t(question.category)} · {t(question.difficulty)}{question.publishedVersionId ? t(" - published version available") : t(" - no published version")}</span></button></li>)}</ul> : <p className="py-10 text-center text-sm text-text-muted">{t("No matching questions.")}</p>}<AdminPagination page={page} totalPages={totalPages} disabled={loading} onPageChange={setPage} /></CardContent></Card>
       <div className="space-y-6">
         <Card><CardContent><div className="flex justify-between gap-3"><div><h2 className="text-lg font-semibold text-text">{selected ? t("Question metadata") : t("Create question")}</h2><p className="mt-1 text-sm text-text-muted">{t("Content and answers are managed as immutable versions below.")}</p></div>{selected ? <Status status={selected.status} /> : null}</div>
           <form className="mt-6 grid gap-5 sm:grid-cols-2" onSubmit={submitQuestion}>
-            <div><Label htmlFor="question-code">{t("Code")}</Label><Input id="question-code" maxLength={50} aria-invalid={Boolean(validation.code)} value={form.code} onChange={(event) => setForm((current) => ({ ...current, code: event.target.value.toUpperCase() }))} />{validation.code ? <FieldError>{validation.code}</FieldError> : null}</div>
+            <div><Label>{t("System code")}</Label><p className="mt-2 font-mono text-xs text-text-muted">{selected?.code ?? t("Generated automatically after creation")}</p></div>
             <div><Label htmlFor="question-difficulty">{t("Difficulty")}</Label><Select id="question-difficulty" value={form.difficulty} onChange={(event) => setForm((current) => ({ ...current, difficulty: event.target.value as Difficulty }))}>{difficulties.map((difficulty) => <option key={difficulty} value={difficulty}>{t(difficulty)}</option>)}</Select></div>
             <div><Label htmlFor="question-language">{t("Language")}</Label><Select id="question-language" value={form.language} onChange={(event) => setForm((current) => ({ ...current, language: event.target.value as QuestionLanguage }))}>{languages.map((language) => <option key={language} value={language}>{t(language)}</option>)}</Select></div>
             <div><Label htmlFor="question-category">{t("Category")}</Label><Select id="question-category" value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value as QuestionCategory }))}>{categories.map((category) => <option key={category} value={category}>{t(category)}</option>)}</Select></div>
-            <div className="sm:col-span-2"><Label htmlFor="question-subtopic">{t("Subtopic")}</Label><Select id="question-subtopic" aria-invalid={Boolean(validation.subtopicId)} value={form.subtopicId} onChange={(event) => setForm((current) => ({ ...current, subtopicId: event.target.value }))}><option value="">{t("Select subtopic")}</option>{subtopics.map((node) => <option key={node.id} value={node.id}>{node.name} ({node.status})</option>)}</Select>{validation.subtopicId ? <FieldError>{validation.subtopicId}</FieldError> : null}</div>
+            <div className="sm:col-span-2"><Label>{t("Subtopic")}</Label><p className="mt-2 text-sm font-medium text-text">{subtopics.find((node) => node.id === knowledgeFilter)?.name ?? t("Select subtopic")}</p>{validation.subtopicId ? <FieldError>{validation.subtopicId}</FieldError> : null}</div>
             <div className="sm:col-span-2"><Button type="submit" loading={pending}>{selected ? t("Save metadata") : t("Create question")}</Button></div>
           </form>
           {selected ? <div className="mt-7 border-t border-border pt-6"><div className="flex flex-wrap gap-2">{questionTransitions(selected.status).map((status) => <Button key={status} size="sm" variant="secondary" disabled={pending} onClick={() => void changeStatus(status)}>{status === "REVIEW" ? t("Submit for review") : status === "DRAFT" ? t("Move to draft") : t("Archive")}</Button>)}</div><Button className="mt-5" size="sm" variant="danger" loading={pending} onClick={() => void deleteQuestion()}>{t("Delete question")}</Button></div> : null}
@@ -255,8 +262,8 @@ function questionTransitions(status: ContentStatus): Exclude<ContentStatus, "PUB
   return ["ARCHIVED"];
 }
 function Status({ status }: { status: ContentStatus }) { const { t } = useI18n(); return <Badge variant={status === "PUBLISHED" ? "success" : status === "REVIEW" ? "warning" : status === "DRAFT" ? "info" : "neutral"}>{t(status)}</Badge>; }
-function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[] }) {
+function FilterSelect({ label, value, onChange, options, includeAll = true }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[]; includeAll?: boolean }) {
   const { t } = useI18n();
-  return <div><Label className="sr-only">{label}</Label><Select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}><option value="">{t("All {{label}}", { label: label.toLowerCase() })}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Select></div>;
+  return <div><Label className="sr-only">{label}</Label><Select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>{includeAll ? <option value="">{t("All {{label}}", { label: label.toLowerCase() })}</option> : <option value="">{t("Select subtopic")}</option>}{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Select></div>;
 }
 function messageOf(reason: unknown) { return reason instanceof Error ? reason.message : "The request could not be completed."; }

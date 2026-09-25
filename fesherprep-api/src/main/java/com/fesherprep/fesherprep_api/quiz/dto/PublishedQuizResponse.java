@@ -19,6 +19,7 @@ public record PublishedQuizResponse(
         QuestionLanguage language,
         QuizCategory category,
         int maximumScore,
+        Integer durationSeconds,
         BigDecimal passingScore,
         int questionCount
 ) {
@@ -33,6 +34,7 @@ public record PublishedQuizResponse(
                 quiz.getLanguage(),
                 quiz.getCategory(),
                 quiz.getMaximumScore(),
+                quiz.getDurationSeconds(),
                 BigDecimal.valueOf(quiz.getMaximumScore())
                         .multiply(BigDecimal.valueOf(quiz.getPassPercentage()))
                         .divide(BigDecimal.valueOf(100))

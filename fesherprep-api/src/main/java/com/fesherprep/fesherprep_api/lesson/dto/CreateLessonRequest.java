@@ -7,7 +7,6 @@ import java.util.UUID;
 public record CreateLessonRequest(
         @NotNull UUID subtopicId,
         @NotBlank @Size(max = 200) String title,
-        @NotBlank @Size(max = 220) String slug,
         @NotBlank String content,
         @PositiveOrZero int displayOrder,
         @Positive int minimumReadSeconds,
