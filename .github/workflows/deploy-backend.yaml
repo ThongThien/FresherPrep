@@ -10,18 +10,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ========================================
+      # 1. Checkout source code
+      # ========================================
       - name: Checkout
         uses: actions/checkout@v7
 
+      # ========================================
+      # 2. Login Docker Hub
+      # ========================================
       - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
           username: thongthien2004
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # ========================================
+      # 3. Setup Docker Buildx
+      # ========================================
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      # ========================================
+      # 4. Build & Push Docker Image
+      # ========================================
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v7
         with:
@@ -32,17 +44,59 @@ jobs:
             thongthien2004/fresherprep-api:latest
             thongthien2004/fresherprep-api:${{ github.sha }}
 
+      # ========================================
+      # 5. Prepare SSH Key
+      # ========================================
+      - name: Prepare SSH key
+        shell: bash
+        run: |
+          test -n "${{ secrets.VPS_SSH_KEY_B64 }}" || {
+            echo "ERROR: VPS_SSH_KEY_B64 is empty"
+            exit 1
+          }
+
+          echo "${{ secrets.VPS_SSH_KEY_B64 }}" \
+            | base64 -d \
+            > "$RUNNER_TEMP/fresherprep_deploy_key"
+
+          chmod 600 "$RUNNER_TEMP/fresherprep_deploy_key"
+
+          ssh-keygen -y \
+            -f "$RUNNER_TEMP/fresherprep_deploy_key" \
+            > /tmp/fresherprep_deploy.pub
+
+          echo "SSH private key format: OK"
+
+      # ========================================
+      # 6. Deploy to VPS
+      # ========================================
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
+          key_path: ${{ runner.temp }}/fresherprep_deploy_key
+
           script: |
+            set -e
+
+            echo "========================================"
+            echo "Deploying FresherPrep Backend"
+            echo "========================================"
+
+            echo ""
+            echo "1. Pulling latest Docker image..."
+
             docker pull thongthien2004/fresherprep-api:latest
 
+            echo ""
+            echo "2. Removing old container..."
+
             docker rm -f fresherprep-api || true
+
+            echo ""
+            echo "3. Starting new container..."
 
             docker run -d \
               --name fresherprep-api \
@@ -51,8 +105,27 @@ jobs:
               -p 127.0.0.1:8080:8080 \
               thongthien2004/fresherprep-api:latest
 
-            echo "Waiting for application to start..."
+            echo ""
+            echo "4. Container status..."
+
+            docker ps \
+              --filter "name=fresherprep-api"
+
+            echo ""
+            echo "5. Waiting for application to start..."
+
             sleep 10
 
-            curl --fail --silent --show-error \
+            echo ""
+            echo "6. Health check..."
+
+            curl \
+              --fail \
+              --silent \
+              --show-error \
               http://127.0.0.1:8080/actuator/health
+
+            echo ""
+            echo "========================================"
+            echo "Deployment successful!"
+            echo "========================================"
