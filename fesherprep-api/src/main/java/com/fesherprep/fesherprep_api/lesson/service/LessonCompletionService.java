@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -78,6 +79,8 @@ public class LessonCompletionService {
                     false,
                     null,
                     AssessmentProgressStatus.NOT_REQUIRED,
+                    null,
+                    null,
                     readingQualified
             );
         }
@@ -94,7 +97,23 @@ public class LessonCompletionService {
         } else {
             status = AssessmentProgressStatus.NOT_STARTED;
         }
-        return new LessonCompletionResult(readingQualified, true, quizId, status, passed);
+        QuizAttempt resultAttempt = attempts.stream()
+                .filter(attempt -> attempt.getStatus() == AttemptStatus.SUBMITTED)
+                .filter(attempt -> !passed || attempt.isPassed())
+                .max(Comparator.comparing(
+                        QuizAttempt::getSubmittedAt,
+                        Comparator.nullsFirst(Comparator.naturalOrder())
+                ))
+                .orElse(null);
+        return new LessonCompletionResult(
+                readingQualified,
+                true,
+                quizId,
+                status,
+                assessment.getPassPercentage(),
+                resultAttempt == null ? null : resultAttempt.getScorePercentage(),
+                readingQualified && passed
+        );
     }
 
     public record LessonCompletionResult(
@@ -102,6 +121,8 @@ public class LessonCompletionService {
             boolean assessmentRequired,
             UUID assessmentQuizId,
             AssessmentProgressStatus assessmentStatus,
+            Integer assessmentPassPercentage,
+            BigDecimal assessmentScorePercentage,
             boolean completed
     ) {
     }

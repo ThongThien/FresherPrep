@@ -191,7 +191,6 @@ export function LearningPathManagement() {
 function PathItems({ path, lessons, onChanged, onError }: { path: LearningPathDetail; lessons: LessonSummary[]; onChanged: (message?: string) => Promise<void>; onError: (value: string) => void }) {
   const { t } = useI18n();
   const [lessonId, setLessonId] = useState("");
-  const [displayOrder, setDisplayOrder] = useState(path.items.length);
   const [required, setRequired] = useState(true);
   const [weight, setWeight] = useState(1);
   const [pending, setPending] = useState(false);
@@ -203,9 +202,8 @@ function PathItems({ path, lessons, onChanged, onError }: { path: LearningPathDe
     setPending(true);
     onError("");
     try {
-      await adminRequest(`learning-paths/${path.id}/items`, { method: "POST", ...jsonBody({ lessonId, displayOrder, required, weight }) });
+      await adminRequest(`learning-paths/${path.id}/items`, { method: "POST", ...jsonBody({ lessonId, required, weight }) });
       setLessonId("");
-      setDisplayOrder(path.items.length + 1);
       await onChanged("Lesson added to the learning path.");
     } catch (reason) {
       onError(messageOf(reason));
@@ -218,7 +216,7 @@ function PathItems({ path, lessons, onChanged, onError }: { path: LearningPathDe
     {path.items.length ? <div className="mt-5 space-y-3">{[...path.items].sort((a, b) => a.displayOrder - b.displayOrder).map((item) => <PathItemEditor key={item.id} pathId={path.id} item={item} pending={pending} setPending={setPending} onChanged={onChanged} onError={onError} />)}</div> : <p className="mt-5 rounded-md border border-dashed border-border p-5 text-sm text-text-muted">{t("No lessons have been added.")}</p>}
     <form className="mt-6 grid gap-4 border-t border-border pt-6 sm:grid-cols-2" onSubmit={addItem}>
       <div className="sm:col-span-2"><Label htmlFor="item-lesson">{t("Add lesson")}</Label><Select id="item-lesson" value={lessonId} onChange={(event) => setLessonId(event.target.value)}><option value="">{t("Select lesson")}</option>{available.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title} ({lesson.status})</option>)}</Select></div>
-      <div><Label htmlFor="item-order">{t("Display order")}</Label><Input id="item-order" type="number" min={0} value={displayOrder} onChange={(event) => setDisplayOrder(Number(event.target.value))} /></div>
+      <div className="sm:col-span-2"><p className="text-xs leading-5 text-text-muted">{t("New lessons are appended after the current last lesson. You can reorder them afterward.")}</p></div>
       <div><Label htmlFor="item-weight">{t("Weight")}</Label><Input id="item-weight" type="number" min={1} value={weight} onChange={(event) => setWeight(Number(event.target.value))} /></div>
       <label className="flex min-h-10 items-center gap-2 text-sm font-medium text-text"><input type="checkbox" checked={required} onChange={(event) => setRequired(event.target.checked)} className="size-4 accent-primary" />{t("Required lesson")}</label>
       <div className="sm:text-right"><Button type="submit" loading={pending}>{t("Add lesson")}</Button></div>

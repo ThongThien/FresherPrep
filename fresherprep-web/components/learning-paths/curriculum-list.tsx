@@ -38,7 +38,7 @@ export function CurriculumList({
       {orderedItems.map((item, index) => {
         const progress = progressByLessonId.get(item.lessonId);
         const state = itemState(item, data, progress, startedLessonIds.has(item.lessonId), t);
-        const current = item.lessonId === continueLessonId && !progress?.completed;
+        const current = item.lessonId === continueLessonId && !progress?.completed && !progress?.locked;
         return (
           <li
             key={item.id}
@@ -72,15 +72,26 @@ export function CurriculumList({
                         {t("Assessment: {{status}}", { status: assessmentLabel(progress.assessmentStatus, t) })}
                       </p>
                     ) : null}
+                    {progress?.locked ? (
+                      <p className="mt-2 text-sm text-text-muted">
+                        {progress.blockedByLessonTitle
+                          ? t("Complete \"{{title}}\" first.", { title: progress.blockedByLessonTitle })
+                          : t("Complete earlier lessons first.")}
+                      </p>
+                    ) : null}
                   </div>
 
-                  {data.joined === true ? (
+                  {data.joined === true && !progress?.locked ? (
                     <Link
                       href={"/lessons/" + item.lessonId + "?pathId=" + encodeURIComponent(data.path.id)}
                       className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-md border border-border-strong px-3 text-sm font-semibold text-text transition-colors hover:border-primary/40 hover:bg-primary-subtle hover:text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20"
                     >
                       {progress?.completed ? t("Review") : startedLessonIds.has(item.lessonId) ? t("Continue") : t("Open lesson")}
                     </Link>
+                  ) : data.joined === true && progress?.locked ? (
+                    <span className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md border border-border bg-surface-muted px-3 text-sm font-semibold text-text-muted" aria-label={t("Lesson locked")}>
+                      <span aria-hidden="true">{"\uD83D\uDD12"}</span>{t("Locked")}
+                    </span>
                   ) : null}
                 </div>
               </div>
@@ -101,6 +112,7 @@ function itemState(
 ) {
   if (data.joined !== true) return { label: t("Path preview") };
   if (progress?.completed) return { label: t("Completed") };
+  if (progress?.locked) return { label: t("Locked") };
   if (started) return { label: t("In progress") };
   if (data.lessonProgressUnavailable) return { label: t("Incomplete") };
   return { label: t("Not started") };

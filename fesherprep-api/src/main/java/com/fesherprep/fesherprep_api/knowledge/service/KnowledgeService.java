@@ -1,5 +1,6 @@
 package com.fesherprep.fesherprep_api.knowledge.service;
 
+import com.fesherprep.fesherprep_api.config.CacheNames;
 import com.fesherprep.fesherprep_api.knowledge.domain.KnowledgeNode;
 import com.fesherprep.fesherprep_api.knowledge.domain.NodeType;
 import com.fesherprep.fesherprep_api.knowledge.dto.*;
@@ -9,6 +10,8 @@ import com.fesherprep.fesherprep_api.shared.util.ContentIdentityGenerator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +27,7 @@ public class KnowledgeService {
     private final ContentIdentityGenerator identityGenerator;
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.KNOWLEDGE_TREE, key = "'published'", sync = true)
     public List<KnowledgeTreeNodeResponse> getPublishedTree() {
         List<KnowledgeNode> nodes = knowledgeNodeRepository
                 .findAllByStatusOrderByDisplayOrderAscNameAsc(ContentStatus.PUBLISHED);
@@ -45,6 +49,7 @@ public class KnowledgeService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.KNOWLEDGE_NODE, key = "#id", sync = true)
     public KnowledgeNodeResponse getPublishedNode(UUID id) {
         return KnowledgeNodeResponse.from(
                 knowledgeNodeRepository.findByIdAndStatus(id, ContentStatus.PUBLISHED)
@@ -103,6 +108,7 @@ public class KnowledgeService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
     public KnowledgeNodeResponse createNode(@Valid CreateKnowledgeNodeRequest request) {
         String slug = generateUniqueSlug(request.name());
         KnowledgeNode parent = resolveParent(request.parentId());
@@ -119,6 +125,7 @@ public class KnowledgeService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
     public KnowledgeNodeResponse updateNode(UUID id, @Valid UpdateKnowledgeNodeRequest request) {
         KnowledgeNode node = requireNode(id);
         String slug = node.getSlug();
@@ -134,6 +141,7 @@ public class KnowledgeService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
     public KnowledgeNodeResponse changeStatus(
             UUID id,
             @Valid ChangeKnowledgeNodeStatusRequest request
@@ -155,18 +163,21 @@ public class KnowledgeService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
     public KnowledgeNodeResponse publishNode(UUID id) {
         return changeStatus(id, new ChangeKnowledgeNodeStatusRequest(ContentStatus.PUBLISHED));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
     public KnowledgeNodeResponse archiveNode(UUID id) {
         return changeStatus(id, new ChangeKnowledgeNodeStatusRequest(ContentStatus.ARCHIVED));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
     public void deleteNode(UUID id) {
         KnowledgeNode node = requireNode(id);
         if (node.getStatus() != ContentStatus.DRAFT && node.getStatus() != ContentStatus.ARCHIVED) {

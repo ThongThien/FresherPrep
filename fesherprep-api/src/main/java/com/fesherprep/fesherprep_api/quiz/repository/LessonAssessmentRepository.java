@@ -16,6 +16,9 @@ public interface LessonAssessmentRepository extends JpaRepository<LessonAssessme
     @EntityGraph(attributePaths = { "lesson", "quiz" })
     List<LessonAssessment> findAllByLessonIdIn(Collection<UUID> lessonIds);
 
+    @EntityGraph(attributePaths = { "lesson", "quiz" })
+    List<LessonAssessment> findAllByQuizId(UUID quizId);
+
     boolean existsByLessonId(UUID lessonId);
 
     long deleteByLessonId(UUID lessonId);

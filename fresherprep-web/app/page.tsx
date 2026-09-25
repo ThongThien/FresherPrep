@@ -1,175 +1,212 @@
-import type { ReactNode } from "react";
+"use client";
 
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  Feedback,
-  FieldError,
-  FieldHint,
-  Input,
-  Label,
-  Progress,
-  Select,
-  Textarea,
-} from "@/components/ui";
+import Link from "next/link";
 
-const colors = [
-  ["Primary", "bg-primary"],
-  ["Success", "bg-success"],
-  ["Warning", "bg-warning"],
-  ["Danger", "bg-danger"],
-  ["Neutral", "bg-text"],
+import { LanguageSwitcher, ThemeToggle } from "@/components/shell";
+import { Badge } from "@/components/ui";
+import { useI18n } from "@/lib/i18n";
+
+const capabilities = [
+  ["Structured learning paths", "Follow lessons in a clear order instead of collecting disconnected tutorials."],
+  ["Lessons and explanations", "Study focused technical content, examples, and the reasoning behind each answer."],
+  ["Practice and assessment", "Use question banks, quizzes, and lesson assessments to check understanding."],
+  ["Progress you can use", "Resume lessons, review quiz results, and see progress across joined learning paths."],
+] as const;
+
+const javaScope = [
+  ["Java Fundamentals", "Java Overview", "Java Basics", "Java Execution"],
+  ["Object-Oriented Programming", "Inheritance", "Polymorphism"],
+] as const;
+
+const resources = [
+  "Oracle Java Documentation",
+  "Spring Documentation",
+  "PostgreSQL Documentation",
+  "MDN Web Docs",
 ] as const;
 
 export default function Home() {
+  const { t } = useI18n();
+
   return (
-    <main className="flex-1 px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <header className="max-w-3xl border-b border-border pb-8">
-          <Badge variant="info">UI foundation</Badge>
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-text sm:text-4xl">
-            FresherPrep Design System
-          </h1>
-          <p className="mt-3 text-base leading-7 text-text-muted sm:text-lg">
-            A calm, consistent visual foundation for focused Java Backend learning.
-          </p>
-        </header>
+    <div className="min-h-dvh bg-background">
+      <a
+        href="#main-content"
+        className="fixed left-4 top-3 z-50 -translate-y-20 rounded-md bg-primary-solid px-4 py-2 text-sm font-semibold text-white shadow-button transition-transform focus:translate-y-0 motion-reduce:transition-none"
+      >
+        {t("Skip to main content")}
+      </a>
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-          <div className="space-y-8">
-            <Section title="Actions" description="Primary, supporting, and system-level actions.">
-              <div className="flex flex-wrap gap-3">
-                <Button>Continue learning</Button>
-                <Button variant="secondary">View learning path</Button>
-                <Button variant="ghost">Not now</Button>
-                <Button variant="danger">Delete</Button>
-                <Button loading>Saving</Button>
-                <Button disabled>Unavailable</Button>
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Badge>Default</Badge>
-                <Badge variant="info">In progress</Badge>
-                <Badge variant="success">Completed</Badge>
-                <Badge variant="warning">Review needed</Badge>
-                <Badge variant="danger">Not passed</Badge>
-              </div>
-            </Section>
-
-            <Section title="Progress" description="Color is reserved for meaningful learning states.">
-              <div className="space-y-5">
-                <Progress value={68} label="Java Fundamentals" showValue />
-                <Progress value={100} label="Lesson completed" showValue tone="success" />
-              </div>
-            </Section>
-
-            <Section
-              title="Feedback"
-              description="Short, direct messages that never communicate with color alone."
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Feedback tone="success" title="Progress saved">
-                  You can continue from this point on your next visit.
-                </Feedback>
-                <Feedback tone="error" title="Unable to submit">
-                  Select an answer before continuing.
-                </Feedback>
-                <Feedback tone="info" title="Study tip">
-                  Review the explanation after every question.
-                </Feedback>
-                <Feedback tone="warning" title="Time is running low">
-                  You have 5 minutes left to finish this quiz.
-                </Feedback>
-              </div>
-            </Section>
-          </div>
-
-          <div className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Set a learning goal</CardTitle>
-                <CardDescription>
-                  Form controls share consistent focus, spacing, and error language.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div>
-                  <Label htmlFor="goal">Goal</Label>
-                  <Input id="goal" placeholder="For example: Complete Java Core" />
-                  <FieldHint>Choose a specific and achievable target.</FieldHint>
-                </div>
-                <div>
-                  <Label htmlFor="pace">Study pace</Label>
-                  <Select id="pace" defaultValue="steady">
-                    <option value="steady">Steady - 30 minutes/day</option>
-                    <option value="focused">Focused - 60 minutes/day</option>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="note">Notes</Label>
-                  <Textarea id="note" placeholder="What would you like to focus on this week?" />
-                </div>
-                <div>
-                  <Label htmlFor="invalid-goal">Error example</Label>
-                  <Input id="invalid-goal" aria-invalid="true" />
-                  <FieldError>A learning goal is required.</FieldError>
-                </div>
-              </CardContent>
-              <CardFooter className="flex-col sm:flex-row">
-                <Button className="w-full sm:w-auto">Save goal</Button>
-                <Button variant="ghost" className="w-full sm:w-auto">
-                  Cancel
-                </Button>
-              </CardFooter>
-            </Card>
-
-            <section aria-labelledby="palette-heading">
-              <h2 id="palette-heading" className="text-lg font-semibold tracking-tight text-text">
-                State palette
-              </h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 lg:grid-cols-2 xl:grid-cols-5">
-                {colors.map(([name, className]) => (
-                  <div key={name} className="rounded-md border border-border bg-surface p-2 shadow-input">
-                    <div className={`h-10 rounded-sm ${className}`} />
-                    <p className="mt-2 text-xs font-medium text-text-muted">{name}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
+      <header className="border-b border-border bg-surface">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 rounded-sm font-semibold tracking-tight text-text focus-visible:ring-3 focus-visible:ring-focus/20"
+            aria-label={t("FresherPrep home")}
+          >
+            <span className="flex size-8 items-center justify-center rounded-md bg-primary-solid text-xs font-bold text-white" aria-hidden="true">FP</span>
+            <span className="hidden min-[380px]:inline">FresherPrep</span>
+          </Link>
+          <nav className="ml-auto hidden items-center gap-5 sm:flex" aria-label={t("Public navigation")}>
+            <a className="inline-flex min-h-10 items-center text-sm font-medium text-text-muted hover:text-text" href="#learning">{t("Learning")}</a>
+            <a className="inline-flex min-h-10 items-center text-sm font-medium text-text-muted hover:text-text" href="#practice">{t("Practice")}</a>
+          </nav>
+          <div className="ml-auto flex items-center gap-2 sm:ml-3">
+            <LanguageSwitcher />
+            <ThemeToggle />
+            <Link className="inline-flex min-h-10 items-center justify-center rounded-md border border-border-strong bg-surface px-3 text-sm font-semibold text-text shadow-button transition-colors hover:border-primary/40 hover:bg-primary-subtle hover:text-primary" href="/login">
+              {t("Sign in")}
+            </Link>
           </div>
         </div>
-      </div>
-    </main>
-  );
-}
+      </header>
 
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  const headingId = `${title.toLowerCase()}-heading`;
+      <main id="main-content" tabIndex={-1}>
+        <section className="border-b border-border">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:items-center lg:px-8 lg:py-24">
+            <div>
+              <Badge variant="info">{t("Java Backend Intern / Fresher preparation")}</Badge>
+              <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-text sm:text-5xl sm:leading-[1.08]">
+                {t("Build the Java foundation for your first backend role.")}
+              </h1>
+              <p className="mt-5 max-w-2xl text-base leading-8 text-text-muted sm:text-lg">
+                {t("Learn Java from fundamentals through object-oriented concepts, practice with focused questions, and prepare for Java Backend Intern and Fresher interviews.")}
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link className="inline-flex min-h-11 items-center justify-center rounded-md border border-primary-solid bg-primary-solid px-5 text-base font-semibold text-white shadow-button transition-colors hover:border-primary-solid-hover hover:bg-primary-solid-hover focus-visible:ring-3 focus-visible:ring-focus/25" href="/login">
+                  {t("Start learning")}
+                </Link>
+                <a className="inline-flex min-h-11 items-center justify-center rounded-md border border-border-strong bg-surface px-5 text-base font-semibold text-text shadow-button transition-colors hover:border-primary/40 hover:bg-primary-subtle hover:text-primary" href="#learning">
+                  {t("Explore content")}
+                </a>
+              </div>
+              <p className="mt-5 text-sm leading-6 text-text-subtle">
+                {t("Designed for beginners, IT students, interns, and Java Backend Fresher candidates.")}
+              </p>
+            </div>
 
-  return (
-    <section aria-labelledby={headingId}>
-      <div className="mb-4">
-        <h2 id={headingId} className="text-lg font-semibold tracking-tight text-text">
-          {title}
-        </h2>
-        <p className="mt-1 text-sm leading-6 text-text-muted">{description}</p>
-      </div>
-      <Card>
-        <CardContent>{children}</CardContent>
-      </Card>
-    </section>
+            <div className="border-l-4 border-primary bg-surface p-6 shadow-card sm:p-7">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("A focused learning cycle")}</p>
+              <ol className="mt-6 space-y-5">
+                {[
+                  ["01", "Learn concepts in context"],
+                  ["02", "Practice with four-option questions"],
+                  ["03", "Review explanations and results"],
+                  ["04", "Continue from saved progress"],
+                ].map(([number, label]) => (
+                  <li key={number} className="flex items-center gap-4">
+                    <span className="font-mono text-sm font-semibold text-primary" aria-hidden="true">{number}</span>
+                    <span className="text-sm font-medium text-text">{t(label)}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8" aria-labelledby="provides-title">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("What FresherPrep provides")}</p>
+            <h2 id="provides-title" className="mt-3 text-3xl font-semibold tracking-tight text-text">{t("One place to learn, practise, and review.")}</h2>
+            <p className="mt-3 leading-7 text-text-muted">{t("Content is organized around a practical learning flow, without fake scores, rankings, or distracting gamification.")}</p>
+          </div>
+          <div className="mt-10 grid gap-x-8 gap-y-9 sm:grid-cols-2">
+            {capabilities.map(([title, description], index) => (
+              <article key={title} className="border-t border-border pt-5">
+                <div className="flex items-start gap-4">
+                  <span className="font-mono text-xs font-semibold text-primary" aria-hidden="true">0{index + 1}</span>
+                  <div>
+                    <h3 className="font-semibold text-text">{t(title)}</h3>
+                    <p className="mt-2 text-sm leading-6 text-text-muted">{t(description)}</p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="learning" className="border-y border-border bg-surface">
+          <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Current learning scope")}</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-text">{t("Start with the Java concepts that everything else depends on.")}</h2>
+                <p className="mt-4 leading-7 text-text-muted">{t("The current curriculum focuses on Java fundamentals and object-oriented programming for Intern and Fresher preparation.")}</p>
+              </div>
+              <div className="grid gap-5 sm:grid-cols-2">
+                {javaScope.map((scope) => (
+                  <article key={scope[0]} className="rounded-lg border border-border bg-background p-5 shadow-card">
+                    <h3 className="font-semibold text-text">{t(scope[0])}</h3>
+                    <ol className="mt-4 space-y-3">
+                      {scope.slice(1).map((topic, index) => (
+                        <li key={topic} className="flex items-center gap-3 text-sm text-text-muted">
+                          <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                          <span>{t(topic)}</span>
+                          {index < scope.length - 2 ? <span className="ml-auto text-text-subtle" aria-hidden="true">↓</span> : null}
+                        </li>
+                      ))}
+                    </ol>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="practice" className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-18 lg:grid-cols-2 lg:px-8">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Practice and quizzes")}</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-text">{t("Check understanding, then learn from the explanation.")}</h2>
+            <p className="mt-4 leading-7 text-text-muted">{t("Take lesson assessments or broader quizzes, review correct and incorrect answers after submission, and use the result to decide what to revisit.")}</p>
+          </div>
+          <ul className="grid gap-3 sm:grid-cols-2" aria-label={t("Practice features")}>
+            {["Practice questions", "Quiz results", "Answer explanations", "Learning progress"].map((item) => (
+              <li key={item} className="flex min-h-14 items-center gap-3 rounded-md border border-border bg-surface px-4 text-sm font-semibold text-text">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-success-subtle text-success-strong" aria-hidden="true">✓</span>
+                {t(item)}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="border-y border-border bg-surface">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-18 lg:grid-cols-2 lg:px-8">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Trusted learning resources")}</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-text">{t("Grounded in reliable technical documentation.")}</h2>
+              <p className="mt-3 text-sm leading-6 text-text-muted">{t("Learning content is designed with reference to diverse, reputable documentation. FresherPrep does not claim affiliation with these publishers.")}</p>
+              <ul className="mt-5 flex flex-wrap gap-2">
+                {resources.map((resource) => <li key={resource}><Badge>{resource}</Badge></li>)}
+              </ul>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-subtle">{t("Coming soon")}</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-text">{t("More ways to practise.")}</h2>
+              <p className="mt-3 text-sm leading-6 text-text-muted">{t("These areas are planned for later and are not available yet.")}</p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Badge variant="warning">{t("SQL Practice")}</Badge>
+                <Badge variant="warning">{t("LeetCode / Coding Practice")}</Badge>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6 sm:py-20 lg:px-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">FresherPrep</p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-text">{t("Ready to begin?")}</h2>
+          <p className="mx-auto mt-3 max-w-xl leading-7 text-text-muted">{t("Build your Java foundation one focused lesson and assessment at a time.")}</p>
+          <Link className="mt-7 inline-flex min-h-11 items-center justify-center rounded-md border border-primary-solid bg-primary-solid px-5 text-base font-semibold text-white shadow-button transition-colors hover:border-primary-solid-hover hover:bg-primary-solid-hover focus-visible:ring-3 focus-visible:ring-focus/25" href="/login">
+            {t("Start learning")}
+          </Link>
+        </section>
+      </main>
+
+      <footer className="border-t border-border bg-surface">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <p>© 2026 FresherPrep</p>
+          <p>{t("Java Backend learning for Intern and Fresher preparation.")}</p>
+        </div>
+      </footer>
+    </div>
   );
 }

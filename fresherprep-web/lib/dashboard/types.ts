@@ -45,6 +45,9 @@ export interface LearningPathLessonProgress {
   assessmentQuizId: string | null;
   assessmentStatus: AssessmentProgressStatus;
   completed: boolean;
+  locked: boolean;
+  blockedByLessonId: string | null;
+  blockedByLessonTitle: string | null;
 }
 
 export interface LearningPathProgress {
@@ -72,6 +75,8 @@ export interface LessonProgress {
   assessmentRequired: boolean;
   assessmentQuizId: string | null;
   assessmentStatus: AssessmentProgressStatus;
+  assessmentPassPercentage: number | null;
+  assessmentScorePercentage: number | null;
   completed: boolean;
   version: number;
 }

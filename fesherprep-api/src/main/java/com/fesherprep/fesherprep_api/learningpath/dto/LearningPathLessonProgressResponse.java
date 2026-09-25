@@ -15,6 +15,9 @@ public record LearningPathLessonProgressResponse(
         boolean assessmentRequired,
         UUID assessmentQuizId,
         AssessmentProgressStatus assessmentStatus,
-        boolean completed
+        boolean completed,
+        boolean locked,
+        UUID blockedByLessonId,
+        String blockedByLessonTitle
 ) {
 }

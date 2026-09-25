@@ -319,7 +319,10 @@ function findContinueLesson(data: LearningPathDetailData, orderedItems: Learning
   );
   if (recentIncomplete) return itemByLessonId.get(recentIncomplete.lessonId) ?? null;
 
-  return orderedItems.find((item) => !progressByLessonId.get(item.lessonId)?.completed) ?? null;
+  return orderedItems.find((item) => {
+    const progress = progressByLessonId.get(item.lessonId);
+    return !progress?.completed && !progress?.locked;
+  }) ?? null;
 }
 
 function SummaryRow({ label, value }: { label: string; value: number }) {

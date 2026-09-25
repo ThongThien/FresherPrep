@@ -29,6 +29,8 @@ export interface LessonProgress {
   assessmentRequired: boolean;
   assessmentQuizId: string | null;
   assessmentStatus: AssessmentProgressStatus;
+  assessmentPassPercentage: number | null;
+  assessmentScorePercentage: number | null;
   completed: boolean;
   version: number;
 }

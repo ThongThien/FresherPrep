@@ -2,6 +2,7 @@ package com.fesherprep.fesherprep_api.lesson.dto;
 
 import com.fesherprep.fesherprep_api.lesson.domain.LessonProgress;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -16,6 +17,8 @@ public record LessonProgressResponse(
         boolean assessmentRequired,
         UUID assessmentQuizId,
         AssessmentProgressStatus assessmentStatus,
+        Integer assessmentPassPercentage,
+        BigDecimal assessmentScorePercentage,
         boolean completed,
         long version
 ) {
@@ -24,6 +27,8 @@ public record LessonProgressResponse(
             boolean assessmentRequired,
             UUID assessmentQuizId,
             AssessmentProgressStatus assessmentStatus,
+            Integer assessmentPassPercentage,
+            BigDecimal assessmentScorePercentage,
             boolean completed
     ) {
         return new LessonProgressResponse(
@@ -37,6 +42,8 @@ public record LessonProgressResponse(
                 assessmentRequired,
                 assessmentQuizId,
                 assessmentStatus,
+                assessmentPassPercentage,
+                assessmentScorePercentage,
                 completed,
                 progress.getVersion()
         );

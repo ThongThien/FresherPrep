@@ -1,7 +1,10 @@
 package com.fesherprep.fesherprep_api.quiz.service;
 
+import com.fesherprep.fesherprep_api.config.CacheNames;
 import com.fesherprep.fesherprep_api.knowledge.domain.KnowledgeNode;
 import com.fesherprep.fesherprep_api.knowledge.repository.KnowledgeNodeRepository;
+import com.fesherprep.fesherprep_api.lesson.domain.LessonProgress;
+import com.fesherprep.fesherprep_api.lesson.repository.LessonProgressRepository;
 import com.fesherprep.fesherprep_api.question.domain.Question;
 import com.fesherprep.fesherprep_api.question.domain.QuestionOption;
 import com.fesherprep.fesherprep_api.question.domain.QuestionCategory;
@@ -16,6 +19,8 @@ import com.fesherprep.fesherprep_api.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,8 +44,10 @@ public class QuizService {
     private final QuizAttemptRepository attemptRepository;
     private final QuizAttemptAnswerRepository answerRepository;
     private final QuizQuestionSelectionRepository questionRepository;
+    private final LessonAssessmentRepository lessonAssessmentRepository;
     private final KnowledgeNodeRepository knowledgeNodeRepository;
     private final UserRepository userRepository;
+    private final LessonProgressRepository lessonProgressRepository;
     private final Clock clock;
 
     @PreAuthorize("isAuthenticated()")
@@ -56,8 +63,12 @@ public class QuizService {
 
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.QUIZ_DETAIL, key = "#quizId", sync = true)
     public PublishedQuizResponse getPublishedQuiz(UUID quizId) {
-        return PublishedQuizResponse.from(requirePublishedQuiz(quizId));
+        return quizRepository
+                .findPublishedProjectionByIdAndStatus(quizId, ContentStatus.PUBLISHED)
+                .map(PublishedQuizResponse::from)
+                .orElseThrow(() -> new QuizNotFoundException(quizId));
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -65,7 +76,7 @@ public class QuizService {
     public PublishedQuizResponse getPublishedQuizByCode(String code) {
         String normalizedCode = normalizeCode(code);
         return PublishedQuizResponse.from(
-                quizRepository.findByCodeAndStatus(normalizedCode, ContentStatus.PUBLISHED)
+                quizRepository.findPublishedProjectionByCodeAndStatus(normalizedCode, ContentStatus.PUBLISHED)
                         .orElseThrow(() -> new QuizNotFoundException(normalizedCode))
         );
     }
@@ -76,6 +87,7 @@ public class QuizService {
         User user = requireCurrentUser();
         Quiz quiz = quizRepository.findForStart(quizId, ContentStatus.PUBLISHED)
                 .orElseThrow(() -> new QuizNotFoundException(quizId));
+        requireAssessmentReading(user.getId(), quizId);
         Optional<QuizAttempt> activeAttempt = attemptRepository
                 .findFirstByUserIdAndQuizIdAndStatusOrderByCreatedAtDesc(
                         user.getId(), quizId, AttemptStatus.IN_PROGRESS
@@ -87,6 +99,24 @@ public class QuizService {
 
         QuizAttempt attempt = attemptRepository.saveAndFlush(new QuizAttempt(user, quiz, versions));
         return QuizAttemptResponse.from(attempt);
+    }
+
+    private void requireAssessmentReading(UUID userId, UUID quizId) {
+        List<LessonAssessment> assessments = lessonAssessmentRepository.findAllByQuizId(quizId);
+        if (assessments.isEmpty()) {
+            return;
+        }
+        boolean readingQualified = assessments.stream().anyMatch(assessment ->
+                lessonProgressRepository
+                        .findFirstByUserIdAndLessonId(userId, assessment.getLesson().getId())
+                        .map(LessonProgress::getReadQualifiedAt)
+                        .isPresent()
+        );
+        if (!readingQualified) {
+            throw new IllegalStateException(
+                    "Complete the lesson reading requirement before starting its assessment"
+            );
+        }
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -160,6 +190,7 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public QuizResponse createQuiz(@Valid CreateQuizRequest request) {
         String code = normalizeCode(request.code());
         ensureUniqueCode(code, null);
@@ -179,6 +210,7 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public QuizResponse updateQuiz(UUID quizId, @Valid UpdateQuizRequest request) {
         Quiz quiz = requireQuiz(quizId);
         if (quizRepository.isUsedByLessonAssessment(quizId)
@@ -204,6 +236,7 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public QuizResponse changeStatus(UUID quizId, @Valid ChangeQuizStatusRequest request) {
         Quiz quiz = requireQuiz(quizId);
         if (request.status() == ContentStatus.PUBLISHED) {
@@ -215,6 +248,7 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public QuizResponse publishQuiz(UUID quizId) {
         Quiz quiz = requireQuiz(quizId);
         validatePublish(quiz);
@@ -224,6 +258,7 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public QuizResponse archiveQuiz(UUID quizId) {
         Quiz quiz = requireQuiz(quizId);
         quiz.archive();
@@ -232,6 +267,7 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public QuizResponse addFixedQuestion(
             UUID quizId,
             @Valid AddFixedQuestionRequest request
@@ -250,6 +286,7 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public QuizResponse removeFixedQuestion(UUID quizId, UUID questionId) {
         Quiz quiz = requireQuiz(quizId);
         QuizFixedQuestion removed = quiz.removeQuestion(questionId);
@@ -259,6 +296,7 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public QuizResponse addRule(UUID quizId, @Valid UpsertQuizRuleRequest request) {
         Quiz quiz = requireQuiz(quizId);
         KnowledgeNode node = requireKnowledgeNode(request.knowledgeNodeId());
@@ -270,6 +308,7 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public QuizResponse updateRule(
             UUID quizId,
             UUID ruleId,
@@ -283,6 +322,7 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public QuizResponse removeRule(UUID quizId, UUID ruleId) {
         Quiz quiz = requireQuiz(quizId);
         QuizRule removed = quiz.removeRule(ruleId);
@@ -292,6 +332,7 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public void deleteQuiz(UUID quizId) {
         Quiz quiz = requireQuiz(quizId);
         if (quiz.getStatus() != ContentStatus.DRAFT && quiz.getStatus() != ContentStatus.ARCHIVED) {

@@ -1,5 +1,6 @@
 package com.fesherprep.fesherprep_api.learningpath.service;
 
+import com.fesherprep.fesherprep_api.config.CacheNames;
 import com.fesherprep.fesherprep_api.knowledge.domain.KnowledgeNode;
 import com.fesherprep.fesherprep_api.knowledge.domain.NodeType;
 import com.fesherprep.fesherprep_api.knowledge.repository.KnowledgeNodeRepository;
@@ -23,6 +24,8 @@ import com.fesherprep.fesherprep_api.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -62,6 +65,7 @@ public class LearningPathService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.LEARNING_PATH_DETAIL, key = "#pathId", sync = true)
     public LearningPathDetailResponse getPublishedPath(UUID pathId) {
         LearningPath path = pathRepository.findByIdAndStatus(pathId, ContentStatus.PUBLISHED)
                 .orElseThrow(() -> new LearningPathNotFoundException(pathId));
@@ -125,9 +129,11 @@ public class LearningPathService {
                 completionService.evaluateAll(user.getId(), lessons, progressByLessonId);
 
         List<LearningPathLessonProgressResponse> lessonResults = new ArrayList<>();
+        LearningPathItem firstIncompleteItem = null;
         for (LearningPathItem item : items) {
             LessonCompletionService.LessonCompletionResult completion =
                     completions.get(item.getLesson().getId());
+            boolean locked = firstIncompleteItem != null && !completion.completed();
             lessonResults.add(new LearningPathLessonProgressResponse(
                     item.getId(),
                     item.getLesson().getId(),
@@ -139,8 +145,14 @@ public class LearningPathService {
                     completion.assessmentRequired(),
                     completion.assessmentQuizId(),
                     completion.assessmentStatus(),
-                    completion.completed()
+                    completion.completed(),
+                    locked,
+                    locked ? firstIncompleteItem.getLesson().getId() : null,
+                    locked ? firstIncompleteItem.getLesson().getTitle() : null
             ));
+            if (firstIncompleteItem == null && !completion.completed()) {
+                firstIncompleteItem = item;
+            }
         }
 
         int completedItems = (int) lessonResults.stream()
@@ -197,6 +209,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
     public LearningPathDetailResponse createPath(@Valid CreateLearningPathRequest request) {
         KnowledgeNode technology = requireTechnology(request.technologyId());
         String slug = normalizeSlug(request.slug());
@@ -207,6 +220,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
     public LearningPathDetailResponse updatePath(
             UUID pathId,
             @Valid UpdateLearningPathRequest request
@@ -220,6 +234,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
     public LearningPathDetailResponse changeStatus(
             UUID pathId,
             @Valid ChangeLearningPathStatusRequest request
@@ -234,6 +249,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
     public LearningPathDetailResponse publishPath(UUID pathId) {
         LearningPath path = requirePath(pathId);
         validatePublish(path);
@@ -243,6 +259,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
     public LearningPathDetailResponse archivePath(UUID pathId) {
         LearningPath path = requirePath(pathId);
         path.changeStatus(ContentStatus.ARCHIVED);
@@ -251,6 +268,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
     public LearningPathDetailResponse addItem(
             UUID pathId,
             @Valid AddLearningPathItemRequest request
@@ -261,7 +279,10 @@ public class LearningPathService {
         if (itemRepository.existsByLearningPathIdAndLessonId(pathId, lesson.getId())) {
             throw new IllegalStateException("Lesson already exists in this learning path");
         }
-        ensureAvailablePosition(pathId, request.displayOrder(), null);
+        int displayOrder = request.displayOrder() == null
+                ? nextDisplayOrder(pathId)
+                : request.displayOrder();
+        ensureAvailablePosition(pathId, displayOrder, null);
         if (path.getStatus() == ContentStatus.PUBLISHED
                 && lesson.getStatus() != ContentStatus.PUBLISHED) {
             throw new IllegalStateException("A published learning path can only contain published lessons");
@@ -270,7 +291,7 @@ public class LearningPathService {
         LearningPathItem item = new LearningPathItem(
                 path,
                 lesson,
-                request.displayOrder(),
+                displayOrder,
                 request.required(),
                 request.weight()
         );
@@ -284,6 +305,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
     public LearningPathDetailResponse updateItem(
             UUID pathId,
             UUID itemId,
@@ -291,14 +313,14 @@ public class LearningPathService {
     ) {
         LearningPath path = requirePath(pathId);
         LearningPathItem item = requireItem(pathId, itemId);
-        ensureAvailablePosition(pathId, request.displayOrder(), itemId);
-        item.configure(request.displayOrder(), request.required(), request.weight());
+        reorderItem(pathId, item, request);
         itemRepository.flush();
         return toDetail(path, false);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
     public LearningPathDetailResponse removeItem(UUID pathId, UUID itemId) {
         LearningPath path = requirePath(pathId);
         LearningPathItem item = requireItem(pathId, itemId);
@@ -309,6 +331,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
     public void deletePath(UUID pathId) {
         LearningPath path = requirePath(pathId);
         if (path.getStatus() != ContentStatus.DRAFT && path.getStatus() != ContentStatus.ARCHIVED) {
@@ -402,6 +425,68 @@ public class LearningPathService {
         if (exists) {
             throw new IllegalStateException("Learning path display order is already in use");
         }
+    }
+
+    private int nextDisplayOrder(UUID pathId) {
+        Integer maximum = itemRepository.findMaxDisplayOrder(pathId);
+        return maximum == null ? 0 : Math.addExact(maximum, 1);
+    }
+
+    private void reorderItem(
+            UUID pathId,
+            LearningPathItem item,
+            UpdateLearningPathItemRequest request
+    ) {
+        int oldOrder = item.getDisplayOrder();
+        int newOrder = request.displayOrder();
+        if (oldOrder == newOrder
+                || !itemRepository.existsByLearningPathIdAndDisplayOrderAndIdNot(
+                        pathId,
+                        newOrder,
+                        item.getId()
+                )) {
+            item.configure(newOrder, request.required(), request.weight());
+            return;
+        }
+
+        List<LearningPathItem> items = itemRepository
+                .findAllByLearningPathIdOrderByDisplayOrderAsc(pathId);
+        int temporaryOrder = nextDisplayOrder(pathId);
+        item.configure(temporaryOrder, item.isRequired(), item.getWeight());
+        itemRepository.flush();
+
+        if (newOrder < oldOrder) {
+            items.stream()
+                    .filter(candidate -> !candidate.getId().equals(item.getId()))
+                    .filter(candidate -> candidate.getDisplayOrder() >= newOrder
+                            && candidate.getDisplayOrder() < oldOrder)
+                    .sorted((left, right) -> Integer.compare(
+                            right.getDisplayOrder(),
+                            left.getDisplayOrder()
+                    ))
+                    .forEach(candidate -> {
+                        candidate.configure(
+                                Math.addExact(candidate.getDisplayOrder(), 1),
+                                candidate.isRequired(),
+                                candidate.getWeight()
+                        );
+                        itemRepository.flush();
+                    });
+        } else {
+            items.stream()
+                    .filter(candidate -> !candidate.getId().equals(item.getId()))
+                    .filter(candidate -> candidate.getDisplayOrder() > oldOrder
+                            && candidate.getDisplayOrder() <= newOrder)
+                    .forEach(candidate -> {
+                        candidate.configure(
+                                candidate.getDisplayOrder() - 1,
+                                candidate.isRequired(),
+                                candidate.getWeight()
+                        );
+                        itemRepository.flush();
+                    });
+        }
+        item.configure(newOrder, request.required(), request.weight());
     }
 
     private LearningPath savePath(LearningPath path, String slug) {

@@ -4,6 +4,7 @@ import com.fesherprep.fesherprep_api.quiz.domain.Quiz;
 import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.quiz.domain.QuizCategory;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
+import com.fesherprep.fesherprep_api.quiz.dto.PublishedQuizProjection;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -22,17 +23,62 @@ public interface QuizRepository extends JpaRepository<Quiz, UUID> {
 
     Page<Quiz> findAllByStatus(ContentStatus status, Pageable pageable);
 
-    @Query("""
-            select quiz from Quiz quiz
+    @Query(value = """
+            select new com.fesherprep.fesherprep_api.quiz.dto.PublishedQuizProjection(
+                quiz.id, quiz.code, quiz.title, quiz.type, quiz.selectionMode,
+                quiz.passPercentage, quiz.language, quiz.category, quiz.maximumScore,
+                quiz.durationSeconds,
+                (select count(item.id) from QuizFixedQuestion item where item.quiz = quiz),
+                (select coalesce(sum(rule.questionCount), 0) from QuizRule rule where rule.quiz = quiz)
+            )
+            from Quiz quiz
+            where quiz.status = :status
+              and (:language is null or quiz.language = :language)
+              and (:category is null or quiz.category = :category)
+            """, countQuery = """
+            select count(quiz)
+            from Quiz quiz
             where quiz.status = :status
               and (:language is null or quiz.language = :language)
               and (:category is null or quiz.category = :category)
             """)
-    Page<Quiz> findPublishedFiltered(
+    Page<PublishedQuizProjection> findPublishedFiltered(
             @Param("status") ContentStatus status,
             @Param("language") QuestionLanguage language,
             @Param("category") QuizCategory category,
             Pageable pageable
+    );
+
+    @Query("""
+            select new com.fesherprep.fesherprep_api.quiz.dto.PublishedQuizProjection(
+                quiz.id, quiz.code, quiz.title, quiz.type, quiz.selectionMode,
+                quiz.passPercentage, quiz.language, quiz.category, quiz.maximumScore,
+                quiz.durationSeconds,
+                (select count(item.id) from QuizFixedQuestion item where item.quiz = quiz),
+                (select coalesce(sum(rule.questionCount), 0) from QuizRule rule where rule.quiz = quiz)
+            )
+            from Quiz quiz
+            where quiz.id = :id and quiz.status = :status
+            """)
+    Optional<PublishedQuizProjection> findPublishedProjectionByIdAndStatus(
+            @Param("id") UUID id,
+            @Param("status") ContentStatus status
+    );
+
+    @Query("""
+            select new com.fesherprep.fesherprep_api.quiz.dto.PublishedQuizProjection(
+                quiz.id, quiz.code, quiz.title, quiz.type, quiz.selectionMode,
+                quiz.passPercentage, quiz.language, quiz.category, quiz.maximumScore,
+                quiz.durationSeconds,
+                (select count(item.id) from QuizFixedQuestion item where item.quiz = quiz),
+                (select coalesce(sum(rule.questionCount), 0) from QuizRule rule where rule.quiz = quiz)
+            )
+            from Quiz quiz
+            where quiz.code = :code and quiz.status = :status
+            """)
+    Optional<PublishedQuizProjection> findPublishedProjectionByCodeAndStatus(
+            @Param("code") String code,
+            @Param("status") ContentStatus status
     );
 
     @Override

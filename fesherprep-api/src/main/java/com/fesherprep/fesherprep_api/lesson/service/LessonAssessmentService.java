@@ -1,5 +1,6 @@
 package com.fesherprep.fesherprep_api.lesson.service;
 
+import com.fesherprep.fesherprep_api.config.CacheNames;
 import com.fesherprep.fesherprep_api.lesson.domain.Lesson;
 import com.fesherprep.fesherprep_api.lesson.dto.AssignLessonAssessmentRequest;
 import com.fesherprep.fesherprep_api.lesson.dto.LessonAssessmentResponse;
@@ -12,6 +13,7 @@ import com.fesherprep.fesherprep_api.quiz.service.QuizNotFoundException;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class LessonAssessmentService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LESSON_DETAIL, allEntries = true)
     public LessonAssessmentResponse assignAssessment(
             UUID lessonId,
             @Valid AssignLessonAssessmentRequest request
@@ -65,6 +68,7 @@ public class LessonAssessmentService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LESSON_DETAIL, allEntries = true)
     public void removeAssessment(UUID lessonId) {
         requireLesson(lessonId);
         long deleted = assessmentRepository.deleteByLessonId(lessonId);

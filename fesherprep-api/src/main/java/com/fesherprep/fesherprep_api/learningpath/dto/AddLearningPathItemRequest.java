@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public record AddLearningPathItemRequest(
         @NotNull UUID lessonId,
-        @PositiveOrZero int displayOrder,
+        @PositiveOrZero Integer displayOrder,
         boolean required,
         @Positive int weight
 ) {

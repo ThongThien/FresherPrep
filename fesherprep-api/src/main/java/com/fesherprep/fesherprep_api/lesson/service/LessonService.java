@@ -1,5 +1,6 @@
 package com.fesherprep.fesherprep_api.lesson.service;
 
+import com.fesherprep.fesherprep_api.config.CacheNames;
 import com.fesherprep.fesherprep_api.knowledge.domain.KnowledgeNode;
 import com.fesherprep.fesherprep_api.knowledge.domain.NodeType;
 import com.fesherprep.fesherprep_api.knowledge.repository.KnowledgeNodeRepository;
@@ -10,6 +11,8 @@ import com.fesherprep.fesherprep_api.lesson.dto.*;
 import com.fesherprep.fesherprep_api.lesson.repository.LessonPrerequisiteRepository;
 import com.fesherprep.fesherprep_api.lesson.repository.LessonProgressRepository;
 import com.fesherprep.fesherprep_api.lesson.repository.LessonRepository;
+import com.fesherprep.fesherprep_api.learningpath.domain.LearningPathItem;
+import com.fesherprep.fesherprep_api.learningpath.repository.LearningPathItemRepository;
 import com.fesherprep.fesherprep_api.quiz.repository.LessonAssessmentRepository;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import com.fesherprep.fesherprep_api.shared.util.ContentIdentityGenerator;
@@ -17,6 +20,7 @@ import com.fesherprep.fesherprep_api.user.domain.User;
 import com.fesherprep.fesherprep_api.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,6 +47,8 @@ public class LessonService {
     private final UserRepository userRepository;
     private final LessonAssessmentRepository assessmentRepository;
     private final LessonCompletionService completionService;
+    private final LearningPathItemRepository learningPathItemRepository;
+    private final PublishedLessonCacheService publishedLessonCacheService;
     private final Clock clock;
     private final ContentIdentityGenerator identityGenerator;
 
@@ -62,7 +68,9 @@ public class LessonService {
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public LessonDetailResponse getPublishedLesson(UUID lessonId) {
-        return toDetail(requirePublishedLesson(lessonId), true);
+        User user = requireCurrentUser();
+        requireSequentialAccess(user.getId(), lessonId, null);
+        return publishedLessonCacheService.get(lessonId);
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -72,14 +80,15 @@ public class LessonService {
                 .findBySlugAndStatus(normalizeSlug(slug), ContentStatus.PUBLISHED)
                 .orElseThrow(() -> new LessonNotFoundException(slug));
         requirePublishedSubtopic(lesson.getSubtopic().getId());
-        return toDetail(lesson, true);
+        requireSequentialAccess(requireCurrentUser().getId(), lesson.getId(), lesson);
+        return publishedLessonCacheService.get(lesson.getId());
     }
 
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public List<LessonSummaryResponse> getPublishedPrerequisites(UUID lessonId) {
-        requirePublishedLesson(lessonId);
-        return prerequisiteResponses(lessonId, true);
+        requireSequentialAccess(requireCurrentUser().getId(), lessonId, null);
+        return publishedLessonCacheService.get(lessonId).prerequisites();
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -87,6 +96,7 @@ public class LessonService {
     public LessonProgressResponse startProgress(UUID lessonId) {
         User user = requireCurrentUser();
         Lesson lesson = requirePublishedLesson(lessonId);
+        requireSequentialAccess(user.getId(), lessonId, lesson);
         Instant now = clock.instant();
 
         LessonProgress progress = progressRepository
@@ -106,7 +116,8 @@ public class LessonService {
             @Valid RecordLessonProgressRequest request
     ) {
         User user = requireCurrentUser();
-        requirePublishedLesson(lessonId);
+        Lesson lesson = requirePublishedLesson(lessonId);
+        requireSequentialAccess(user.getId(), lessonId, lesson);
 
         LessonProgress progress = progressRepository
                 .findByUserIdAndLessonId(user.getId(), lessonId)
@@ -164,6 +175,7 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
     public LessonDetailResponse createLesson(@Valid CreateLessonRequest request) {
         KnowledgeNode subtopic = requireSubtopic(request.subtopicId());
         String slug = generateUniqueSlug(request.title());
@@ -182,6 +194,7 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
     public LessonDetailResponse updateLesson(UUID lessonId, @Valid UpdateLessonRequest request) {
         Lesson lesson = requireLesson(lessonId);
         KnowledgeNode subtopic = requireSubtopic(request.subtopicId());
@@ -200,6 +213,7 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
     public LessonDetailResponse changeStatus(
             UUID lessonId,
             @Valid ChangeLessonStatusRequest request
@@ -220,18 +234,21 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
     public LessonDetailResponse publishLesson(UUID lessonId) {
         return changeStatus(lessonId, new ChangeLessonStatusRequest(ContentStatus.PUBLISHED));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
     public LessonDetailResponse archiveLesson(UUID lessonId) {
         return changeStatus(lessonId, new ChangeLessonStatusRequest(ContentStatus.ARCHIVED));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
     public void deleteLesson(UUID lessonId) {
         Lesson lesson = requireLesson(lessonId);
         if (lesson.getStatus() != ContentStatus.DRAFT && lesson.getStatus() != ContentStatus.ARCHIVED) {
@@ -252,6 +269,7 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LESSON_DETAIL, allEntries = true)
     public List<LessonSummaryResponse> addPrerequisite(UUID lessonId, UUID prerequisiteLessonId) {
         Lesson lesson = requireLesson(lessonId);
         Lesson prerequisite = requireLesson(prerequisiteLessonId);
@@ -277,6 +295,7 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LESSON_DETAIL, allEntries = true)
     public void removePrerequisite(UUID lessonId, UUID prerequisiteLessonId) {
         requireLesson(lessonId);
         long deleted = prerequisiteRepository.deleteByLessonIdAndPrerequisiteLessonId(
@@ -377,8 +396,65 @@ public class LessonService {
                 completion.assessmentRequired(),
                 completion.assessmentQuizId(),
                 completion.assessmentStatus(),
+                completion.assessmentPassPercentage(),
+                completion.assessmentScorePercentage(),
                 completion.completed()
         );
+    }
+
+    private void requireSequentialAccess(UUID userId, UUID lessonId, Lesson knownLesson) {
+        List<LearningPathItem> placements = learningPathItemRepository
+                .findJoinedPublishedPlacements(userId, lessonId, ContentStatus.PUBLISHED);
+        if (placements.isEmpty()) {
+            return;
+        }
+        Lesson lesson = knownLesson == null ? placements.getFirst().getLesson() : knownLesson;
+        LessonProgress currentProgress = progressRepository
+                .findFirstByUserIdAndLessonId(userId, lessonId)
+                .orElse(null);
+        if (completionService.evaluate(userId, lesson, currentProgress).completed()) {
+            return;
+        }
+
+        String blockerTitle = null;
+        for (LearningPathItem placement : placements) {
+            List<LearningPathItem> orderedItems = learningPathItemRepository
+                    .findAllByLearningPathIdOrderByDisplayOrderAsc(placement.getLearningPath().getId());
+            int currentIndex = -1;
+            for (int index = 0; index < orderedItems.size(); index++) {
+                if (orderedItems.get(index).getLesson().hasSameIdentityAs(lesson)) {
+                    currentIndex = index;
+                    break;
+                }
+            }
+            if (currentIndex <= 0) {
+                return;
+            }
+
+            List<Lesson> earlierLessons = orderedItems.subList(0, currentIndex).stream()
+                    .map(LearningPathItem::getLesson)
+                    .toList();
+            List<UUID> earlierLessonIds = earlierLessons.stream().map(Lesson::getId).toList();
+            Map<UUID, LessonProgress> progressByLessonId = progressRepository
+                    .findAllByUserIdAndLessonIdIn(userId, earlierLessonIds)
+                    .stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            progress -> progress.getLesson().getId(),
+                            progress -> progress
+                    ));
+            Map<UUID, LessonCompletionService.LessonCompletionResult> completions =
+                    completionService.evaluateAll(userId, earlierLessons, progressByLessonId);
+            Optional<Lesson> blocker = earlierLessons.stream()
+                    .filter(candidate -> !completions.get(candidate.getId()).completed())
+                    .findFirst();
+            if (blocker.isEmpty()) {
+                return;
+            }
+            if (blockerTitle == null) {
+                blockerTitle = blocker.get().getTitle();
+            }
+        }
+        throw new IllegalStateException("Complete \"" + blockerTitle + "\" before opening this lesson");
     }
 
     private void validateArchive(UUID lessonId) {

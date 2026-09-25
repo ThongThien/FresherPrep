@@ -7,3 +7,4 @@ export * from "./learning-path-management";
 export * from "./lesson-management";
 export * from "./question-management";
 export * from "./quiz-management";
+export * from "./ui-foundation-preview";
