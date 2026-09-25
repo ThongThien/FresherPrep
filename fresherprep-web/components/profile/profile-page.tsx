@@ -3,8 +3,22 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 
-import { useCurrentUser, useUpdateCurrentUser } from "@/components/auth/current-user-context";
-import { Badge, Button, Card, CardContent, CardHeader, Feedback, FieldError, FieldHint, Input, Label } from "@/components/ui";
+import {
+  useCurrentUser,
+  useUpdateCurrentUser,
+} from "@/components/auth/current-user-context";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Feedback,
+  FieldError,
+  FieldHint,
+  Input,
+  Label,
+} from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { CurrentUser } from "@/lib/auth/types";
 import { cn } from "@/lib/cn";
@@ -27,12 +41,13 @@ export function ProfilePage() {
   const [preferenceNotice, setPreferenceNotice] = useState<string | null>(null);
 
   const normalizedName = displayName.trim();
-  const nameError = normalizedName.length === 0
-    ? t("Display name is required.")
-    : normalizedName.length > 100
-      ? t("Display name cannot exceed 100 characters.")
-      : null;
-
+  const nameError =
+    normalizedName.length === 0
+      ? t("Display name is required.")
+      : normalizedName.length > 100
+        ? t("Display name cannot exceed 100 characters.")
+        : null;
+  // aaa
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (nameError || saving || normalizedName === user.displayName) return;
@@ -47,7 +62,9 @@ export function ProfilePage() {
         body: JSON.stringify({ displayName: normalizedName }),
       });
       if (response.status === 401) {
-        window.location.replace(`/login?next=${encodeURIComponent("/profile")}`);
+        window.location.replace(
+          `/login?next=${encodeURIComponent("/profile")}`,
+        );
         return;
       }
       if (!response.ok) {
@@ -65,7 +82,11 @@ export function ProfilePage() {
       setDisplayName(payload.user.displayName);
       setSuccess(t("Profile updated."));
     } catch {
-      setError(t("Unable to update your profile. Check your connection and try again."));
+      setError(
+        t(
+          "Unable to update your profile. Check your connection and try again.",
+        ),
+      );
     } finally {
       setSaving(false);
     }
@@ -88,14 +109,18 @@ export function ProfilePage() {
 
   function changeLocale(value: Locale) {
     setLocale(value);
-    setPreferenceNotice(value === "vi" ? "Đã lưu ngôn ngữ." : "Language preference saved.");
+    setPreferenceNotice(
+      value === "vi" ? "Đã lưu ngôn ngữ." : "Language preference saved.",
+    );
   }
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 py-2 sm:py-4">
       <header>
         <p className="text-sm font-semibold text-primary">{t("Account")}</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-text sm:text-3xl">{t("Profile & settings")}</h1>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-text sm:text-3xl">
+          {t("Profile & settings")}
+        </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted sm:text-base">
           {t("Manage your public name and local learning preferences.")}
         </p>
@@ -108,14 +133,20 @@ export function ProfilePage() {
               <Avatar name={user.displayName} />
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="truncate text-lg font-semibold text-text">{user.displayName}</h2>
+                  <h2 className="truncate text-lg font-semibold text-text">
+                    {user.displayName}
+                  </h2>
                   <Badge variant={user.role === "ADMIN" ? "info" : "neutral"}>
                     {user.role === "ADMIN" ? t("Administrator") : t("Learner")}
                   </Badge>
                 </div>
-                <p className="mt-1 truncate text-sm text-text-muted">{user.email}</p>
+                <p className="mt-1 truncate text-sm text-text-muted">
+                  {user.email}
+                </p>
                 <p className="mt-1 text-xs text-text-subtle">
-                  {t("Joined {{date}}", { date: formatDate(user.createdAt, locale) })}
+                  {t("Joined {{date}}", {
+                    date: formatDate(user.createdAt, locale),
+                  })}
                 </p>
               </div>
             </div>
@@ -130,28 +161,59 @@ export function ProfilePage() {
                 maxLength={101}
                 autoComplete="name"
                 aria-invalid={Boolean(nameError)}
-                aria-describedby={nameError ? "display-name-error" : "display-name-hint"}
+                aria-describedby={
+                  nameError ? "display-name-error" : "display-name-hint"
+                }
                 onChange={(event) => {
                   setDisplayName(event.target.value);
                   setError(null);
                   setSuccess(null);
                 }}
               />
-              {nameError ? <FieldError id="display-name-error">{nameError}</FieldError> : (
-                <FieldHint id="display-name-hint">{t("This name appears in your FresherPrep account.")}</FieldHint>
+              {nameError ? (
+                <FieldError id="display-name-error">{nameError}</FieldError>
+              ) : (
+                <FieldHint id="display-name-hint">
+                  {t("This name appears in your FresherPrep account.")}
+                </FieldHint>
               )}
 
               <div className="mt-4">
                 <Label htmlFor="profile-email">{t("Email")}</Label>
-                <Input id="profile-email" value={user.email} readOnly disabled />
-                <FieldHint>{t("Email changes are not supported by the current account API.")}</FieldHint>
+                <Input
+                  id="profile-email"
+                  value={user.email}
+                  readOnly
+                  disabled
+                />
+                <FieldHint>
+                  {t(
+                    "Email changes are not supported by the current account API.",
+                  )}
+                </FieldHint>
               </div>
 
-              {error ? <Feedback className="mt-4" tone="error" title={t("Profile update failed")}>{error}</Feedback> : null}
-              {success ? <Feedback className="mt-4" tone="success" title={success} /> : null}
+              {error ? (
+                <Feedback
+                  className="mt-4"
+                  tone="error"
+                  title={t("Profile update failed")}
+                >
+                  {error}
+                </Feedback>
+              ) : null}
+              {success ? (
+                <Feedback className="mt-4" tone="success" title={success} />
+              ) : null}
 
               <div className="mt-5 flex justify-end">
-                <Button type="submit" loading={saving} disabled={Boolean(nameError) || normalizedName === user.displayName}>
+                <Button
+                  type="submit"
+                  loading={saving}
+                  disabled={
+                    Boolean(nameError) || normalizedName === user.displayName
+                  }
+                >
                   {saving ? t("Saving...") : t("Save changes")}
                 </Button>
               </div>
@@ -162,23 +224,37 @@ export function ProfilePage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <h2 className="text-base font-semibold tracking-tight text-text">{t("Preferences")}</h2>
-              <p className="mt-1 text-sm leading-6 text-text-muted">{t("Saved on this device and applied immediately.")}</p>
+              <h2 className="text-base font-semibold tracking-tight text-text">
+                {t("Preferences")}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-text-muted">
+                {t("Saved on this device and applied immediately.")}
+              </p>
             </CardHeader>
             <CardContent className="space-y-5">
               <ChoiceGroup
                 legend={t("Appearance")}
                 value={preference}
-                options={themeOptions.map((value) => ({ value, label: t(themeLabel(value)) }))}
+                options={themeOptions.map((value) => ({
+                  value,
+                  label: t(themeLabel(value)),
+                }))}
                 onChange={(value) => changeTheme(value as ThemePreference)}
               />
               <ChoiceGroup
                 legend={t("Language")}
                 value={locale}
-                options={localeOptions.map((value) => ({ value, label: value === "vi" ? "Tiếng Việt" : "English" }))}
+                options={localeOptions.map((value) => ({
+                  value,
+                  label: value === "vi" ? "Tiếng Việt" : "English",
+                }))}
                 onChange={(value) => changeLocale(value as Locale)}
               />
-              <p className="min-h-5 text-xs text-success-strong" role="status" aria-live="polite">
+              <p
+                className="min-h-5 text-xs text-success-strong"
+                role="status"
+                aria-live="polite"
+              >
                 {preferenceNotice}
               </p>
             </CardContent>
@@ -186,11 +262,20 @@ export function ProfilePage() {
 
           <Card>
             <CardHeader>
-              <h2 className="text-base font-semibold tracking-tight text-text">{t("Account access")}</h2>
-              <p className="mt-1 text-sm leading-6 text-text-muted">{t("End the current authenticated session on this device.")}</p>
+              <h2 className="text-base font-semibold tracking-tight text-text">
+                {t("Account access")}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-text-muted">
+                {t("End the current authenticated session on this device.")}
+              </p>
             </CardHeader>
             <CardContent>
-              <Button variant="secondary" loading={loggingOut} onClick={logout} className="w-full sm:w-auto">
+              <Button
+                variant="secondary"
+                loading={loggingOut}
+                onClick={logout}
+                className="w-full sm:w-auto"
+              >
                 {loggingOut ? t("Signing out...") : t("Sign out")}
               </Button>
             </CardContent>
@@ -202,7 +287,14 @@ export function ProfilePage() {
 }
 
 function Avatar({ name }: { name: string }) {
-  const initials = name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
   return (
     <span
       className="flex size-16 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary-subtle text-lg font-bold text-primary-strong"
@@ -214,7 +306,12 @@ function Avatar({ name }: { name: string }) {
   );
 }
 
-function ChoiceGroup({ legend, value, options, onChange }: {
+function ChoiceGroup({
+  legend,
+  value,
+  options,
+  onChange,
+}: {
   legend: string;
   value: string;
   options: { value: string; label: string }[];
