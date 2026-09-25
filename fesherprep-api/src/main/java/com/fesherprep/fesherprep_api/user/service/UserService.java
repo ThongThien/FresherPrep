@@ -26,12 +26,16 @@ import org.springframework.validation.annotation.Validated;
 
 import java.time.Clock;
 import java.util.Locale;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @Validated
 @RequiredArgsConstructor
 public class UserService {
+    private static final Set<String> ADMIN_SORT_FIELDS =
+            Set.of("createdAt", "displayName", "email");
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserLearningPathRepository userLearningPathRepository;
@@ -68,10 +72,10 @@ public class UserService {
     ) {
         Specification<User> specification = (root, query, builder) -> builder.conjunction();
         if (search != null && !search.isBlank()) {
-            String pattern = "%" + search.strip().toLowerCase(Locale.ROOT) + "%";
+            String pattern = "%" + escapeLike(search.strip().toLowerCase(Locale.ROOT)) + "%";
             specification = specification.and((root, query, builder) -> builder.or(
-                    builder.like(builder.lower(root.get("email")), pattern),
-                    builder.like(builder.lower(root.get("displayName")), pattern)
+                    builder.like(builder.lower(root.get("email")), pattern, '\\'),
+                    builder.like(builder.lower(root.get("displayName")), pattern, '\\')
             ));
         }
         if (role != null) {
@@ -82,7 +86,8 @@ public class UserService {
             specification = specification.and((root, query, builder) ->
                     builder.equal(root.get("active"), active));
         }
-        return userRepository.findAll(specification, pageable).map(AdminUserSummaryResponse::from);
+        return userRepository.findAll(specification, adminPageable(pageable))
+                .map(AdminUserSummaryResponse::from);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -175,5 +180,21 @@ public class UserService {
     private User requireCurrentUser() {
         return userRepository.findById(currentUserId())
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("Authenticated user no longer exists"));
+    }
+
+    private static Pageable adminPageable(Pageable pageable) {
+        List<Sort.Order> orders = pageable.getSort().stream()
+                .filter(order -> ADMIN_SORT_FIELDS.contains(order.getProperty()))
+                .toList();
+        Sort sort = orders.isEmpty()
+                ? Sort.by(Sort.Direction.DESC, "createdAt")
+                : Sort.by(orders);
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+    }
+
+    private static String escapeLike(String value) {
+        return value.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 }

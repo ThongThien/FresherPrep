@@ -66,6 +66,7 @@ jobs:
 
             docker run -d \
               --name fresherprep-api \
+              --network fresherprep-net \
               --env-file /opt/fresherprep/FresherPrep/fesherprep-api/.env \
               -p 127.0.0.1:8080:8080 \
               --restart unless-stopped \
