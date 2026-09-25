@@ -13,7 +13,7 @@ export type UserState =
       status: "authenticated";
       displayName: string;
       email: string;
-      role: "USER" | "ADMIN";
+      role: "USER" | "CONTRIBUTOR" | "ADMIN";
     };
 
 interface UserAreaProps {

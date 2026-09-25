@@ -92,7 +92,7 @@ export interface QuizAttemptSummary {
   submittedAt: string | null;
 }
 
-export type DashboardSection = "paths" | "pathProgress" | "lessons" | "quizAttempts";
+export type DashboardSection = "paths" | "pathProgress" | "lessons" | "quizAttempts" | "achievements";
 
 export interface AchievementProgress {
   completedLessons: number | null;

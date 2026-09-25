@@ -136,8 +136,8 @@ export function ProfilePage() {
                   <h2 className="truncate text-lg font-semibold text-text">
                     {user.displayName}
                   </h2>
-                  <Badge variant={user.role === "ADMIN" ? "info" : "neutral"}>
-                    {user.role === "ADMIN" ? t("Administrator") : t("Learner")}
+                  <Badge variant={user.role === "ADMIN" ? "info" : user.role === "CONTRIBUTOR" ? "warning" : "neutral"}>
+                    {user.role === "ADMIN" ? t("Administrator") : user.role === "CONTRIBUTOR" ? t("Contributor") : t("Learner")}
                   </Badge>
                 </div>
                 <p className="mt-1 truncate text-sm text-text-muted">

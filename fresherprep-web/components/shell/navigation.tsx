@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/lib/i18n";
@@ -25,6 +26,7 @@ export function LearningNavigation({
 }: LearningNavigationProps) {
   const pathname = usePathname();
   const { t } = useI18n();
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   return (
     <nav aria-label={t("Learning navigation")} className={className}>
@@ -36,7 +38,10 @@ export function LearningNavigation({
             <li key={item.href}>
               <Link
                 href={item.href}
-                onClick={onNavigate}
+                onClick={() => {
+                  setPendingHref(item.href);
+                  onNavigate?.();
+                }}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "group flex min-h-11 items-center gap-3 rounded-md border border-transparent px-3 text-sm font-medium text-text-muted transition-colors hover:bg-surface-muted hover:text-text focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20",
@@ -52,6 +57,15 @@ export function LearningNavigation({
                   )}
                 />
                 <span>{t(item.label)}</span>
+                {pendingHref === item.href && !active ? (
+                  <>
+                    <span
+                      className="ml-auto size-3.5 animate-spin rounded-full border-2 border-primary/25 border-t-primary motion-reduce:animate-none"
+                      aria-hidden="true"
+                    />
+                    <span className="sr-only">{t("Loading")}</span>
+                  </>
+                ) : null}
                 {active ? <span className="sr-only">{t("(current page)")}</span> : null}
               </Link>
             </li>

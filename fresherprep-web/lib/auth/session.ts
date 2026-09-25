@@ -98,7 +98,7 @@ export function isCurrentUser(value: unknown): value is CurrentUser {
     typeof user.id === "string" &&
     typeof user.email === "string" &&
     typeof user.displayName === "string" &&
-    (user.role === "USER" || user.role === "ADMIN")
+    (user.role === "USER" || user.role === "CONTRIBUTOR" || user.role === "ADMIN")
   );
 }
 

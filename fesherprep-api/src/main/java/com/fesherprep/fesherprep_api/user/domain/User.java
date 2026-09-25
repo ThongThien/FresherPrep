@@ -39,7 +39,7 @@ public class User extends BaseEntity {
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 16)
     private UserRole role = UserRole.USER;
 
     @Column(nullable = false, columnDefinition = "boolean default true")

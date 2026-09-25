@@ -6,6 +6,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useCurrentUser } from "@/components/auth";
 import { Badge, Button, Feedback, Progress } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
+import {
+  achievementDefinitions,
+  type AchievementDefinition,
+  type AchievementIcon as AchievementIconName,
+} from "@/lib/dashboard/achievements";
 import { useI18n, type Locale } from "@/lib/i18n";
 import type {
   DashboardData,
@@ -172,65 +177,22 @@ function DashboardContent({ data, onRetry }: { data: DashboardData; onRetry: () 
   );
 }
 
-type AchievementSource = keyof DashboardData["achievementProgress"];
-
-interface AchievementDefinition {
-  id: string;
-  title: string;
-  description: string;
-  source: AchievementSource;
-  target: number;
-  icon: "book" | "stack" | "quiz" | "award";
-}
-
 function Achievements({ data, onRetry }: { data: DashboardData; onRetry: () => void }) {
   const { t } = useI18n();
-  const definitions: AchievementDefinition[] = [
-    {
-      id: "first-lesson",
-      title: t("First Lesson"),
-      description: t("Complete your first lesson."),
-      source: "completedLessons",
-      target: 1,
-      icon: "book",
-    },
-    {
-      id: "ten-lessons",
-      title: t("10 Lessons Completed"),
-      description: t("Complete ten lessons in your learning journey."),
-      source: "completedLessons",
-      target: 10,
-      icon: "stack",
-    },
-    {
-      id: "first-quiz",
-      title: t("First Quiz"),
-      description: t("Submit your first quiz attempt."),
-      source: "submittedQuizzes",
-      target: 1,
-      icon: "quiz",
-    },
-    {
-      id: "quiz-master",
-      title: t("Quiz Master"),
-      description: t("Pass five quiz attempts."),
-      source: "passedQuizzes",
-      target: 5,
-      icon: "award",
-    },
-  ];
-  const unlocked = definitions.filter((item) => {
+  const unlocked = achievementDefinitions.filter((item) => {
     const value = data.achievementProgress[item.source];
     return value !== null && value >= item.target;
   }).length;
-  const unavailable = definitions.some((item) => data.achievementProgress[item.source] === null);
+  const unavailable =
+    data.issues.includes("achievements") ||
+    achievementDefinitions.some((item) => data.achievementProgress[item.source] === null);
 
   return (
     <DashboardSection
       eyebrow={t("Milestones")}
       title={t("Achievements")}
       description={t("Small milestones based on your actual lesson and quiz progress.")}
-      action={<Badge variant={unlocked > 0 ? "success" : "neutral"}>{t("{{count}} of {{total}} unlocked", { count: unlocked, total: definitions.length })}</Badge>}
+      action={<Badge variant={unlocked > 0 ? "success" : "neutral"}>{t("{{count}} of {{total}} unlocked", { count: unlocked, total: achievementDefinitions.length })}</Badge>}
     >
       {unavailable ? (
         <div className="mb-4 flex flex-col gap-3 rounded-md border border-warning/25 bg-warning-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -238,10 +200,13 @@ function Achievements({ data, onRetry }: { data: DashboardData; onRetry: () => v
           <Button variant="secondary" size="sm" onClick={onRetry}>{t("Try again")}</Button>
         </div>
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {definitions.map((achievement) => (
+      <div
+        className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-3"
+        aria-label={t("Achievement list")}
+      >
+        {achievementDefinitions.map((achievement) => (
           <AchievementCard
-            key={achievement.id}
+            key={achievement.code}
             achievement={achievement}
             current={data.achievementProgress[achievement.source]}
           />
@@ -258,10 +223,10 @@ function AchievementCard({ achievement, current }: { achievement: AchievementDef
 
   return (
     <article
-      className={`rounded-lg border p-4 transition-[border-color,background-color] motion-reduce:transition-none ${
+      className={`w-[17rem] shrink-0 snap-start rounded-lg border p-4 transition-[border-color,background-color] motion-reduce:transition-none ${
         unlocked ? "border-success/30 bg-success-subtle" : "border-border bg-surface"
       }`}
-      aria-label={`${achievement.title}: ${current === null ? t("Unavailable") : unlocked ? t("Unlocked") : t("Not yet unlocked")}`}
+      aria-label={`${t(achievement.title)}: ${current === null ? t("Unavailable") : unlocked ? t("Unlocked") : t("Not yet unlocked")}`}
     >
       <div className="flex items-start justify-between gap-3">
         <span
@@ -278,8 +243,8 @@ function AchievementCard({ achievement, current }: { achievement: AchievementDef
           {current === null ? t("Unavailable") : unlocked ? t("Unlocked") : t("In progress")}
         </Badge>
       </div>
-      <h3 className="mt-4 font-semibold text-text">{achievement.title}</h3>
-      <p className="mt-1 min-h-10 text-sm leading-5 text-text-muted">{achievement.description}</p>
+      <h3 className="mt-4 font-semibold text-text">{t(achievement.title)}</h3>
+      <p className="mt-1 min-h-10 text-sm leading-5 text-text-muted">{t(achievement.description)}</p>
       {current !== null ? (
         <div className="mt-4">
           <Progress
@@ -299,7 +264,7 @@ function AchievementCard({ achievement, current }: { achievement: AchievementDef
   );
 }
 
-function AchievementIcon({ icon }: { icon: AchievementDefinition["icon"] }) {
+function AchievementIcon({ icon }: { icon: AchievementIconName }) {
   if (icon === "book") {
     return <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current" strokeWidth="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z" /><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z" /></svg>;
   }
@@ -638,8 +603,8 @@ function DashboardSkeleton() {
       </div>
       <div className="space-y-4">
         <div className="h-6 w-44 rounded bg-surface-strong" />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[0, 1, 2, 3].map((item) => <div key={item} className="h-52 rounded-lg border border-border bg-surface" />)}
+        <div className="flex gap-3 overflow-hidden">
+          {[0, 1, 2, 3].map((item) => <div key={item} className="h-52 w-[17rem] shrink-0 rounded-lg border border-border bg-surface" />)}
         </div>
       </div>
       <div className="grid gap-8 lg:grid-cols-2">

@@ -1,5 +1,6 @@
 package com.fesherprep.fesherprep_api.shared.exception;
 
+import com.fesherprep.fesherprep_api.contribution.service.ContributionNotFoundException;
 import com.fesherprep.fesherprep_api.knowledge.service.DuplicateKnowledgeSlugException;
 import com.fesherprep.fesherprep_api.knowledge.service.KnowledgeNodeNotFoundException;
 import com.fesherprep.fesherprep_api.lesson.service.DuplicateLessonSlugException;
@@ -47,7 +48,8 @@ public class GlobalExceptionHandler {
             QuestionVersionNotFoundException.class,
             QuizNotFoundException.class,
             QuizAttemptNotFoundException.class,
-            UserNotFoundException.class
+            UserNotFoundException.class,
+            ContributionNotFoundException.class
     })
     public ResponseEntity<ApiErrorResponse> handleNotFound(RuntimeException exception) {
         return response(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", exception.getMessage());

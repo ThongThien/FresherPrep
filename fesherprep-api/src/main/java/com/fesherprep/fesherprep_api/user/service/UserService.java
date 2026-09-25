@@ -48,6 +48,16 @@ public class UserService {
         return UserResponse.from(requireCurrentUser());
     }
 
+    @Transactional(readOnly = true)
+    public AchievementProgressResponse getMyAchievementProgress() {
+        UUID userId = currentUserId();
+        return new AchievementProgressResponse(
+                lessonProgressRepository.countCompletedByUserId(userId),
+                quizAttemptRepository.countByUserIdAndStatus(userId, AttemptStatus.SUBMITTED),
+                quizAttemptRepository.countPassedByUserId(userId)
+        );
+    }
+
     @Transactional
     public UserResponse updateCurrentUser(@Valid UpdateUserRequest request) {
         User user = requireCurrentUser();

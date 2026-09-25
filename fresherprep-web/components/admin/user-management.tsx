@@ -175,6 +175,7 @@ export function UserManagement() {
           <AdminFilter label={t("Filter by role")} value={role} onChange={(value) => { setRole(value); setPage(0); }}>
             <option value="">{t("All roles")}</option>
             <option value="USER">USER</option>
+            <option value="CONTRIBUTOR">CONTRIBUTOR</option>
             <option value="ADMIN">ADMIN</option>
           </AdminFilter>
           <AdminFilter label={t("Filter by status")} value={status} onChange={(value) => { setStatus(value); setPage(0); }}>
@@ -266,9 +267,15 @@ function UserDetail({ detail, currentUserId, dateFormatter, onClose, onChange }:
             <DetailRow label={t("Updated at")} value={dateFormatter.format(new Date(user.updatedAt))} />
           </dl>
           <div className="mt-6 space-y-3 border-t border-border pt-5">
-            <Button className="w-full" variant="secondary" disabled={self} onClick={() => onChange({ kind: "role", user, role: user.role === "ADMIN" ? "USER" : "ADMIN" })}>
-              {user.role === "ADMIN" ? t("Change role to USER") : t("Change role to ADMIN")}
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              {(["USER", "CONTRIBUTOR", "ADMIN"] satisfies UserRole[])
+                .filter((role) => role !== user.role)
+                .map((role) => (
+                  <Button key={role} variant="secondary" disabled={self} onClick={() => onChange({ kind: "role", user, role })}>
+                    {t("Set role: {{role}}", { role })}
+                  </Button>
+                ))}
+            </div>
             <Button className="w-full" variant={user.active ? "danger" : "secondary"} disabled={self} onClick={() => onChange({ kind: "status", user, active: !user.active })}>
               {user.active ? t("Deactivate account") : t("Activate account")}
             </Button>
@@ -321,7 +328,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 }
 
 function RoleBadge({ role }: { role: UserRole }) {
-  return <Badge variant={role === "ADMIN" ? "info" : "neutral"}>{role}</Badge>;
+  return <Badge variant={role === "ADMIN" ? "info" : role === "CONTRIBUTOR" ? "warning" : "neutral"}>{role}</Badge>;
 }
 
 function StatusBadge({ active }: { active: boolean }) {

@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n";
 import { AppHeader } from "./app-header";
 import { LearningNavigation } from "./navigation";
 import { MobileNavigation } from "./mobile-navigation";
-import { adminNavigationEntry, learningNavigation } from "./navigation-items";
+import { adminNavigationEntry, contributorNavigationEntry, learningNavigation } from "./navigation-items";
 import { UserArea, type UserState } from "./user-area";
 
 interface AppShellProps {
@@ -20,10 +20,13 @@ interface AppShellProps {
 export function AppShell({ children, userState, onLogout, logoutPending }: AppShellProps) {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const { t } = useI18n();
-  const navigationItems =
-    userState.status === "authenticated" && userState.role === "ADMIN"
+  const navigationItems = userState.status !== "authenticated"
+    ? learningNavigation
+    : userState.role === "ADMIN"
       ? [...learningNavigation, adminNavigationEntry]
-      : learningNavigation;
+      : userState.role === "CONTRIBUTOR"
+        ? [...learningNavigation, contributorNavigationEntry]
+        : learningNavigation;
 
   return (
     <div className="min-h-dvh bg-background">

@@ -23,6 +23,7 @@ type SessionState =
 
 export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) {
   const pathname = usePathname();
+  const [initialPathname] = useState(pathname);
   const { t } = useI18n();
   const [session, setSession] = useState<SessionState>({ status: "loading" });
   const [loggingOut, setLoggingOut] = useState(false);
@@ -34,7 +35,7 @@ export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) 
     void fetch("/api/auth/session", { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
         if (response.status === 401) {
-          window.location.replace(`/login?next=${encodeURIComponent(pathname)}`);
+          window.location.replace(`/login?next=${encodeURIComponent(initialPathname)}`);
           return;
         }
         if (!response.ok) {
@@ -59,7 +60,7 @@ export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) 
       });
 
     return () => controller.abort();
-  }, [pathname, sessionRequest, t]);
+  }, [initialPathname, sessionRequest, t]);
 
   async function logout() {
     if (loggingOut) return;

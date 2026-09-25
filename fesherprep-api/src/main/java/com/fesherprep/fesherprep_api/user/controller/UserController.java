@@ -4,6 +4,7 @@ import com.fesherprep.fesherprep_api.config.OpenApiConfiguration;
 import com.fesherprep.fesherprep_api.user.dto.UpdateUserRequest;
 import com.fesherprep.fesherprep_api.user.dto.UpdateUserRoleRequest;
 import com.fesherprep.fesherprep_api.user.dto.UserResponse;
+import com.fesherprep.fesherprep_api.user.dto.AchievementProgressResponse;
 import com.fesherprep.fesherprep_api.user.service.UserService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -22,6 +23,11 @@ public class UserController {
     @GetMapping("/me")
     public UserResponse getCurrentUser() {
         return userService.getCurrentUser();
+    }
+
+    @GetMapping("/me/achievement-progress")
+    public AchievementProgressResponse getMyAchievementProgress() {
+        return userService.getMyAchievementProgress();
     }
 
     @PatchMapping("/me")

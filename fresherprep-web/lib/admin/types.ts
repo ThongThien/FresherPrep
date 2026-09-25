@@ -36,7 +36,41 @@ export interface AdminPage<T> {
   last: boolean;
 }
 
-export type UserRole = "USER" | "ADMIN";
+export type UserRole = "USER" | "CONTRIBUTOR" | "ADMIN";
+
+export type ContributionContentType = "LESSON" | "QUESTION" | "QUIZ";
+export type ReviewStatus = "DRAFT" | "PENDING_REVIEW" | "REJECTED" | "PUBLISHED";
+
+export interface ContributionSummary {
+  id: string;
+  contentType: ContributionContentType;
+  contentId: string;
+  title: string;
+  status: ReviewStatus;
+  contributorId: string;
+  contributorName: string;
+  contributorEmail: string;
+  reviewComment: string | null;
+  createdAt: string;
+  updatedAt: string;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+}
+
+export interface ReviewHistory {
+  id: string;
+  action: "CREATED" | "EDITED" | "SUBMITTED" | "REJECTED" | "APPROVED" | "PUBLISHED";
+  actorId: string;
+  actorName: string;
+  comment: string | null;
+  occurredAt: string;
+}
+
+export interface ContributionDetail {
+  submission: ContributionSummary;
+  content: unknown;
+  history: ReviewHistory[];
+}
 
 export interface AdminUserSummary {
   id: string;

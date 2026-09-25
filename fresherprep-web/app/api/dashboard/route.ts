@@ -12,6 +12,7 @@ import {
 import type {
   DashboardData,
   DashboardSection,
+  AchievementProgress,
   LearningPathProgress,
   LessonProgress,
   PageResponse,
@@ -56,8 +57,9 @@ async function loadDashboard(accessToken: string) {
   const headers = { Authorization: `Bearer ${accessToken}` };
   const results = await Promise.allSettled([
     fetchJson("/api/learning-paths/me?size=4&sort=createdAt,desc", headers),
-    fetchJson("/api/lessons/me/progress?size=100&sort=lastViewedAt,desc", headers),
-    fetchJson("/api/quiz-attempts?size=100&sort=createdAt,desc", headers),
+    fetchJson("/api/lessons/me/progress?size=6&sort=lastViewedAt,desc", headers),
+    fetchJson("/api/quiz-attempts?size=6&sort=createdAt,desc", headers),
+    fetchJson("/api/users/me/achievement-progress", headers),
   ]);
 
   if (results.some((result) => result.status === "fulfilled" && result.value.status === 401)) {
@@ -68,17 +70,7 @@ async function loadDashboard(accessToken: string) {
   const paths = pageResult<UserLearningPath>(results[0], "paths", issues);
   const lessonProgress = pageResult<LessonProgress>(results[1], "lessons", issues);
   const quizAttempts = pageResult<QuizAttemptSummary>(results[2], "quizAttempts", issues);
-  const achievementProgress = {
-    completedLessons: issues.includes("lessons")
-      ? null
-      : lessonProgress.content.filter((lesson) => lesson.completed).length,
-    submittedQuizzes: issues.includes("quizAttempts")
-      ? null
-      : quizAttempts.content.filter((attempt) => attempt.status === "SUBMITTED").length,
-    passedQuizzes: issues.includes("quizAttempts")
-      ? null
-      : quizAttempts.content.filter((attempt) => attempt.status === "SUBMITTED" && attempt.passed === true).length,
-  };
+  const achievementProgress = achievementResult(results[3], issues);
 
   let latestPathProgress: LearningPathProgress | null = null;
   const latestPath = paths.content[0]?.learningPath;
@@ -107,6 +99,17 @@ async function loadDashboard(accessToken: string) {
       issues,
     } satisfies DashboardData,
   };
+}
+
+function achievementResult(
+  result: PromiseSettledResult<Awaited<ReturnType<typeof fetchJson>>>,
+  issues: DashboardSection[],
+): AchievementProgress {
+  if (result.status === "fulfilled" && result.value.ok && isAchievementProgress(result.value.payload)) {
+    return result.value.payload;
+  }
+  issues.push("achievements");
+  return { completedLessons: null, submittedQuizzes: null, passedQuizzes: null };
 }
 
 async function fetchJson(path: string, headers: HeadersInit) {
@@ -171,4 +174,13 @@ function isPage(value: unknown): value is PageResponse<unknown> {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object";
+}
+
+function isAchievementProgress(value: unknown): value is AchievementProgress {
+  return (
+    isObject(value) &&
+    typeof value.completedLessons === "number" &&
+    typeof value.submittedQuizzes === "number" &&
+    typeof value.passedQuizzes === "number"
+  );
 }

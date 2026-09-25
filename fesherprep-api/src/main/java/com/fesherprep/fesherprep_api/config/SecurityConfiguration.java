@@ -140,6 +140,7 @@ public class SecurityConfiguration {
                                 "/api/auth/logout"
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/contributor/**").hasRole("CONTRIBUTOR")
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/learning-paths/me",

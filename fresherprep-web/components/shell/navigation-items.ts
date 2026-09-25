@@ -16,6 +16,11 @@ export const adminNavigationEntry: NavigationItem = {
   href: "/admin",
 };
 
+export const contributorNavigationEntry: NavigationItem = {
+  label: "Contributor",
+  href: "/contributor",
+};
+
 export function isNavigationItemActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }

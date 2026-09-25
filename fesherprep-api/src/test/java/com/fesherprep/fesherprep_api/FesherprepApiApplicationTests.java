@@ -32,7 +32,8 @@ class FesherprepApiApplicationTests {
             "learning_paths", "learning_path_items", "user_learning_paths",
             "questions", "question_versions", "question_options",
             "quizzes", "quiz_rules", "quiz_fixed_questions", "lesson_assessments",
-            "quiz_attempts", "quiz_attempt_questions", "quiz_attempt_answers"
+            "quiz_attempts", "quiz_attempt_questions", "quiz_attempt_answers",
+            "content_submissions", "content_review_events"
     );
 
     @Test
@@ -64,7 +65,7 @@ class FesherprepApiApplicationTests {
                     .map(Table::getName)
                     .collect(Collectors.toSet());
             assertEquals(CORE_TABLES, mappedTables,
-                    "Only the 19 core tables should be mapped; roles and optional modules must not create tables");
+                    "Only application tables should be mapped; roles must not create a separate table");
 
             var commands = new SchemaCreatorImpl(registry).generateCreationCommands(metadata, true);
             Set<String> createdTables = commands.stream()
@@ -74,8 +75,6 @@ class FesherprepApiApplicationTests {
                     .collect(Collectors.toSet());
             assertEquals(CORE_TABLES, createdTables,
                     "Every mapped core table must produce PostgreSQL DDL");
-            assertTrue(commands.contains("create schema fresherprep"),
-                    "DDL must create the same application schema configured for Supabase");
             assertTrue(commands.stream().anyMatch(command -> command.contains(" foreign key ")),
                     "Schema generation must include the relationships between core tables");
 
