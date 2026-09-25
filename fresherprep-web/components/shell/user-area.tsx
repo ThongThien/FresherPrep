@@ -5,8 +5,6 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/lib/i18n";
 
-import { Button } from "@/components/ui";
-
 export type UserState =
   | { status: "loading" }
   | { status: "unavailable" }
@@ -26,13 +24,7 @@ interface UserAreaProps {
   logoutPending?: boolean;
 }
 
-export function UserArea({
-  state,
-  compact = false,
-  className,
-  onLogout,
-  logoutPending = false,
-}: UserAreaProps) {
+export function UserArea({ state, compact = false, className }: UserAreaProps) {
   const { t } = useI18n();
   if (state.status === "loading") {
     return (
