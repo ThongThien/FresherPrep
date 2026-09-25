@@ -11,28 +11,28 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
-      - name: Login Docker Hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: thongthien2004
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Setup Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build and Push
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v7
         with:
           context: ./fesherprep-api
           file: ./fesherprep-api/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/fresherprep-api:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/fresherprep-api:${{ github.sha }}
+            thongthien2004/fresherprep-api:latest
+            thongthien2004/fresherprep-api:${{ github.sha }}
 
-      - name: Deploy VPS
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -40,7 +40,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/fresherprep-api:latest
+            docker pull thongthien2004/fresherprep-api:latest
 
             docker rm -f fresherprep-api || true
 
@@ -49,9 +49,10 @@ jobs:
               --restart unless-stopped \
               --env-file /opt/fresherprep/FresherPrep/fesherprep-api/.env \
               -p 127.0.0.1:8080:8080 \
-              ${{ secrets.DOCKERHUB_USERNAME }}/fresherprep-api:latest
+              thongthien2004/fresherprep-api:latest
 
+            echo "Waiting for application to start..."
             sleep 10
 
-            curl --fail \
+            curl --fail --silent --show-error \
               http://127.0.0.1:8080/actuator/health
