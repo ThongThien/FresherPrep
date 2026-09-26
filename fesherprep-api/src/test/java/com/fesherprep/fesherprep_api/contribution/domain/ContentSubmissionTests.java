@@ -26,6 +26,7 @@ class ContentSubmissionTests {
         submission.beginEditing();
         assertEquals(ReviewStatus.DRAFT, submission.getStatus());
         submission.submit(Instant.parse("2026-09-25T12:00:00Z"));
+        assertNull(submission.getReviewComment());
         submission.publish(admin, Instant.parse("2026-09-25T13:00:00Z"));
         assertEquals(ReviewStatus.PUBLISHED, submission.getStatus());
     }

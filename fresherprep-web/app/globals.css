@@ -193,14 +193,30 @@ textarea {
 .lesson-prose :not(pre) > code { border: 1px solid var(--ds-border); border-radius: 0.25rem; background: var(--ds-surface-muted); padding: 0.08rem 0.3rem; color: var(--ds-primary-strong); font-family: var(--font-geist-mono), monospace; font-size: 0.875em; }
 .lesson-callout { max-width: 44rem; border-left: 3px solid var(--ds-primary); background: var(--ds-primary-subtle); padding: 1rem 1.1rem; color: var(--ds-text-muted); }
 
+@media (min-width: 1024px) {
+  .public-snap-container {
+    height: calc(100dvh - 4rem);
+    overflow-y: auto;
+  }
+  .public-snap-section {
+    min-height: calc(100dvh - 4rem);
+    display: flex;
+    align-items: center;
+    scroll-snap-align: start;
+  }
+
+  .public-snap-section-final {
+    align-items: stretch;
+  }
+}
+
 @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
-  html:has(.public-snap-container) {
-    scroll-snap-type: y proximity;
+  .public-snap-container {
+    scroll-behavior: smooth;
+    scroll-snap-type: y mandatory;
   }
 
   .public-snap-section {
-    min-height: calc(100svh - 4rem);
-    scroll-snap-align: start;
-    scroll-snap-stop: normal;
+    scroll-snap-stop: always;
   }
 }

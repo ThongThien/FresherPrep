@@ -923,6 +923,20 @@ Object.assign(vi, {
   "Quiz Ace": "Chuy\u00ean gia quiz",
   "Pass five quiz attempts.": "\u0110\u1ea1t 5 l\u01b0\u1ee3t quiz.",
   "Pass ten quiz attempts.": "\u0110\u1ea1t 10 l\u01b0\u1ee3t quiz.",
+  "Introduction": "Gi\u1edbi thi\u1ec7u",
+  "Java roadmap": "L\u1ed9 tr\u00ecnh Java",
+  "Learning experience": "Tr\u1ea3i nghi\u1ec7m h\u1ecdc t\u1eadp",
+  "Learning resources": "T\u00e0i nguy\u00ean h\u1ecdc t\u1eadp",
+  "Get started": "B\u1eaft \u0111\u1ea7u",
+  "Home sections": "C\u00e1c ph\u1ea7n trang ch\u1ee7",
+  "Changes requested": "Y\u00eau c\u1ea7u ch\u1ec9nh s\u1eeda",
+  "CREATED": "\u0110\u00e3 t\u1ea1o",
+  "EDITED": "\u0110\u00e3 ch\u1ec9nh s\u1eeda",
+  "APPROVED": "\u0110\u00e3 ph\u00ea duy\u1ec7t",
+  "REJECTED": "B\u1ecb t\u1eeb ch\u1ed1i",
+  "PENDING_REVIEW": "\u0110ang ch\u1edd duy\u1ec7t",
+  "QUESTION": "C\u00e2u h\u1ecfi",
+  "QUIZ": "B\u00e0i ki\u1ec3m tra",
 });
 
 export function useI18n() {

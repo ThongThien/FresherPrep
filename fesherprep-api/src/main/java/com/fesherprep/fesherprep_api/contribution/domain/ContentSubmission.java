@@ -117,6 +117,7 @@ public class ContentSubmission extends BaseEntity {
         submittedAt = Objects.requireNonNull(now, "Submission time is required");
         reviewedBy = null;
         reviewedAt = null;
+        reviewComment = null;
     }
 
     public void reject(User reviewer, String comment, Instant now) {

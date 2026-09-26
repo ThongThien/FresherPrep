@@ -6,6 +6,7 @@ import { useCurrentUser } from "@/components/auth";
 import { Badge, Button, Card, CardContent, Feedback, Input, Select, Textarea } from "@/components/ui";
 import { KnowledgePathSelect, knowledgePathLabel } from "@/components/content/knowledge-path-select";
 import { QuestionBatchEditor, type BatchQuestionPayload } from "@/components/content/question-batch-editor";
+import { ContributionContentSummary } from "@/components/contribution/contribution-content-summary";
 import type {
   AdminPage,
   ContributionContentType,
@@ -280,7 +281,8 @@ export function ContributorWorkspace() {
     </section>
     {detail ? <section className="mt-8 border-t border-border pt-7"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-2xl font-semibold text-text">{detail.submission.title}</h2><div className="mt-2"><StatusBadge status={detail.submission.status} /></div></div><div className="flex gap-2">{detail.submission.status !== "PENDING_REVIEW" ? <Button variant="secondary" onClick={() => edit(detail)}>{detail.submission.status === "PUBLISHED" ? t("Create revision") : t("Edit")}</Button> : null}<Button variant="ghost" onClick={() => setDetail(undefined)}>{t("Close details")}</Button></div></div>
       {detail.submission.contentType === "QUIZ" && (detail.submission.status === "DRAFT" || detail.submission.status === "REJECTED") ? <Card className="mt-5"><CardContent><h3 className="font-semibold text-text">{t("Quiz configuration")}</h3><p className="mt-1 text-sm text-text-muted">{(detail.content as { selectionMode?: string }).selectionMode === "FIXED" ? t("FIXED uses the exact published questions you select, in display order.") : t("RULE_BASED selects published questions when an attempt starts. Choose scope, difficulty and count.")}</p><div className="mt-4 flex flex-col gap-3 sm:flex-row"><Select value={configId} onChange={(event) => setConfigId(event.target.value)}><option value="">{(detail.content as { selectionMode?: string }).selectionMode === "FIXED" ? t("Select a published question") : t("Select a knowledge scope")}</option>{(detail.content as { selectionMode?: string }).selectionMode === "FIXED" ? availableQuestions.map((question) => <option key={question.id} value={question.id}>{question.code} / {question.difficulty}</option>) : nodes.map((node) => <option key={node.id} value={node.id}>{knowledgePathLabel(nodes, node.id)} ({node.type})</option>)}</Select>{(detail.content as { selectionMode?: string }).selectionMode !== "FIXED" ? <Input className="sm:w-32" aria-label={t("Question count")} type="number" min="1" value={configCount} onChange={(event) => setConfigCount(event.target.value)} /> : null}<Button disabled={!configId} loading={pending} onClick={() => void configureQuiz()}>{t("Add configuration")}</Button></div></CardContent></Card> : null}
-      <div className="mt-5 grid gap-5 lg:grid-cols-2"><Card><CardContent><h3 className="font-semibold text-text">{t("Content")}</h3><ContentSummary type={detail.submission.contentType} content={detail.content} /></CardContent></Card><Card><CardContent><h3 className="font-semibold text-text">{t("Review history")}</h3><ol className="mt-4 space-y-4">{detail.history.map((event) => <li className="border-l-2 border-border pl-3 text-sm" key={event.id}><p className="font-medium text-text">{event.action}</p><p className="mt-1 text-xs text-text-muted">{event.actorName} / {date.format(new Date(event.occurredAt))}</p>{event.comment ? <p className="mt-2 text-text-muted">{event.comment}</p> : null}</li>)}</ol></CardContent></Card></div>
+      {detail.submission.status === "REJECTED" && detail.submission.reviewComment ? <Feedback className="mt-5" tone="error" title={t("Changes requested")}>{detail.submission.reviewComment}</Feedback> : null}
+      <div className="mt-5 grid gap-5 lg:grid-cols-2"><Card><CardContent><h3 className="font-semibold text-text">{t("Content")}</h3><ContributionContentSummary type={detail.submission.contentType} content={detail.content} /></CardContent></Card><Card><CardContent><h3 className="font-semibold text-text">{t("Review history")}</h3><ol className="mt-4 space-y-4">{detail.history.map((event) => <li className="border-l-2 border-border pl-3 text-sm" key={event.id}><p className="font-medium text-text">{t(event.action)}</p><p className="mt-1 text-xs text-text-muted">{event.actorName} / {date.format(new Date(event.occurredAt))}</p>{event.comment ? <p className="mt-2 text-text-muted">{event.comment}</p> : null}</li>)}</ol></CardContent></Card></div>
     </section> : null}
   </div>;
 }
@@ -295,26 +297,13 @@ function Field({ label, children, wide = false }: { label: string; children: Rea
 }
 
 function StatusBadge({ status }: { status: ReviewStatus }) {
-  return <Badge variant={status === "PUBLISHED" ? "success" : status === "REJECTED" ? "danger" : status === "PENDING_REVIEW" ? "warning" : "neutral"}>{status}</Badge>;
+  const { t } = useI18n();
+  return <Badge variant={status === "PUBLISHED" ? "success" : status === "REJECTED" ? "danger" : status === "PENDING_REVIEW" ? "warning" : "neutral"}>{t(status)}</Badge>;
 }
 
 function nextVersion(detail: ContributionDetail) {
   const content = detail.content as { versions?: { versionNumber: number }[] };
   return Math.max(0, ...(content.versions ?? []).map((version) => version.versionNumber)) + 1;
-}
-
-function ContentSummary({ type, content }: { type: ContributionContentType; content: unknown }) {
-  const { t } = useI18n();
-  const value = content as Record<string, unknown>;
-  if (type === "LESSON") {
-    const lesson = (value.lesson ?? value) as Record<string, unknown>;
-    return <div className="mt-4 space-y-3 text-sm"><h4 className="text-lg font-semibold text-text">{String(lesson.title ?? "")}</h4><p className="text-text-muted">{t("Reading requirement: {{seconds}} seconds and {{percent}}% scroll.", { seconds: Number(lesson.minimumReadSeconds ?? 0), percent: Number(lesson.requiredScrollPercent ?? 0) })}</p><div className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-surface-muted p-4 leading-7 text-text">{String(lesson.content ?? "")}</div></div>;
-  }
-  if (type === "QUESTION") {
-    const question = (value.question ?? {}) as Record<string, unknown>; const versions = (value.versions ?? []) as Record<string, unknown>[];
-    return <div className="mt-4 space-y-4"><div className="flex flex-wrap gap-2"><Badge>{String(question.code ?? "")}</Badge><Badge variant="info">{String(question.difficulty ?? "")}</Badge></div>{versions.map((version) => <article key={String(version.id)} className="rounded-md border border-border p-4"><h4 className="font-semibold text-text">{t("Version {{number}}", { number: Number(version.versionNumber ?? 0) })}</h4><p className="mt-2 text-sm text-text">{String(version.content ?? "")}</p><p className="mt-2 text-sm text-text-muted">{String(version.explanation ?? "")}</p></article>)}</div>;
-  }
-  return <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">{[["Title", value.title], ["Code", value.code], ["Type", value.type], ["Selection mode", value.selectionMode], ["Pass percentage", `${value.passPercentage ?? 0}%`], ["Status", value.status]].map(([label, field]) => <div key={String(label)}><dt className="text-xs text-text-muted">{t(String(label))}</dt><dd className="mt-1 font-medium text-text">{String(field ?? "-")}</dd></div>)}</dl>;
 }
 
 function messageOf(cause: unknown) {
