@@ -4,6 +4,7 @@ import com.fesherprep.fesherprep_api.contribution.domain.*;
 import com.fesherprep.fesherprep_api.contribution.dto.*;
 import com.fesherprep.fesherprep_api.contribution.repository.*;
 import com.fesherprep.fesherprep_api.knowledge.domain.*;
+import com.fesherprep.fesherprep_api.knowledge.dto.KnowledgeNodeResponse;
 import com.fesherprep.fesherprep_api.knowledge.repository.KnowledgeNodeRepository;
 import com.fesherprep.fesherprep_api.lesson.domain.Lesson;
 import com.fesherprep.fesherprep_api.lesson.dto.*;
@@ -14,6 +15,7 @@ import com.fesherprep.fesherprep_api.question.domain.*;
 import com.fesherprep.fesherprep_api.question.dto.*;
 import com.fesherprep.fesherprep_api.question.repository.*;
 import com.fesherprep.fesherprep_api.question.service.QuestionService;
+import com.fesherprep.fesherprep_api.question.service.QuestionBatchCreator;
 import com.fesherprep.fesherprep_api.quiz.domain.*;
 import com.fesherprep.fesherprep_api.quiz.dto.*;
 import com.fesherprep.fesherprep_api.quiz.repository.*;
@@ -57,7 +59,30 @@ public class ContributionService {
     private final QuestionService questionService;
     private final QuizService quizService;
     private final ContentIdentityGenerator identityGenerator;
+    private final QuestionBatchCreator questionBatchCreator;
     private final Clock clock;
+
+    @PreAuthorize("hasRole('CONTRIBUTOR')")
+    @Transactional(readOnly = true)
+    public List<KnowledgeNodeResponse> availableKnowledgeNodes() {
+        return knowledgeNodeRepository.findAllByOrderByDisplayOrderAscNameAsc().stream()
+                .map(KnowledgeNodeResponse::from)
+                .toList();
+    }
+
+    @PreAuthorize("hasRole('CONTRIBUTOR')")
+    @Transactional(readOnly = true)
+    public Page<QuestionResponse> availableQuestions(
+            QuestionLanguage language,
+            QuestionCategory category,
+            UUID knowledgeNodeId,
+            Difficulty difficulty,
+            Pageable pageable
+    ) {
+        return questionRepository.findAllFiltered(
+                language, category, knowledgeNodeId, difficulty,
+                ContentStatus.PUBLISHED, pageable).map(QuestionResponse::from);
+    }
 
     @PreAuthorize("hasRole('CONTRIBUTOR')")
     @Transactional(readOnly = true)
@@ -116,6 +141,21 @@ public class ContributionService {
                 request.category() == null ? QuestionCategory.TECHNICAL : request.category()
         ));
         return detail(createSubmission(ContributionContentType.QUESTION, question.getId(), code, owner));
+    }
+
+    @PreAuthorize("hasRole('CONTRIBUTOR')")
+    @Transactional
+    public List<ContributionDetailResponse> createQuestionsBatch(
+            @Valid BatchCreateQuestionsRequest request
+    ) {
+        User owner = currentUser();
+        return questionBatchCreator.create(request).stream()
+                .map(created -> detail(createSubmission(
+                        ContributionContentType.QUESTION,
+                        created.question().getId(),
+                        shortTitle(created.version().getContent()),
+                        owner)))
+                .toList();
     }
 
     @PreAuthorize("hasRole('CONTRIBUTOR')")
@@ -206,11 +246,35 @@ public class ContributionService {
         User owner = currentUser();
         ContentSubmission submission = editable(ContributionContentType.QUIZ, quizId, owner);
         Quiz quiz = requireQuiz(quizId);
-        Question question = requireQuestion(request.questionId());
+        Question question = requirePublishedQuestion(request.questionId());
         quiz.addQuestion(question, request.position());
         fixedQuestionRepository.save(quiz.getFixedQuestions().stream()
                 .filter(item -> item.getQuestion().hasSameIdentityAs(question)).findFirst().orElseThrow());
         record(submission, owner, ReviewAction.EDITED, "Updated fixed quiz questions");
+        return detail(submission);
+    }
+
+    @PreAuthorize("hasRole('CONTRIBUTOR')")
+    @Transactional
+    public ContributionDetailResponse addFixedQuestions(
+            UUID quizId, @Valid AddFixedQuestionsRequest request
+    ) {
+        User owner = currentUser();
+        ContentSubmission submission = editable(ContributionContentType.QUIZ, quizId, owner);
+        Quiz quiz = requireQuiz(quizId);
+        int nextPosition = quiz.getFixedQuestions().stream()
+                .mapToInt(QuizFixedQuestion::getPosition)
+                .max().orElse(0) + 1;
+        List<QuizFixedQuestion> added = new ArrayList<>();
+        for (UUID questionId : request.questionIds()) {
+            Question question = requirePublishedQuestion(questionId);
+            quiz.addQuestion(question, nextPosition++);
+            added.add(quiz.getFixedQuestions().stream()
+                    .filter(item -> item.getQuestion().hasSameIdentityAs(question))
+                    .findFirst().orElseThrow());
+        }
+        fixedQuestionRepository.saveAll(added);
+        record(submission, owner, ReviewAction.EDITED, "Added fixed quiz questions");
         return detail(submission);
     }
 
@@ -489,6 +553,15 @@ public class ContributionService {
     private Question requireQuestion(UUID id) {
         return questionRepository.findById(id)
                 .orElseThrow(() -> new ContributionNotFoundException(id));
+    }
+
+    private Question requirePublishedQuestion(UUID id) {
+        Question question = requireQuestion(id);
+        if (question.getStatus() != ContentStatus.PUBLISHED
+                || question.getPublishedVersion() == null) {
+            throw new IllegalArgumentException("A fixed quiz can only use a published question");
+        }
+        return question;
     }
 
     private Quiz requireQuiz(UUID id) {

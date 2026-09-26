@@ -52,6 +52,13 @@ public class QuestionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(questionService.createQuestion(request));
     }
 
+    @PostMapping("/batch")
+    public ResponseEntity<List<BatchCreatedQuestionResponse>> createBatch(
+            @Valid @RequestBody BatchCreateQuestionsRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(questionService.createBatch(request));
+    }
+
     @PutMapping("/{questionId}")
     public QuestionResponse updateQuestion(
             @PathVariable UUID questionId,

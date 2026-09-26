@@ -104,6 +104,14 @@ public class QuizController {
         return quizService.addFixedQuestion(quizId, request);
     }
 
+    @PostMapping("/admin/{quizId}/fixed-questions/batch")
+    public QuizResponse addFixedQuestions(
+            @PathVariable UUID quizId,
+            @Valid @RequestBody AddFixedQuestionsRequest request
+    ) {
+        return quizService.addFixedQuestions(quizId, request);
+    }
+
     @DeleteMapping("/admin/{quizId}/fixed-questions/{questionId}")
     public QuizResponse removeFixedQuestion(
             @PathVariable UUID quizId,

@@ -34,6 +34,7 @@ public class QuestionService {
     private final QuestionVersionRepository versionRepository;
     private final KnowledgeNodeRepository knowledgeNodeRepository;
     private final ContentIdentityGenerator identityGenerator;
+    private final QuestionBatchCreator batchCreator;
 
     @Transactional(readOnly = true)
     public Page<QuestionResponse> getAllQuestions(
@@ -86,6 +87,16 @@ public class QuestionService {
                 categoryOrDefault(request.category())
         );
         return QuestionResponse.from(saveQuestion(question, code));
+    }
+
+    @Transactional
+    public List<BatchCreatedQuestionResponse> createBatch(
+            @Valid BatchCreateQuestionsRequest request
+    ) {
+        return batchCreator.create(request).stream()
+                .map(created -> BatchCreatedQuestionResponse.from(
+                        created.question(), created.version()))
+                .toList();
     }
 
     @Transactional

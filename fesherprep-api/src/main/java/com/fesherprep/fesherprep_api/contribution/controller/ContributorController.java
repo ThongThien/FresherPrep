@@ -5,6 +5,10 @@ import com.fesherprep.fesherprep_api.contribution.domain.*;
 import com.fesherprep.fesherprep_api.contribution.dto.*;
 import com.fesherprep.fesherprep_api.contribution.service.ContributionService;
 import com.fesherprep.fesherprep_api.lesson.dto.*;
+import com.fesherprep.fesherprep_api.knowledge.dto.KnowledgeNodeResponse;
+import com.fesherprep.fesherprep_api.question.domain.Difficulty;
+import com.fesherprep.fesherprep_api.question.domain.QuestionCategory;
+import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.question.dto.*;
 import com.fesherprep.fesherprep_api.quiz.dto.*;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -16,6 +20,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/contributor")
@@ -23,6 +28,22 @@ import java.util.UUID;
 @SecurityRequirement(name = OpenApiConfiguration.BEARER_AUTH)
 public class ContributorController {
     private final ContributionService service;
+
+    @GetMapping("/knowledge")
+    public List<KnowledgeNodeResponse> availableKnowledgeNodes() {
+        return service.availableKnowledgeNodes();
+    }
+
+    @GetMapping("/questions")
+    public Page<QuestionResponse> availableQuestions(
+            @RequestParam(required = false) QuestionLanguage language,
+            @RequestParam(required = false) QuestionCategory category,
+            @RequestParam(required = false) UUID knowledgeNodeId,
+            @RequestParam(required = false) Difficulty difficulty,
+            @PageableDefault(size = 100, sort = "code", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        return service.availableQuestions(language, category, knowledgeNodeId, difficulty, pageable);
+    }
 
     @GetMapping("/submissions")
     public Page<ContributionSummaryResponse> mySubmissions(
@@ -64,6 +85,13 @@ public class ContributorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.createQuestion(request));
     }
 
+    @PostMapping("/questions/batch")
+    public ResponseEntity<List<ContributionDetailResponse>> createQuestionsBatch(
+            @Valid @RequestBody BatchCreateQuestionsRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.createQuestionsBatch(request));
+    }
+
     @PutMapping("/questions/{questionId}")
     public ContributionDetailResponse updateQuestion(
             @PathVariable UUID questionId, @Valid @RequestBody UpdateQuestionRequest request
@@ -98,6 +126,14 @@ public class ContributorController {
             @PathVariable UUID quizId, @Valid @RequestBody AddFixedQuestionRequest request
     ) {
         return service.addFixedQuestion(quizId, request);
+    }
+
+    @PostMapping("/quizzes/{quizId}/fixed-questions/batch")
+    public ContributionDetailResponse addFixedQuestions(
+            @PathVariable UUID quizId,
+            @Valid @RequestBody AddFixedQuestionsRequest request
+    ) {
+        return service.addFixedQuestions(quizId, request);
     }
 
     @DeleteMapping("/quizzes/{quizId}/fixed-questions/{questionId}")

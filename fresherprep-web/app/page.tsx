@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
-import { LanguageSwitcher, ThemeToggle } from "@/components/shell";
+import { PublicFooter, PublicHeader } from "@/components/public";
 import { Badge } from "@/components/ui";
 import { useI18n } from "@/lib/i18n";
+import type { LearningPathSummary, PageResponse } from "@/lib/learning-paths/types";
 
 const capabilities = [
   ["Structured learning paths", "Follow lessons in a clear order instead of collecting disconnected tutorials."],
@@ -27,6 +29,16 @@ const resources = [
 
 export default function Home() {
   const { t } = useI18n();
+  const [paths, setPaths] = useState<LearningPathSummary[]>([]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/public/learning-paths", { signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() as Promise<PageResponse<LearningPathSummary>> : null)
+      .then((page) => page && setPaths(page.content))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
 
   return (
     <div className="min-h-dvh bg-background">
@@ -37,32 +49,10 @@ export default function Home() {
         {t("Skip to main content")}
       </a>
 
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6 lg:px-8">
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 rounded-sm font-semibold tracking-tight text-text focus-visible:ring-3 focus-visible:ring-focus/20"
-            aria-label={t("FresherPrep home")}
-          >
-            <span className="flex size-8 items-center justify-center rounded-md bg-primary-solid text-xs font-bold text-white" aria-hidden="true">FP</span>
-            <span className="hidden min-[380px]:inline">FresherPrep</span>
-          </Link>
-          <nav className="ml-auto hidden items-center gap-5 sm:flex" aria-label={t("Public navigation")}>
-            <a className="inline-flex min-h-10 items-center text-sm font-medium text-text-muted hover:text-text" href="#learning">{t("Learning")}</a>
-            <a className="inline-flex min-h-10 items-center text-sm font-medium text-text-muted hover:text-text" href="#practice">{t("Practice")}</a>
-          </nav>
-          <div className="ml-auto flex items-center gap-2 sm:ml-3">
-            <LanguageSwitcher />
-            <ThemeToggle />
-            <Link className="inline-flex min-h-10 items-center justify-center rounded-md border border-border-strong bg-surface px-3 text-sm font-semibold text-text shadow-button transition-colors hover:border-primary/40 hover:bg-primary-subtle hover:text-primary" href="/login">
-              {t("Sign in")}
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
-      <main id="main-content" tabIndex={-1}>
-        <section className="border-b border-border">
+      <main id="main-content" tabIndex={-1} className="public-snap-container">
+        <section className="public-snap-section border-b border-border">
           <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:items-center lg:px-8 lg:py-24">
             <div>
               <Badge variant="info">{t("Java Backend Intern / Fresher preparation")}</Badge>
@@ -104,7 +94,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8" aria-labelledby="provides-title">
+        <section className="public-snap-section mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8" aria-labelledby="provides-title">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("What FresherPrep provides")}</p>
             <h2 id="provides-title" className="mt-3 text-3xl font-semibold tracking-tight text-text">{t("One place to learn, practise, and review.")}</h2>
@@ -125,7 +115,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="learning" className="border-y border-border bg-surface">
+        <section id="learning" className="public-snap-section border-y border-border bg-surface">
           <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
             <div className="grid gap-10 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
               <div>
@@ -134,7 +124,14 @@ export default function Home() {
                 <p className="mt-4 leading-7 text-text-muted">{t("The current curriculum focuses on Java fundamentals and object-oriented programming for Intern and Fresher preparation.")}</p>
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
-                {javaScope.map((scope) => (
+                {paths.length ? paths.map((path) => (
+                  <article key={path.id} className="rounded-lg border border-border bg-background p-5 shadow-card">
+                    <Badge variant="success">{t("Published")}</Badge>
+                    <h3 className="mt-3 font-semibold text-text">{path.name}</h3>
+                    <p className="mt-2 text-sm text-text-muted">{path.technologyName}</p>
+                    <Link className="mt-5 inline-flex min-h-10 items-center text-sm font-semibold text-primary hover:underline" href={`/learning-paths/${path.id}`}>{t("View learning path")}</Link>
+                  </article>
+                )) : javaScope.map((scope) => (
                   <article key={scope[0]} className="rounded-lg border border-border bg-background p-5 shadow-card">
                     <h3 className="font-semibold text-text">{t(scope[0])}</h3>
                     <ol className="mt-4 space-y-3">
@@ -153,7 +150,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="practice" className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-18 lg:grid-cols-2 lg:px-8">
+        <section id="practice" className="public-snap-section mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-18 lg:grid-cols-2 lg:px-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Practice and quizzes")}</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-text">{t("Check understanding, then learn from the explanation.")}</h2>
@@ -169,7 +166,7 @@ export default function Home() {
           </ul>
         </section>
 
-        <section className="border-y border-border bg-surface">
+        <section className="public-snap-section border-y border-border bg-surface">
           <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-18 lg:grid-cols-2 lg:px-8">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Trusted learning resources")}</p>
@@ -191,7 +188,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6 sm:py-20 lg:px-8">
+        <section className="public-snap-section mx-auto max-w-6xl px-4 py-16 text-center sm:px-6 sm:py-20 lg:px-8">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">FresherPrep</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-text">{t("Ready to begin?")}</h2>
           <p className="mx-auto mt-3 max-w-xl leading-7 text-text-muted">{t("Build your Java foundation one focused lesson and assessment at a time.")}</p>
@@ -201,12 +198,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <p>© 2026 FresherPrep</p>
-          <p>{t("Java Backend learning for Intern and Fresher preparation.")}</p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

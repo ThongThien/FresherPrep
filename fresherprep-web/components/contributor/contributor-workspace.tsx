@@ -4,12 +4,16 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 
 import { useCurrentUser } from "@/components/auth";
 import { Badge, Button, Card, CardContent, Feedback, Input, Select, Textarea } from "@/components/ui";
+import { KnowledgePathSelect, knowledgePathLabel } from "@/components/content/knowledge-path-select";
+import { QuestionBatchEditor, type BatchQuestionPayload } from "@/components/content/question-batch-editor";
 import type {
   AdminPage,
   ContributionContentType,
   ContributionDetail,
   ContributionSummary,
   ReviewStatus,
+  KnowledgeNode,
+  Question,
 } from "@/lib/admin/types";
 import { contributorJson, contributorRequest } from "@/lib/contributor/client";
 import { useI18n } from "@/lib/i18n";
@@ -57,6 +61,9 @@ export function ContributorWorkspace() {
   const [success, setSuccess] = useState<string>();
   const [configId, setConfigId] = useState("");
   const [configCount, setConfigCount] = useState("1");
+  const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
+  const [availableQuestions, setAvailableQuestions] = useState<Question[]>([]);
+  const [showBatch, setShowBatch] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,6 +85,22 @@ export function ContributorWorkspace() {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
+
+  useEffect(() => {
+    if (user.role !== "CONTRIBUTOR") return;
+    const timer = window.setTimeout(() => void Promise.all([
+      contributorRequest<KnowledgeNode[]>("knowledge"),
+      contributorRequest<AdminPage<Question>>("questions?page=0&size=100&sort=code,asc"),
+    ]).then(([knowledge, questions]) => {
+      setNodes(knowledge);
+      setAvailableQuestions(questions.content);
+      setForm((current) => current.subtopicId ? current : {
+        ...current,
+        subtopicId: knowledge.find((node) => node.type === "SUBTOPIC")?.id ?? "",
+      });
+    }).catch((cause) => setError(messageOf(cause))), 0);
+    return () => window.clearTimeout(timer);
+  }, [user.role]);
 
   async function open(id: string) {
     try {
@@ -155,6 +178,17 @@ export function ContributorWorkspace() {
     });
   }
 
+  async function createQuestionBatch(payload: BatchQuestionPayload) {
+    setPending(true); setError(undefined); setSuccess(undefined);
+    try {
+      await contributorRequest("questions/batch", { method: "POST", ...contributorJson(payload) });
+      setSuccess(t("{{count}} question drafts created.", { count: payload.questions.length }));
+      setShowBatch(false);
+      await load();
+    } catch (cause) { setError(messageOf(cause)); throw cause; }
+    finally { setPending(false); }
+  }
+
   async function submit(item: ContributionSummary) {
     setPending(true);
     setError(undefined);
@@ -219,10 +253,11 @@ export function ContributorWorkspace() {
     {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
     {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
     <Card className="mt-7"><CardContent>
-      <h2 className="text-lg font-semibold text-text">{editing ? t("Edit contribution") : t("Create a draft")}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold text-text">{editing ? t("Edit contribution") : t("Create a draft")}</h2>{!editing ? <Button variant="secondary" onClick={() => setShowBatch((value) => !value)}>{showBatch ? t("Single item") : t("Batch questions")}</Button> : null}</div>
+      {showBatch && !editing ? <div className="mt-5"><QuestionBatchEditor nodes={nodes} pending={pending} onSubmit={createQuestionBatch} /></div> :
       <form className="mt-5 grid gap-4 sm:grid-cols-2" onSubmit={save}>
         <Field label={t("Content type")}><Select value={form.kind} disabled={Boolean(editing)} onChange={(event) => setForm({ ...initialForm, kind: event.target.value as ContributionContentType })}><option>LESSON</option><option>QUESTION</option><option>QUIZ</option></Select></Field>
-        {form.kind !== "QUIZ" ? <Field label={t("Subtopic ID")}><Input required value={form.subtopicId} onChange={(event) => setForm({ ...form, subtopicId: event.target.value })} /></Field> : null}
+        {form.kind !== "QUIZ" ? <div className="sm:col-span-2"><KnowledgePathSelect nodes={nodes} value={form.subtopicId} onChange={(subtopicId) => setForm({ ...form, subtopicId })} idPrefix="contributor-content" />{form.subtopicId ? <p className="mt-2 text-xs text-text-muted">{knowledgePathLabel(nodes, form.subtopicId)}</p> : null}</div> : null}
         {form.kind !== "QUESTION" ? <Field label={t("Title")}><Input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></Field> : null}
         {form.kind === "LESSON" ? <>
           <Field label={t("Minimum read seconds")}><Input type="number" min="1" value={form.minimumReadSeconds} onChange={(event) => setForm({ ...form, minimumReadSeconds: event.target.value })} /></Field>
@@ -237,15 +272,15 @@ export function ContributorWorkspace() {
           <Field label={t("Pass percentage")}><Input type="number" min="0" max="100" value={form.passPercentage} onChange={(event) => setForm({ ...form, passPercentage: event.target.value })} /></Field>
         </> : null}
         <div className="flex gap-3 sm:col-span-2"><Button type="submit" loading={pending}>{t("Save draft")}</Button>{editing ? <Button type="button" variant="secondary" onClick={() => { setEditing(undefined); setForm(initialForm); }}>{t("Cancel")}</Button> : null}</div>
-      </form>
+      </form>}
     </CardContent></Card>
     <section className="mt-8"><div className="flex flex-wrap items-center justify-between gap-4"><h2 className="text-2xl font-semibold text-text">{t("My submissions")}</h2><Select aria-label={t("Filter by review status")} className="w-52" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0); }}><option value="">{t("All statuses")}</option><option>DRAFT</option><option>PENDING_REVIEW</option><option>REJECTED</option><option>PUBLISHED</option></Select></div>
       {loading ? <p className="mt-5 text-sm text-text-muted" role="status">{t("Loading contributions...")}</p> : items.length ? <div className="mt-5 grid gap-4 sm:grid-cols-2">{items.map((item) => <Card key={item.id}><CardContent><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-text">{item.title}</p><p className="mt-1 text-xs text-text-muted">{item.contentType} · {date.format(new Date(item.updatedAt))}</p></div><StatusBadge status={item.status} /></div>{item.reviewComment ? <p className="mt-4 rounded-md bg-danger-subtle p-3 text-sm text-danger-strong">{item.reviewComment}</p> : null}<div className="mt-5 flex flex-wrap gap-2"><Button size="sm" variant="secondary" onClick={() => void open(item.id)}>{t("View details")}</Button>{item.status === "DRAFT" || item.status === "REJECTED" ? <Button size="sm" loading={pending} onClick={() => void submit(item)}>{t("Submit for review")}</Button> : null}</div></CardContent></Card>)}</div> : <p className="mt-5 rounded-lg border border-dashed border-border p-8 text-center text-sm text-text-muted">{t("No contributions yet.")}</p>}
       {totalPages > 1 ? <div className="mt-5 flex justify-between"><Button variant="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>{t("Previous")}</Button><Button variant="secondary" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>{t("Next")}</Button></div> : null}
     </section>
     {detail ? <section className="mt-8 border-t border-border pt-7"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-2xl font-semibold text-text">{detail.submission.title}</h2><div className="mt-2"><StatusBadge status={detail.submission.status} /></div></div><div className="flex gap-2">{detail.submission.status !== "PENDING_REVIEW" ? <Button variant="secondary" onClick={() => edit(detail)}>{detail.submission.status === "PUBLISHED" ? t("Create revision") : t("Edit")}</Button> : null}<Button variant="ghost" onClick={() => setDetail(undefined)}>{t("Close details")}</Button></div></div>
-      {detail.submission.contentType === "QUIZ" && (detail.submission.status === "DRAFT" || detail.submission.status === "REJECTED") ? <Card className="mt-5"><CardContent><h3 className="font-semibold text-text">{t("Quiz configuration")}</h3><div className="mt-4 flex flex-col gap-3 sm:flex-row"><Input value={configId} onChange={(event) => setConfigId(event.target.value)} placeholder={((detail.content as { selectionMode?: string }).selectionMode === "FIXED") ? t("Published question ID") : t("Knowledge node ID")} />{(detail.content as { selectionMode?: string }).selectionMode !== "FIXED" ? <Input className="sm:w-32" type="number" min="1" value={configCount} onChange={(event) => setConfigCount(event.target.value)} /> : null}<Button disabled={!configId} loading={pending} onClick={() => void configureQuiz()}>{t("Add configuration")}</Button></div></CardContent></Card> : null}
-      <div className="mt-5 grid gap-5 lg:grid-cols-2"><Card><CardContent><h3 className="font-semibold text-text">{t("Content")}</h3><pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap rounded bg-surface-muted p-4 text-xs text-text">{JSON.stringify(detail.content, null, 2)}</pre></CardContent></Card><Card><CardContent><h3 className="font-semibold text-text">{t("Review history")}</h3><ol className="mt-4 space-y-4">{detail.history.map((event) => <li className="border-l-2 border-border pl-3 text-sm" key={event.id}><p className="font-medium text-text">{event.action}</p><p className="mt-1 text-xs text-text-muted">{event.actorName} · {date.format(new Date(event.occurredAt))}</p>{event.comment ? <p className="mt-2 text-text-muted">{event.comment}</p> : null}</li>)}</ol></CardContent></Card></div>
+      {detail.submission.contentType === "QUIZ" && (detail.submission.status === "DRAFT" || detail.submission.status === "REJECTED") ? <Card className="mt-5"><CardContent><h3 className="font-semibold text-text">{t("Quiz configuration")}</h3><p className="mt-1 text-sm text-text-muted">{(detail.content as { selectionMode?: string }).selectionMode === "FIXED" ? t("FIXED uses the exact published questions you select, in display order.") : t("RULE_BASED selects published questions when an attempt starts. Choose scope, difficulty and count.")}</p><div className="mt-4 flex flex-col gap-3 sm:flex-row"><Select value={configId} onChange={(event) => setConfigId(event.target.value)}><option value="">{(detail.content as { selectionMode?: string }).selectionMode === "FIXED" ? t("Select a published question") : t("Select a knowledge scope")}</option>{(detail.content as { selectionMode?: string }).selectionMode === "FIXED" ? availableQuestions.map((question) => <option key={question.id} value={question.id}>{question.code} / {question.difficulty}</option>) : nodes.map((node) => <option key={node.id} value={node.id}>{knowledgePathLabel(nodes, node.id)} ({node.type})</option>)}</Select>{(detail.content as { selectionMode?: string }).selectionMode !== "FIXED" ? <Input className="sm:w-32" aria-label={t("Question count")} type="number" min="1" value={configCount} onChange={(event) => setConfigCount(event.target.value)} /> : null}<Button disabled={!configId} loading={pending} onClick={() => void configureQuiz()}>{t("Add configuration")}</Button></div></CardContent></Card> : null}
+      <div className="mt-5 grid gap-5 lg:grid-cols-2"><Card><CardContent><h3 className="font-semibold text-text">{t("Content")}</h3><ContentSummary type={detail.submission.contentType} content={detail.content} /></CardContent></Card><Card><CardContent><h3 className="font-semibold text-text">{t("Review history")}</h3><ol className="mt-4 space-y-4">{detail.history.map((event) => <li className="border-l-2 border-border pl-3 text-sm" key={event.id}><p className="font-medium text-text">{event.action}</p><p className="mt-1 text-xs text-text-muted">{event.actorName} / {date.format(new Date(event.occurredAt))}</p>{event.comment ? <p className="mt-2 text-text-muted">{event.comment}</p> : null}</li>)}</ol></CardContent></Card></div>
     </section> : null}
   </div>;
 }
@@ -266,6 +301,20 @@ function StatusBadge({ status }: { status: ReviewStatus }) {
 function nextVersion(detail: ContributionDetail) {
   const content = detail.content as { versions?: { versionNumber: number }[] };
   return Math.max(0, ...(content.versions ?? []).map((version) => version.versionNumber)) + 1;
+}
+
+function ContentSummary({ type, content }: { type: ContributionContentType; content: unknown }) {
+  const { t } = useI18n();
+  const value = content as Record<string, unknown>;
+  if (type === "LESSON") {
+    const lesson = (value.lesson ?? value) as Record<string, unknown>;
+    return <div className="mt-4 space-y-3 text-sm"><h4 className="text-lg font-semibold text-text">{String(lesson.title ?? "")}</h4><p className="text-text-muted">{t("Reading requirement: {{seconds}} seconds and {{percent}}% scroll.", { seconds: Number(lesson.minimumReadSeconds ?? 0), percent: Number(lesson.requiredScrollPercent ?? 0) })}</p><div className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-surface-muted p-4 leading-7 text-text">{String(lesson.content ?? "")}</div></div>;
+  }
+  if (type === "QUESTION") {
+    const question = (value.question ?? {}) as Record<string, unknown>; const versions = (value.versions ?? []) as Record<string, unknown>[];
+    return <div className="mt-4 space-y-4"><div className="flex flex-wrap gap-2"><Badge>{String(question.code ?? "")}</Badge><Badge variant="info">{String(question.difficulty ?? "")}</Badge></div>{versions.map((version) => <article key={String(version.id)} className="rounded-md border border-border p-4"><h4 className="font-semibold text-text">{t("Version {{number}}", { number: Number(version.versionNumber ?? 0) })}</h4><p className="mt-2 text-sm text-text">{String(version.content ?? "")}</p><p className="mt-2 text-sm text-text-muted">{String(version.explanation ?? "")}</p></article>)}</div>;
+  }
+  return <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">{[["Title", value.title], ["Code", value.code], ["Type", value.type], ["Selection mode", value.selectionMode], ["Pass percentage", `${value.passPercentage ?? 0}%`], ["Status", value.status]].map(([label, field]) => <div key={String(label)}><dt className="text-xs text-text-muted">{t(String(label))}</dt><dd className="mt-1 font-medium text-text">{String(field ?? "-")}</dd></div>)}</dl>;
 }
 
 function messageOf(cause: unknown) {

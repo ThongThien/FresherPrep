@@ -250,6 +250,30 @@ public class QuizService {
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    public QuizResponse addFixedQuestions(
+            UUID quizId,
+            @Valid AddFixedQuestionsRequest request
+    ) {
+        Quiz quiz = requireQuiz(quizId);
+        int nextPosition = quiz.getFixedQuestions().stream()
+                .mapToInt(QuizFixedQuestion::getPosition)
+                .max()
+                .orElse(0) + 1;
+        List<QuizFixedQuestion> added = new ArrayList<>();
+        for (UUID questionId : request.questionIds()) {
+            Question question = requirePublishedQuestion(questionId);
+            quiz.addQuestion(question, nextPosition++);
+            added.add(quiz.getFixedQuestions().stream()
+                    .filter(item -> item.getQuestion().hasSameIdentityAs(question))
+                    .findFirst().orElseThrow());
+        }
+        fixedQuestionRepository.saveAll(added);
+        return QuizResponse.from(quiz);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
     public QuizResponse publishQuiz(UUID quizId) {
         Quiz quiz = requireQuiz(quizId);
         validatePublish(quiz);
@@ -274,8 +298,7 @@ public class QuizService {
             @Valid AddFixedQuestionRequest request
     ) {
         Quiz quiz = requireQuiz(quizId);
-        Question question = questionRepository.findById(request.questionId())
-                .orElseThrow(() -> new IllegalArgumentException("Question does not exist"));
+        Question question = requirePublishedQuestion(request.questionId());
         quiz.addQuestion(question, request.position());
         QuizFixedQuestion added = quiz.getFixedQuestions().stream()
                 .filter(item -> item.getQuestion().hasSameIdentityAs(question))
@@ -472,6 +495,16 @@ public class QuizService {
     private Quiz requireQuiz(UUID quizId) {
         return quizRepository.findById(quizId)
                 .orElseThrow(() -> new QuizNotFoundException(quizId));
+    }
+
+    private Question requirePublishedQuestion(UUID questionId) {
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new IllegalArgumentException("Question does not exist"));
+        if (question.getStatus() != ContentStatus.PUBLISHED
+                || question.getPublishedVersion() == null) {
+            throw new IllegalArgumentException("A fixed quiz can only use a published question");
+        }
+        return question;
     }
 
     private KnowledgeNode requireKnowledgeNode(UUID nodeId) {

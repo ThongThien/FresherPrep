@@ -14,6 +14,7 @@ import type {
   QuizSummary,
 } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
+import { KnowledgePathSelect, knowledgePathLabel } from "@/components/content/knowledge-path-select";
 import { AdminPagination } from "./admin-ui";
 
 const statuses: ContentStatus[] = ["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"];
@@ -54,7 +55,7 @@ export function LessonManagement() {
         adminRequest<AdminPage<QuizSummary>>("quizzes?page=0&size=200&sort=title,asc"),
       ]);
       const available = nodes.filter((node) => node.type === "SUBTOPIC");
-      setSubtopics(available);
+      setSubtopics(nodes);
       setSelectedSubtopicId((current) => current || available[0]?.id || "");
       setQuizzes(quizPage.content);
     } catch (reason) {
@@ -140,7 +141,7 @@ export function LessonManagement() {
     setError(undefined);
     setSuccess(undefined);
     try {
-      const payload = { ...form, subtopicId: selectedSubtopicId, title: form.title.trim(), content: form.content.trim() };
+      const payload = { ...form, title: form.title.trim(), content: form.content.trim() };
       const saved = await adminRequest<LessonDetail>(
         detail ? `lessons/${detail.id}` : "lessons",
         { method: detail ? "PUT" : "POST", ...jsonBody(payload) },
@@ -207,8 +208,7 @@ export function LessonManagement() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)]">
         <Card><CardContent>
-          <Label htmlFor="lesson-parent">{t("Parent subtopic")}</Label>
-          <Select id="lesson-parent" value={selectedSubtopicId} onChange={(event) => { setSelectedSubtopicId(event.target.value); setPage(0); setQuery(""); setDetail(undefined); setAssessment(undefined); }}><option value="">{t("Select subtopic")}</option>{subtopics.map((node) => <option key={node.id} value={node.id}>{node.name} ({node.status})</option>)}</Select>
+          <KnowledgePathSelect nodes={subtopics} value={selectedSubtopicId} onChange={(value) => { setSelectedSubtopicId(value); setPage(0); setQuery(""); setDetail(undefined); setAssessment(undefined); }} idPrefix="lesson-filter" />
           <Label htmlFor="lesson-search">{t("Search lessons")}</Label>
           <Input id="lesson-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Title or slug")} />
           {loading ? <p className="py-10 text-center text-sm text-text-muted">{t("Loading lessons...")}</p> : visibleLessons.length ? <ul className="mt-5 space-y-2">{visibleLessons.map((lesson) => <li key={lesson.id}><button type="button" onClick={() => void selectLesson(lesson.id)} className={`w-full rounded-md border p-3 text-left transition-colors hover:border-primary/30 hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${detail?.id === lesson.id ? "border-primary/40 bg-primary-subtle" : "border-border"}`}><span className="flex items-start justify-between gap-2"><span className="font-semibold text-text">{lesson.title}</span><LessonStatus status={lesson.status} /></span><span className="mt-1 block text-xs text-text-muted">{lesson.slug} · {t("order {{order}}", { order: lesson.displayOrder })}</span></button></li>)}</ul> : <p className="py-10 text-center text-sm text-text-muted">{t("No matching lessons.")}</p>}
@@ -219,13 +219,13 @@ export function LessonManagement() {
           <Card><CardContent>
             <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-text">{detail ? t("Edit lesson") : t("Create lesson")}</h2><p className="mt-1 text-sm text-text-muted">{t("Content is stored as the backend lesson content string.")}</p></div>{detail ? <LessonStatus status={detail.status} /> : null}</div>
             <form className="mt-6 grid gap-5 sm:grid-cols-2" onSubmit={submit} noValidate>
-              <div><Label>{t("Subtopic")}</Label><p className="mt-2 text-sm font-medium text-text">{subtopics.find((node) => node.id === selectedSubtopicId)?.name ?? t("Select subtopic")}</p></div>
+              <div className="sm:col-span-2"><KnowledgePathSelect nodes={subtopics} value={form.subtopicId} onChange={(subtopicId) => setForm((current) => ({ ...current, subtopicId }))} idPrefix="lesson-form" />{form.subtopicId ? <p className="mt-2 text-xs text-text-muted">{knowledgePathLabel(subtopics, form.subtopicId)}</p> : null}</div>
               <Field label={t("Title")} htmlFor="lesson-title" error={validation.title}><Input id="lesson-title" maxLength={200} aria-invalid={Boolean(validation.title)} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} /></Field>
               <div><Label>{t("System slug")}</Label><p className="mt-2 font-mono text-xs text-text-muted">{detail?.slug ?? t("Generated automatically after creation")}</p></div>
               <Field label={t("Display order")} htmlFor="lesson-order" error={validation.displayOrder}><Input id="lesson-order" type="number" min={0} aria-invalid={Boolean(validation.displayOrder)} value={form.displayOrder} onChange={(event) => setForm((current) => ({ ...current, displayOrder: Number(event.target.value) }))} /></Field>
               <Field label={t("Minimum read seconds")} htmlFor="lesson-read-time" error={validation.minimumReadSeconds}><Input id="lesson-read-time" type="number" min={1} aria-invalid={Boolean(validation.minimumReadSeconds)} value={form.minimumReadSeconds} onChange={(event) => setForm((current) => ({ ...current, minimumReadSeconds: Number(event.target.value) }))} /></Field>
               <Field label={t("Required scroll percent")} htmlFor="lesson-scroll" error={validation.requiredScrollPercent}><Input id="lesson-scroll" type="number" min={1} max={100} aria-invalid={Boolean(validation.requiredScrollPercent)} value={form.requiredScrollPercent} onChange={(event) => setForm((current) => ({ ...current, requiredScrollPercent: Number(event.target.value) }))} /></Field>
-              <div className="sm:col-span-2"><Label htmlFor="lesson-content">{t("Content")}</Label><Textarea id="lesson-content" className="min-h-80 font-mono text-sm" aria-invalid={Boolean(validation.content)} value={form.content} onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))} />{validation.content ? <FieldError>{validation.content}</FieldError> : null}</div>
+              <div className="sm:col-span-2"><Label htmlFor="lesson-content">{t("Content")}</Label><p className="mb-2 text-xs text-text-muted">{t("Use headings, lists and fenced code blocks. The learner view renders this content as a technical lesson.")}</p><Textarea id="lesson-content" className="min-h-80 font-mono text-sm" aria-invalid={Boolean(validation.content)} value={form.content} onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))} />{validation.content ? <FieldError>{validation.content}</FieldError> : null}{form.content.trim() ? <details className="mt-3 rounded-md border border-border p-4"><summary className="cursor-pointer text-sm font-semibold text-text">{t("Content preview")}</summary><div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-text">{form.content}</div></details> : null}</div>
               <div className="sm:col-span-2"><Button type="submit" loading={pending}>{detail ? t("Save lesson") : t("Create lesson")}</Button></div>
             </form>
             {detail ? <div className="mt-7 border-t border-border pt-6"><h3 className="text-sm font-semibold text-text">{t("Publishing status")}</h3><div className="mt-3 flex flex-wrap gap-2">{statuses.map((status) => <Button key={status} size="sm" variant="secondary" disabled={pending || detail.status === status} onClick={() => void changeStatus(status)}>{t(status)}</Button>)}</div><Button className="mt-6" size="sm" variant="danger" loading={pending} onClick={() => void deleteLesson()}>{t("Delete lesson")}</Button></div> : null}

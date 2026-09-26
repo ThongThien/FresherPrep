@@ -1,284 +1,250 @@
-# FresherPrep User Guide
+# Hướng dẫn người học FresherPrep
 
-This guide describes the user-facing product that is currently implemented. Screens and actions that are not available in the application are intentionally omitted.
+Tài liệu này mô tả các chức năng dành cho người học đang có trong hệ thống. Các trạng thái và kết quả học tập do backend quyết định; giao diện không tự tạo điểm số hoặc tự đánh dấu hoàn thành.
 
-## 1. Product overview
+Tên route, enum và field kỹ thuật được giữ nguyên trong dấu mã để khớp chính xác với hệ thống; toàn bộ phần hướng dẫn và giải thích được viết bằng tiếng Việt.
 
-FresherPrep is a structured learning and interview-preparation application. Its main workflow is:
+## 1. Vai trò và luồng học chính
 
-```text
-Create an account
--> join a published learning path
--> open lessons in curriculum order
--> read at your own pace
--> complete a lesson assessment when one exists
--> review learning-path and quiz progress
-```
-
-The application currently supports Java-oriented technical content and English questions/quizzes when such content has been published by an administrator. System-interface language and learning-content language are separate settings.
-
-## 2. Registering an account
-
-Open `/register` and provide:
-
-- Display name: the name shown in the application.
-- Email address: used as the login identity and required to be unique.
-- Password: must satisfy the validation shown by the form; the UI currently explains the 8-72 character range.
-
-After successful registration, FresherPrep signs the new user in and opens the authenticated learning area. Passwords are sent only to the authentication endpoint and are stored by the backend as password hashes, not plaintext.
-
-Common registration problems:
-
-- An existing email cannot be registered again.
-- Invalid or incomplete values produce field/request feedback and do not create a partial account.
-- A network or backend failure keeps the form available for another attempt.
-
-## 3. Login, session refresh, and logout
-
-### Login
-
-Open `/login`, enter the registered email and password, and select **Sign in**. If login was required while opening a protected page, the application returns to that page after authentication.
-
-### Session behavior
-
-The web frontend keeps access and refresh credentials in secure, HTTP-only cookies. JavaScript running in the browser cannot read those cookie values. When an access token expires, frontend API routes attempt one refresh and retry the backend request. A rejected or revoked refresh token ends the session and returns the user to login.
-
-Closing or refreshing a page does not automatically log the user out. The refresh token has its own server-side expiry and can be revoked.
-
-### Logout
-
-Use **Sign out** in the application header or Profile page. Logout asks the backend to revoke the refresh token and clears both authentication cookies. It ends the current device session; it does not delete the account or learning history.
-
-## 4. Application navigation
-
-The authenticated application currently provides:
-
-- **Dashboard** (`/dashboard`)
-- **Learning paths** (`/learning-paths`)
-- **Quizzes** (`/quizzes`)
-- **Learning Games** (`/games`)
-- **Progress** (`/progress`)
-- **Profile** (`/profile`, reached from the account area)
-
-Administrators additionally see an Admin entry. Authorization is still enforced by the backend; hiding or showing a link is not the security boundary.
-
-## 5. Dashboard
-
-The Dashboard summarizes existing backend data rather than creating a separate progress record. It can show:
-
-- The latest joined learning path and required progress.
-- A recommended lesson to continue.
-- Recently joined paths.
-- Recent lesson and quiz activity.
-- Learning statistics derived from lesson progress and submitted quiz attempts.
-- Achievements derived from available progress data.
-
-Dashboard achievements are lightweight milestones, not XP, coins, a leaderboard, or a reward economy. If one data source fails, the corresponding section can show a retry state while other sections remain usable.
-
-## 6. Knowledge and learning paths
-
-Knowledge is organized by administrators as:
+Tài khoản mới có vai trò `USER`. Luồng học chuẩn:
 
 ```text
-Technology -> Category -> Topic -> Subtopic
+Đăng ký hoặc đăng nhập
+→ tham gia lộ trình đã xuất bản
+→ học lesson theo thứ tự
+→ đạt yêu cầu đọc
+→ làm assessment nếu lesson có yêu cầu
+→ hoàn thành lesson
+→ theo dõi tiến độ lộ trình
 ```
 
-There is currently no separate learner-facing knowledge-tree page. Learners encounter this structure through published learning paths, lesson organization, and quiz scopes.
+Các vai trò khác:
 
-### Browsing learning paths
+- `CONTRIBUTOR`: có thêm khu vực đóng góp nội dung. Xem [Hướng dẫn cộng tác viên](./CONTRIBUTOR_GUIDE.md).
+- `ADMIN`: có thêm khu vực quản trị. Xem [Hướng dẫn quản trị](./ADMIN_GUIDE.md).
 
-Open `/learning-paths` to see published paths. The list is paginated and can show whether a path is available or already joined. Unpublished, review, draft, or archived paths are not learner content.
+Việc ẩn hoặc hiện menu không phải cơ chế bảo mật. Backend vẫn kiểm tra quyền ở từng API.
 
-### Viewing a path
+## 2. Đăng ký, đăng nhập và phiên làm việc
 
-Open a path to see:
+### Đăng ký
 
-- Path name and technology.
-- Ordered curriculum items.
-- Required and optional lessons.
-- Current backend-calculated progress when joined.
-- The lesson that can be continued next.
+Mở `/register`, nhập tên hiển thị, email và mật khẩu từ 8 đến 72 ký tự. Email phải hợp lệ và chưa tồn tại. Sau khi đăng ký thành công, hệ thống đăng nhập và chuyển vào khu vực học tập.
 
-### Joining a path
+Mật khẩu được backend băm trước khi lưu, không lưu dạng văn bản thuần.
 
-Select **Join** on a published path. Joining creates one membership for the authenticated user and path. Repeating the action does not create multiple memberships. A path that is no longer published cannot be newly joined.
+### Đăng nhập
 
-Joining does not automatically complete or start every lesson. It enables the curriculum and progress view; individual lesson activity begins when lessons are opened.
+Mở `/login` và nhập email, mật khẩu. Nếu trước đó người dùng bị chuyển tới trang đăng nhập từ một trang được bảo vệ, hệ thống sẽ quay lại trang phù hợp sau khi xác thực.
 
-### Path progress
+Frontend lưu access token và refresh token trong cookie `HttpOnly`; mã JavaScript phía trình duyệt không đọc trực tiếp được token. Khi access token hết hạn, lớp BFF thử refresh một lần rồi gửi lại request. Refresh token cũ không thể tái sử dụng sau khi đã được xoay vòng.
 
-Path progress is calculated by the backend from the path's required items and weights. Optional lessons do not replace required items. A path is complete only when the backend's required-item completion rule is satisfied.
+### Đăng xuất
 
-## 7. Reading a lesson
+Chọn **Đăng xuất** tại header hoặc trang hồ sơ. Backend thu hồi refresh token và frontend xóa cookie xác thực. Thao tác này không xóa tài khoản hoặc lịch sử học.
 
-Open a lesson from a learning path. The reading page prioritizes lesson content and can include headings, paragraphs, lists, callouts, inline code, and code blocks. It also provides breadcrumb context, prerequisites, previous/next navigation where context is available, and completion status.
+Nếu tài khoản bị vô hiệu hóa hoặc role bị thay đổi, token cũ không tiếp tục giữ quyền cũ ở request tiếp theo.
 
-Only published lessons can be opened by a learner. If a prerequisite is displayed, use its link to review that lesson. The backend remains authoritative for lesson availability.
+## 3. Điều hướng
 
-### Starting lesson progress
+Khu vực người học gồm:
 
-Opening a published lesson starts or resumes the single progress record for the current user and lesson. Reloading does not create a duplicate record. Existing values such as active time, maximum scroll position, qualification, assessment state, and completion are restored from the backend.
+- **Dashboard**: `/dashboard`
+- **Lộ trình học**: `/learning-paths`
+- **Quiz**: `/quizzes`
+- **Trò chơi học tập**: `/games`
+- **Tiến độ**: `/progress`
+- **Hồ sơ**: `/profile`
 
-### Active learning time
+Giao diện hỗ trợ tiếng Việt/tiếng Anh và Light/Dark/System. Ngôn ngữ giao diện không tự dịch nội dung lesson, question hoặc answer lấy từ backend.
 
-The lesson sidebar shows a count-up **Time spent** value.
+## 4. Trang tổng quan và thành tựu
 
-Active time increases only while:
+Trang tổng quan tổng hợp dữ liệu thật từ các bảng tiến độ, lộ trình và lượt làm bài kiểm tra, gồm:
 
-- the lesson page is open;
-- the document is visible;
-- the tab is active.
+- lộ trình đang học;
+- bài học nên tiếp tục;
+- hoạt động bài học và bài kiểm tra gần đây;
+- số liệu học tập;
+- các thành tựu phù hợp với dữ liệu hiện có.
 
-It pauses when the tab is hidden and resumes when the user returns. The frontend accumulates seconds locally and synchronizes them in batches instead of sending one request every second. It also attempts a final flush when visibility changes or the page is left. A failed synchronization shows retry feedback and retains pending time for a later attempt.
+Thành tựu được suy ra từ tiến độ, không phải hệ thống XP, coin hoặc leaderboard riêng. Nếu một nguồn dữ liệu phụ bị lỗi, section tương ứng có thể retry mà không làm hỏng toàn bộ Dashboard.
 
-Most importantly:
+## 5. Cấu trúc kiến thức và lộ trình học
 
-> `activeSeconds` is informational learning activity. It is not a minimum reading requirement and never decides pass or fail.
-
-A fast reader does not need to leave the page open merely to satisfy a timer.
-
-### Reading qualification and scrolling
-
-The backend records the maximum scroll percentage reached. For lessons without an assessment, reaching the configured scroll requirement is the current completion mechanism. For lessons with an assessment, scroll/reading status does not replace the assessment.
-
-## 8. Lesson assessment and completion
-
-A lesson may have one assessment quiz. When present, the assessment appears at the end of the lesson content.
-
-The implemented flow is:
+Nội dung được tổ chức theo:
 
 ```text
-Read/learn at your own pace
--> reach the assessment section
--> start or resume its attempt
--> answer one multiple-choice question at a time
--> submit once
--> backend grades the stored question-version snapshots
--> 80% or higher = lesson completed
--> below 80% = lesson remains incomplete
+Technology → Category → Topic → Subtopic
 ```
 
-Assessment quizzes are normally configured around five questions, but their actual question count comes from administrator configuration. The UI never assumes that every assessment has exactly five questions.
+Người học tiếp cận cấu trúc này thông qua các lộ trình, bài học và phạm vi bài kiểm tra đã xuất bản.
 
-### Answering an assessment
+### Xem và tham gia lộ trình
 
-- Only one question is shown at a time.
-- The progress indicator shows position and answered count.
-- Choices are held in browser state and are not posted after every click.
-- Session storage preserves in-progress choices during a reload on the same browser tab/session.
-- The final submission sends selected option IDs once.
-- The backend validates that each option belongs to its attempt question and calculates the score.
+Mở `/learning-paths` để xem các lộ trình `PUBLISHED`. Trang chi tiết hiển thị công nghệ, danh sách bài học theo `displayOrder`, bài học bắt buộc/tùy chọn và tiến độ hiện tại.
 
-### Passing and retrying
+Chọn **Tham gia** để tạo membership. Một user không thể tham gia cùng một lộ trình hai lần. Lộ trình không còn ở trạng thái `PUBLISHED` không nhận thành viên mới.
 
-Lesson assessments require an 80% pass percentage. The result displays correct/total, percentage, pass/fail, and explanations where available.
+### Học tuần tự
 
-If the result is below 80%, the lesson remains incomplete and **Retry assessment** starts a new attempt after the failed one has been submitted. Reading time does not reset and the user is not required to wait before retrying.
+Trong lộ trình đã tham gia, bài học sau bị khóa cho tới khi bài học chưa hoàn thành đầu tiên đứng trước nó được hoàn thành. Backend kiểm tra quy tắc này khi:
 
-If an assessment has already been passed, the backend continues deriving the lesson as completed after reload. A later content-page refresh does not erase the submitted attempt or completion.
+- mở bài học;
+- xem bài học tiên quyết;
+- bắt đầu tiến độ;
+- cập nhật tiến độ.
 
-## 9. Quizzes
+Không thể bỏ qua khóa chỉ bằng cách nhập URL bài học trực tiếp.
 
-### Quiz list and detail
+### Tiến độ lộ trình
 
-Open `/quizzes` to browse published quizzes. The current filters distinguish language and category where supported. A quiz detail page shows title, selection mode, question count, pass threshold, maximum score, and time-limit information when configured.
+Phần trăm được tính trên các bài học `required` và `weight`:
 
-Two selection modes exist:
+```text
+tổng trọng số của bài học bắt buộc đã hoàn thành
+÷ tổng trọng số của toàn bộ bài học bắt buộc
+× 100
+```
 
-- **FIXED**: administrators choose exact questions and their order.
-- **RULE_BASED**: the backend selects published questions matching knowledge/difficulty rules when the attempt starts.
+Lộ trình hoàn thành khi có ít nhất một bài học bắt buộc và tất cả bài học bắt buộc đều hoàn thành. Bài học tùy chọn vẫn xuất hiện trong tiến độ nhưng không thay thế bài học bắt buộc.
 
-### Starting or resuming
+## 6. Đọc bài học và ghi nhận tiến độ
 
-Starting a quiz creates a `QuizAttempt` only when no in-progress attempt already exists for that user and quiz. Otherwise, FresherPrep resumes the latest active attempt.
+Chỉ bài học `PUBLISHED` dưới cây kiến thức hợp lệ mới dành cho người học. Trang bài học có nội dung đọc, khối mã nguồn, bài học tiên quyết, tiến độ và điều hướng trước/sau khi có đủ ngữ cảnh lộ trình.
 
-At start time the backend snapshots:
+### Bắt đầu và tiếp tục
 
-- quiz title and pass threshold;
-- language, category, maximum score, and optional duration;
-- selected question IDs and exact question-version IDs;
-- question order and subtopic context.
+Khi mở bài học, frontend gọi thao tác bắt đầu hoặc tiếp tục. Mỗi cặp người dùng + bài học chỉ có một bản ghi `lesson_progress`; tải lại trang không tạo bản ghi trùng.
 
-Dynamic rules are not rerun when a page reloads. Editing or publishing a newer question version cannot change an existing attempt.
+Các dữ liệu chính:
 
-### Answering questions
+- `activeSeconds`: thời gian hoạt động đã được backend chấp nhận;
+- `lastViewedAt`: lần ghi nhận gần nhất;
+- `maxScrollPercent`: mức cuộn cao nhất;
+- `readQualifiedAt`: thời điểm đạt yêu cầu đọc.
 
-The attempt page presents one question at a time with navigation between questions. Current choices are kept in session storage for reload/resume. Correct answers and explanations are not exposed during an active attempt.
+### Thời gian hoạt động
 
-The frontend does not decide whether an answer is correct. Final option selections are sent to the backend, which validates ownership and relationships, records answer correctness, calculates score, and determines pass/fail.
+Thời gian chỉ tăng khi trang bài học đang mở, tab đang hiển thị và tài liệu đang hoạt động. Frontend gửi theo đợt, không gửi mỗi giây. Backend chỉ nhận số giây phù hợp với khoảng thời gian thực giữa hai lần đồng bộ.
 
-### Countdown
+Hiện tại `minimumReadSeconds` là dữ liệu theo dõi/tham khảo, không quyết định đạt hay trượt lesson.
 
-If a quiz has `durationSeconds`, the attempt snapshots it and exposes an absolute expiry timestamp. The UI displays a countdown calculated from that timestamp, so reload does not reset the clock.
+### Đạt yêu cầu đọc
 
-At `00:00`, answering is disabled and the page invokes the same final submit operation used by the manual submit button. A quiz without configured duration has no artificial timer.
+Bài học đạt yêu cầu đọc khi `maxScrollPercent` đạt `requiredScrollPercent`. Khi đó backend đặt `readQualifiedAt`. Cuộn trang chỉ là một phần điều kiện hoàn thành nếu bài học có bài đánh giá.
 
-### Submission and result
+## 7. Bài đánh giá và hoàn thành bài học
 
-Before manual submission, a confirmation dialog shows answered and unanswered counts. Unanswered questions score zero. Submission is protected against rapid double-clicks; the backend also treats an already submitted attempt as immutable and returns its existing result.
+Mỗi bài học có thể có tối đa một bài kiểm tra đánh giá.
 
-The result page can show:
+Quy tắc hoàn thành hiện tại:
 
-- score and percentage;
-- pass/fail according to the attempt's snapshotted threshold;
-- answered/total count;
-- selected answer, correct answer, correctness, and explanation after submission;
-- actions to retry, return to learning, or review activity where available.
+| Loại bài học | Điều kiện hoàn thành |
+|---|---|
+| Không có bài đánh giá | Đạt yêu cầu đọc |
+| Có bài đánh giá | Đạt yêu cầu đọc **và** có ít nhất một lượt làm bài đánh giá đạt yêu cầu |
 
-### Quiz history
+Vì vậy, đạt bài đánh giá nhưng chưa đạt mức cuộn vẫn chưa hoàn thành bài học; đạt mức cuộn nhưng chưa đạt bài đánh giá cũng chưa hoàn thành.
 
-Recent in-progress and submitted attempts appear on Progress and Dashboard activity sections. Submitted attempts link to results; unfinished attempts link back to the attempt page. History is based on persisted attempts, not browser-only analytics.
+Giao diện chỉ mở hành động làm bài đánh giá sau khi đạt yêu cầu đọc. Bài đánh giá dùng ngưỡng đạt do backend trả về; cấu hình hiện tại yêu cầu 80%.
 
-## 10. Progress page
+Nếu chưa đạt, người học có thể tạo lượt làm mới. Việc làm lại không xóa thời gian đọc hoặc lượt làm cũ. Khi bài học hoàn thành, bài học tiếp theo trong lộ trình tuần tự mới được mở.
 
-Open `/progress` for a focused learning overview:
+## 8. Làm bài kiểm tra
 
-- Joined/active paths and backend-calculated percentages.
-- Completed required lesson counts.
-- Recent completed and in-progress lessons.
-- Recent quiz attempts, scores, and pass/fail status.
+### Loại chọn câu hỏi
 
-The page intentionally avoids fabricated streaks and decorative charts. Sections can fail independently and offer retry without hiding every other result. Counts shown from paginated recent data are summaries of the returned dataset unless explicitly labeled as totals by the backend.
+- `FIXED`: dùng danh sách câu hỏi và thứ tự do người quản trị cấu hình.
+- `RULE_BASED`: backend chọn câu hỏi theo node kiến thức, độ khó và số lượng tại thời điểm bắt đầu.
 
-## 11. Profile and settings
+Nếu quy tắc không đủ câu hỏi hợp lệ đã xuất bản, backend từ chối tạo lượt làm thay vì tạo bài thiếu câu.
 
-The Profile page displays the authenticated user's avatar initials, display name, email, role, and creation date when returned by the backend.
+### Snapshot khi bắt đầu
 
-Users can currently:
+Backend lưu cố định vào lượt làm:
 
-- Update their display name.
-- Choose Light, Dark, or System appearance.
-- Choose Vietnamese or English interface language.
-- Sign out.
+- tiêu đề và ngưỡng đạt của bài kiểm tra;
+- điểm tối đa, ngôn ngữ, category và thời lượng;
+- danh sách câu hỏi thực tế;
+- `questionVersionId`, thứ tự và subtopic.
 
-Theme and language preferences are stored on the current device in `localStorage` and apply immediately. System theme follows the operating-system preference. These preferences do not translate lesson, question, option, or explanation content stored by the backend.
+Tải lại trang không chọn lại câu hỏi động. Việc quản trị viên xuất bản phiên bản mới không thay đổi lượt làm đã bắt đầu.
 
-Password change, password recovery, email verification, OAuth, and social login are not exposed by the current product and are therefore not described as available actions.
+### Chọn đáp án và nộp bài
 
-## 12. English learning content
+Đáp án đang chọn được giữ cục bộ trong trình duyệt và chỉ gửi một lần khi nộp bài. Hệ thống không tự lưu từng đáp án. Đáp án đúng và lời giải thích không được trả về khi lượt làm còn `IN_PROGRESS`.
 
-Administrators can publish English knowledge nodes and questions with English language/category metadata. Learners can browse published English quizzes through the same quiz list and use the same attempt, scoring, history, and result screens.
+Backend kiểm tra:
 
-English is not a separate assessment architecture. Lesson assessments and general quizzes reuse the generic Quiz/QuizAttempt model. Switching the interface to English changes system labels only; it does not automatically translate backend learning content.
+- lượt làm thuộc đúng người dùng;
+- lựa chọn thuộc đúng câu hỏi trong lượt làm;
+- lượt làm chưa được nộp;
+- điểm và trạng thái đạt/chưa đạt được tính ở server.
 
-## 13. Troubleshooting
+Câu không trả lời được tính sai trong mẫu số.
 
-### A page returns to login
+### Bài kiểm tra có giới hạn thời gian
 
-The access token and refresh token may both be expired or revoked. Sign in again. If logout occurred in another request, reloading a protected page also redirects to login.
+Đồng hồ đếm ngược dùng mốc `expiresAt` do backend tạo, nên tải lại trang không đặt lại thời gian. Khi đồng hồ về 0, frontend thực hiện nộp bài một lần.
 
-### Progress did not update immediately
+Backend là nguồn quyết định thời hạn: đáp án đến server sau `expiresAt` bị bỏ qua và lượt làm được chốt tại thời hạn. Vì không tự lưu từng đáp án, người học cần giữ kết nối ổn định và nộp bài trước khi hết giờ.
 
-Lesson time is synchronized in batches. Keep the lesson open briefly or use **Retry sync** when shown. Assessment and quiz results already accepted by the backend are independent of a temporary time-sync failure.
+### Kết quả và lịch sử
 
-### A lesson is unavailable
+Sau khi nộp, trang kết quả có thể hiển thị điểm, phần trăm, đạt/chưa đạt, số câu đã trả lời/tổng số câu, lựa chọn của người dùng, đáp án đúng và lời giải thích. Lượt làm đã nộp là bất biến; nộp lại trả kết quả hiện có, không chấm lại bằng dữ liệu mới.
 
-It may have been archived/unpublished, its parent knowledge node may not be published, or the ID may be invalid. Return to the published learning path.
+Lịch sử trên Trang tổng quan/Tiến độ phân biệt lượt đang làm và lượt đã nộp. Người dùng chỉ truy cập được lượt làm của chính mình.
 
-### A quiz cannot start
+## 9. Trang Tiến độ
 
-The quiz may be unpublished or a RULE_BASED rule may not have enough eligible published questions. The application reports the backend business error instead of creating a partial attempt.
+Mở `/progress` để xem:
 
-### Theme or language was reset
+- lộ trình đã tham gia và phần trăm tiến độ theo trọng số;
+- số bài học bắt buộc đã hoàn thành;
+- bài học đang học hoặc đã hoàn thành;
+- lượt làm bài kiểm tra gần đây, điểm và trạng thái đạt/chưa đạt.
 
-Preferences are device/browser-local. Clearing site storage restores Vietnamese and System-theme defaults.
+Trang không tạo streak hoặc analytics giả. Một section phụ có thể lỗi độc lập và cho phép retry.
+
+## 10. Trò chơi học tập
+
+`/games` gồm:
+
+- **Flashcard**: lật thẻ, chuyển trước/sau, đánh dấu đã nhớ/chưa nhớ.
+- **Matching**: ghép thuật ngữ với định nghĩa, có trạng thái đúng/sai và hoàn thành.
+
+Dữ liệu được tạo từ nội dung học hiện có khi đủ điều kiện. Đây là hoạt động ôn tập nhẹ; kết quả trò chơi không thay thế việc hoàn thành bài học, bài đánh giá hoặc lượt làm bài kiểm tra chính thức.
+
+## 11. Hồ sơ và cài đặt
+
+Trang `/profile` hiển thị tên, email, role, ngày tạo và avatar chữ cái. User có thể:
+
+- đổi tên hiển thị;
+- chọn Light, Dark hoặc System;
+- chọn tiếng Việt hoặc tiếng Anh;
+- đăng xuất.
+
+Theme và ngôn ngữ được lưu trên trình duyệt hiện tại. Xóa site storage sẽ trở về tiếng Việt và System theme. Hệ thống hiện chưa cung cấp đổi mật khẩu, quên mật khẩu, xác minh email hoặc OAuth.
+
+## 12. Xử lý sự cố
+
+### Bị chuyển về đăng nhập
+
+Phiên có thể đã hết hạn, refresh token bị thu hồi, tài khoản bị khóa hoặc role đã thay đổi. Đăng nhập lại; nếu tài khoản inactive, liên hệ Admin.
+
+### Lesson bị khóa
+
+Quay lại lộ trình và hoàn thành lesson khóa được giao diện hiển thị. Việc đạt yêu cầu đọc nhưng chưa pass assessment vẫn chưa mở lesson sau.
+
+### Progress chưa cập nhật
+
+Giữ trang lesson active để lần đồng bộ tiếp theo chạy hoặc dùng **Thử lại** khi có thông báo lỗi. Không tự reload liên tục vì thời gian được gửi theo đợt.
+
+### Quiz không bắt đầu được
+
+Quiz có thể chưa xuất bản, rule-based quiz không đủ question, hoặc đang có attempt cần tiếp tục. Đọc thông báo nghiệp vụ từ backend.
+
+### Theme hoặc ngôn ngữ bị đặt lại
+
+Lựa chọn chỉ lưu trên thiết bị/trình duyệt hiện tại. Kiểm tra quyền dùng `localStorage` và việc xóa dữ liệu website.

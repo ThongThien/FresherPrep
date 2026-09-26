@@ -6,6 +6,8 @@ import { Badge, Button, Card, CardContent, Feedback, FieldError, Input, Label, S
 import { adminRequest, jsonBody } from "@/lib/admin/client";
 import type { AdminPage, ContentStatus, Difficulty, KnowledgeNode, Question, QuestionCategory, QuestionLanguage, QuestionVersion } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
+import { KnowledgePathSelect, knowledgePathLabel } from "@/components/content/knowledge-path-select";
+import { QuestionBatchEditor, type BatchQuestionPayload } from "@/components/content/question-batch-editor";
 import { AdminPagination } from "./admin-ui";
 
 type OptionDraft = { position: number; content: string; correct: boolean; explanation: string };
@@ -19,6 +21,7 @@ export function QuestionManagement() {
   const { t } = useI18n();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [subtopics, setSubtopics] = useState<KnowledgeNode[]>([]);
+  const [showBatch, setShowBatch] = useState(false);
   const [selected, setSelected] = useState<Question>();
   const [versions, setVersions] = useState<QuestionVersion[]>([]);
   const [selectedVersionId, setSelectedVersionId] = useState<string>();
@@ -41,7 +44,7 @@ export function QuestionManagement() {
     try {
       const nodes = await adminRequest<KnowledgeNode[]>("knowledge/nodes");
       const available = nodes.filter((node) => node.type === "SUBTOPIC");
-      setSubtopics(available);
+      setSubtopics(nodes);
       setKnowledgeFilter((current) => current || available[0]?.id || "");
     } catch (reason) { setError(messageOf(reason)); }
   }, []);
@@ -118,12 +121,24 @@ export function QuestionManagement() {
     try {
       const saved = await adminRequest<Question>(
         selected ? `questions/${selected.id}` : "questions",
-        { method: selected ? "PUT" : "POST", ...jsonBody({ ...form, subtopicId: knowledgeFilter }) },
+        { method: selected ? "PUT" : "POST", ...jsonBody(form) },
       );
       await loadQuestions();
       await selectQuestion(saved.id);
       setSuccess(selected ? "Question metadata updated." : "Question created. Add its first immutable version next.");
     } catch (reason) { setError(messageOf(reason)); } finally { setPending(false); }
+  }
+
+  async function createBatch(payload: BatchQuestionPayload) {
+    setPending(true); setError(undefined); setSuccess(undefined);
+    try {
+      await adminRequest("questions/batch", { method: "POST", ...jsonBody(payload) });
+      setKnowledgeFilter(payload.subtopicId);
+      setPage(0);
+      setSuccess(t("{{count}} questions created with their first version.", { count: payload.questions.length }));
+      await loadQuestions();
+    } catch (reason) { setError(messageOf(reason)); throw reason; }
+    finally { setPending(false); }
   }
 
   async function changeStatus(status: Exclude<ContentStatus, "PUBLISHED">) {
@@ -216,13 +231,14 @@ export function QuestionManagement() {
   function clearMessages() { setError(undefined); setSuccess(undefined); setValidation({}); }
 
   return <div className="mx-auto max-w-7xl">
-    <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Questions")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Manage question metadata and immutable content versions.")}</p></div><Button disabled={!knowledgeFilter} onClick={startCreate}>{t("New question")}</Button></header>
+    <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Questions")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Manage question metadata and immutable content versions.")}</p></div><div className="flex gap-2"><Button variant="secondary" onClick={() => setShowBatch((value) => !value)}>{showBatch ? t("Close batch editor") : t("Create in batch")}</Button><Button disabled={!knowledgeFilter} onClick={startCreate}>{t("New question")}</Button></div></header>
     {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
     {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
+    {showBatch ? <div className="mt-6"><QuestionBatchEditor nodes={subtopics} pending={pending} onSubmit={createBatch} /></div> : null}
     <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)]">
       <Card><CardContent><Label htmlFor="question-search">{t("Search questions")}</Label><Input id="question-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Code, language, category, difficulty, or status")} />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <FilterSelect label={t("Parent subtopic")} value={knowledgeFilter} onChange={(value) => { setKnowledgeFilter(value); setPage(0); setQuery(""); setSelected(undefined); }} options={subtopics.map((node) => ({ value: node.id, label: node.name }))} includeAll={false} />
+          <div className="sm:col-span-2"><KnowledgePathSelect nodes={subtopics} value={knowledgeFilter} onChange={(value) => { setKnowledgeFilter(value); setPage(0); setQuery(""); setSelected(undefined); }} idPrefix="question-filter" /></div>
           <FilterSelect label={t("Difficulty")} value={difficultyFilter} onChange={(value) => { setDifficultyFilter(value); setPage(0); }} options={difficulties.map((value) => ({ value, label: t(value) }))} />
           <FilterSelect label={t("Status")} value={statusFilter} onChange={(value) => { setStatusFilter(value); setPage(0); }} options={["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"].map((value) => ({ value, label: t(value) }))} />
         </div>
@@ -234,7 +250,7 @@ export function QuestionManagement() {
             <div><Label htmlFor="question-difficulty">{t("Difficulty")}</Label><Select id="question-difficulty" value={form.difficulty} onChange={(event) => setForm((current) => ({ ...current, difficulty: event.target.value as Difficulty }))}>{difficulties.map((difficulty) => <option key={difficulty} value={difficulty}>{t(difficulty)}</option>)}</Select></div>
             <div><Label htmlFor="question-language">{t("Language")}</Label><Select id="question-language" value={form.language} onChange={(event) => setForm((current) => ({ ...current, language: event.target.value as QuestionLanguage }))}>{languages.map((language) => <option key={language} value={language}>{t(language)}</option>)}</Select></div>
             <div><Label htmlFor="question-category">{t("Category")}</Label><Select id="question-category" value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value as QuestionCategory }))}>{categories.map((category) => <option key={category} value={category}>{t(category)}</option>)}</Select></div>
-            <div className="sm:col-span-2"><Label>{t("Subtopic")}</Label><p className="mt-2 text-sm font-medium text-text">{subtopics.find((node) => node.id === knowledgeFilter)?.name ?? t("Select subtopic")}</p>{validation.subtopicId ? <FieldError>{validation.subtopicId}</FieldError> : null}</div>
+            <div className="sm:col-span-2"><KnowledgePathSelect nodes={subtopics} value={form.subtopicId} onChange={(subtopicId) => setForm((current) => ({ ...current, subtopicId }))} idPrefix="question-form" />{form.subtopicId ? <p className="mt-2 text-xs text-text-muted">{knowledgePathLabel(subtopics, form.subtopicId)}</p> : null}{validation.subtopicId ? <FieldError>{validation.subtopicId}</FieldError> : null}</div>
             <div className="sm:col-span-2"><Button type="submit" loading={pending}>{selected ? t("Save metadata") : t("Create question")}</Button></div>
           </form>
           {selected ? <div className="mt-7 border-t border-border pt-6"><div className="flex flex-wrap gap-2">{questionTransitions(selected.status).map((status) => <Button key={status} size="sm" variant="secondary" disabled={pending} onClick={() => void changeStatus(status)}>{status === "REVIEW" ? t("Submit for review") : status === "DRAFT" ? t("Move to draft") : t("Archive")}</Button>)}</div><Button className="mt-5" size="sm" variant="danger" loading={pending} onClick={() => void deleteQuestion()}>{t("Delete question")}</Button></div> : null}
