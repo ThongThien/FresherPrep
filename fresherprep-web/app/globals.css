@@ -196,10 +196,15 @@ textarea {
 @media (min-width: 1024px) {
   .public-snap-container {
     height: calc(100dvh - 4rem);
-    overflow-y: auto;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
   .public-snap-section {
+    width: 100%;
+    min-width: 100%;
     min-height: calc(100dvh - 4rem);
+    flex: 0 0 100%;
     display: flex;
     align-items: center;
     scroll-snap-align: start;
@@ -213,7 +218,7 @@ textarea {
 @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
   .public-snap-container {
     scroll-behavior: smooth;
-    scroll-snap-type: y mandatory;
+    scroll-snap-type: x mandatory;
   }
 
   .public-snap-section {
