@@ -11,4 +11,11 @@ public record TokenPairResponse(
     public TokenPairResponse(String accessToken, Instant accessTokenExpiresAt, String refreshToken) {
         this("Bearer", accessToken, accessTokenExpiresAt, refreshToken);
     }
+
+    @Override
+    public String toString() {
+        return "TokenPairResponse[tokenType=" + tokenType
+                + ", accessToken=[REDACTED], accessTokenExpiresAt=" + accessTokenExpiresAt
+                + ", refreshToken=[REDACTED]]";
+    }
 }

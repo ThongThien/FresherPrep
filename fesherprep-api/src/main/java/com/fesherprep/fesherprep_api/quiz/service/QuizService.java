@@ -84,7 +84,7 @@ public class QuizService {
     @PreAuthorize("isAuthenticated()")
     @Transactional
     public QuizAttemptResponse startQuiz(UUID quizId) {
-        User user = requireCurrentUser();
+        User user = requireCurrentUserForUpdate();
         Quiz quiz = quizRepository.findForStart(quizId, ContentStatus.PUBLISHED)
                 .orElseThrow(() -> new QuizNotFoundException(quizId));
         requireAssessmentReading(user.getId(), quizId);
@@ -149,6 +149,7 @@ public class QuizService {
         attempt.submit(selections, clock.instant());
         answerRepository.saveAll(newlyAnswered.stream()
                 .map(QuizAttemptQuestion::getAnswer)
+                .filter(Objects::nonNull)
                 .toList());
         attemptRepository.flush();
         return QuizAttemptResponse.from(attempt);
@@ -493,6 +494,20 @@ public class QuizService {
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException(
                         "Authenticated user no longer exists"
                 ));
+    }
+
+    private User requireCurrentUserForUpdate() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AuthenticationCredentialsNotFoundException("Authentication is required");
+        }
+        try {
+            return userRepository.findByIdForUpdate(UUID.fromString(authentication.getName()))
+                    .orElseThrow(() -> new AuthenticationCredentialsNotFoundException(
+                            "Authenticated user no longer exists"));
+        } catch (IllegalArgumentException exception) {
+            throw new AuthenticationCredentialsNotFoundException("Invalid authenticated principal");
+        }
     }
 
     private void ensureUniqueCode(String code, UUID currentQuizId) {

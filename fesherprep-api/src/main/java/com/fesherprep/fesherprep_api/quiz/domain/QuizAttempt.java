@@ -139,6 +139,14 @@ public class QuizAttempt extends BaseEntity {
         }
         Objects.requireNonNull(selections);
         Objects.requireNonNull(submittedAt, "Submission time is required");
+        Instant expiresAt = getExpiresAt();
+        if (expiresAt != null && submittedAt.isAfter(expiresAt)) {
+            // Do not accept answers received after the server-side deadline. Finalize
+            // the existing attempt with unanswered questions so the user can view the
+            // result and start a new attempt without introducing answer autosave.
+            completeSubmission(expiresAt);
+            return;
+        }
         Map<QuizAttemptQuestion, QuestionOption> resolved = new LinkedHashMap<>();
         for (var entry : selections.entrySet()) {
             QuizAttemptQuestion question = questions.stream()

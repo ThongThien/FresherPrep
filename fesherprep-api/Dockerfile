@@ -15,6 +15,12 @@ WORKDIR /app
 
 COPY --from=build /app/target/*.jar app.jar
 
+RUN groupadd --system fresherprep \
+    && useradd --system --gid fresherprep --home-dir /app --shell /usr/sbin/nologin fresherprep \
+    && chown fresherprep:fresherprep /app/app.jar
+
+USER fresherprep
+
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

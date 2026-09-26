@@ -9,4 +9,8 @@ public record RegisterRequest(
         @NotBlank @Size(min = 8, max = 72) String password,
         @NotBlank @Size(max = 100) String displayName
 ) {
+    @Override
+    public String toString() {
+        return "RegisterRequest[email=" + email + ", password=[REDACTED], displayName=" + displayName + "]";
+    }
 }

@@ -9,8 +9,10 @@ import com.fesherprep.fesherprep_api.question.domain.QuestionVersion;
 import com.fesherprep.fesherprep_api.question.domain.QuestionVersion.OptionDefinition;
 import com.fesherprep.fesherprep_api.user.domain.User;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +80,38 @@ class QuizModelTests {
         assertTrue(attempt.getQuestions().getFirst().getAnswer().isCorrect());
         assertNull(attempt.getQuestions().get(1).getAnswer());
         assertThrows(IllegalStateException.class, () -> attempt.submit(Map.of()));
+    }
+
+    @Test
+    void timedAttemptIgnoresAnswersReceivedAfterServerDeadline() {
+        QuestionVersion question = question(hashMap, Difficulty.EASY);
+        Quiz quiz = new Quiz(
+                "Timed quiz",
+                "TIMED-QUIZ",
+                QuizType.TOPIC,
+                QuizSelectionMode.FIXED,
+                80,
+                com.fesherprep.fesherprep_api.question.domain.QuestionLanguage.VI,
+                QuizCategory.TECHNICAL,
+                100,
+                60
+        );
+        quiz.addQuestion(question.getQuestion());
+        quiz.submitForReview();
+        quiz.publish();
+        QuizAttempt attempt = new QuizAttempt(user, quiz, List.of(question));
+        Instant startedAt = Instant.parse("2026-09-26T00:00:00Z");
+        ReflectionTestUtils.setField(attempt, "createdAt", startedAt);
+
+        attempt.submit(Map.of(
+                attempt.getQuestions().getFirst(),
+                question.getOptions().getFirst()
+        ), startedAt.plusSeconds(61));
+
+        assertEquals(AttemptStatus.SUBMITTED, attempt.getStatus());
+        assertEquals(new BigDecimal("0.00"), attempt.getScorePercentage());
+        assertEquals(startedAt.plusSeconds(60), attempt.getSubmittedAt());
+        assertNull(attempt.getQuestions().getFirst().getAnswer());
     }
 
     @Test

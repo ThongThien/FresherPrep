@@ -297,7 +297,7 @@ public class ContributionService {
     @Transactional
     public ContributionDetailResponse approve(UUID id) {
         User reviewer = currentUser();
-        ContentSubmission submission = requireSubmission(id);
+        ContentSubmission submission = requireSubmissionForUpdate(id);
         preventSelfReview(submission, reviewer);
         publishContent(submission);
         record(submission, reviewer, ReviewAction.APPROVED, null);
@@ -310,7 +310,7 @@ public class ContributionService {
     @Transactional
     public ContributionDetailResponse reject(UUID id, @Valid RejectContentRequest request) {
         User reviewer = currentUser();
-        ContentSubmission submission = requireSubmission(id);
+        ContentSubmission submission = requireSubmissionForUpdate(id);
         preventSelfReview(submission, reviewer);
         returnToDraft(submission);
         submission.reject(reviewer, request.reason(), clock.instant());
@@ -455,6 +455,11 @@ public class ContributionService {
 
     private ContentSubmission requireSubmission(UUID id) {
         return submissionRepository.findById(id)
+                .orElseThrow(() -> new ContributionNotFoundException(id));
+    }
+
+    private ContentSubmission requireSubmissionForUpdate(UUID id) {
+        return submissionRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ContributionNotFoundException(id));
     }
 

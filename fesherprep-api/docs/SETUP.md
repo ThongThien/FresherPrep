@@ -17,7 +17,7 @@ Trong Supabase Dashboard, mở **Connect → Session pooler**, sau đó điền:
 | `APP_PROFILE` | `dev` để tạo/cập nhật bảng; `prod` để chỉ kiểm tra schema |
 | `SERVER_PORT` | `8080` hoặc cổng muốn sử dụng |
 | `SUPABASE_DB_URL` | `jdbc:postgresql://<host-session-pooler>:5432/postgres?sslmode=require` |
-| `SUPABASE_DB_USERNAME` | Username trong Connect, thường là `postgres.<project-ref>` |
+| `SUPABASE_DB_USERNAME` | Production: runtime role tối thiểu, ví dụ `fresherprep_runtime.<project-ref>`; chỉ dùng `postgres.<project-ref>` cho migration/admin đã review |
 | `SUPABASE_DB_PASSWORD` | Mật khẩu database của dự án Supabase |
 
 Copy chính xác host từ Dashboard vì không thể suy ra host chỉ từ region. Session pooler cổng `5432` phù hợp kết nối IPv4 và hỗ trợ prepared statements cho JPA. Với môi trường có IPv6, có thể dùng direct connection và username tương ứng trong Dashboard. [Hướng dẫn kết nối Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres).

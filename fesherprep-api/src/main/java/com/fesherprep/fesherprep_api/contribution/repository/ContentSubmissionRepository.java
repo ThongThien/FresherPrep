@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -16,6 +18,11 @@ public interface ContentSubmissionRepository extends JpaRepository<ContentSubmis
     @Override
     @EntityGraph(attributePaths = {"submittedBy", "reviewedBy"})
     Optional<ContentSubmission> findById(UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"submittedBy", "reviewedBy"})
+    @Query("select submission from ContentSubmission submission where submission.id = :id")
+    Optional<ContentSubmission> findByIdForUpdate(@Param("id") UUID id);
 
     @EntityGraph(attributePaths = {"submittedBy", "reviewedBy"})
     Optional<ContentSubmission> findByContentTypeAndContentId(
