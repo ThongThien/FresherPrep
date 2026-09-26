@@ -27,6 +27,7 @@ import com.fesherprep.fesherprep_api.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
@@ -347,7 +348,34 @@ public class ContributionService {
     ) {
         ReviewStatus effective = status == null ? ReviewStatus.PENDING_REVIEW : status;
         String query = contributor == null || contributor.isBlank() ? null : contributor.strip();
-        return submissionRepository.findForReview(type, effective, query, from, to, pageable)
+        Specification<ContentSubmission> filters = (root, criteriaQuery, criteriaBuilder) ->
+                criteriaBuilder.equal(root.get("status"), effective);
+        if (type != null) {
+            filters = filters.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("contentType"), type));
+        }
+        if (query != null) {
+            String pattern = "%" + query.toLowerCase(Locale.ROOT) + "%";
+            filters = filters.and((root, criteriaQuery, criteriaBuilder) -> criteriaBuilder.or(
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(root.get("submittedBy").get("email")),
+                            pattern
+                    ),
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(root.get("submittedBy").get("displayName")),
+                            pattern
+                    )
+            ));
+        }
+        if (from != null) {
+            filters = filters.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.greaterThanOrEqualTo(root.get("submittedAt"), from));
+        }
+        if (to != null) {
+            filters = filters.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.lessThanOrEqualTo(root.get("submittedAt"), to));
+        }
+        return submissionRepository.findAll(filters, pageable)
                 .map(ContributionSummaryResponse::from);
     }
 

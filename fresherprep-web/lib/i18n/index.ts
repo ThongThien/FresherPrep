@@ -953,10 +953,7 @@ Object.assign(vi, {
   "Created and developed by a Java Intern as a practical learning project for the developer community.": "\u0110\u01b0\u1ee3c x\u00e2y d\u1ef1ng v\u00e0 ph\u00e1t tri\u1ec3n b\u1edfi m\u1ed9t Java Intern nh\u01b0 m\u1ed9t d\u1ef1 \u00e1n h\u1ecdc t\u1eadp th\u1ef1c t\u1ebf d\u00e0nh cho c\u1ed9ng \u0111\u1ed3ng l\u1eadp tr\u00ecnh vi\u00ean.",
   "Create a free account": "T\u1ea1o t\u00e0i kho\u1ea3n mi\u1ec5n ph\u00ed",
   "No payment required. Start with the published Java learning path.": "Kh\u00f4ng y\u00eau c\u1ea7u thanh to\u00e1n. B\u1eaft \u0111\u1ea7u ngay v\u1edbi l\u1ed9 tr\u00ecnh Java \u0111\u00e3 xu\u1ea5t b\u1ea3n.",
-  "Previous slide": "Slide tr\u01b0\u1edbc",
-  "Next slide": "Slide ti\u1ebfp theo",
-  "Slide {{current}} of {{total}}": "Slide {{current}} / {{total}}",
-  "Use the mouse wheel, arrow buttons, or keyboard arrows to move between slides.": "D\u00f9ng con l\u0103n chu\u1ed9t, n\u00fat m\u0169i t\u00ean ho\u1eb7c ph\u00edm m\u0169i t\u00ean \u0111\u1ec3 chuy\u1ec3n gi\u1eefa c\u00e1c slide.",
+  "Scroll naturally or select an indicator to move between sections.": "Cu\u1ed9n t\u1ef1 nhi\u00ean ho\u1eb7c ch\u1ecdn indicator \u0111\u1ec3 chuy\u1ec3n gi\u1eefa c\u00e1c ph\u1ea7n.",
 });
 
 export function useI18n() {

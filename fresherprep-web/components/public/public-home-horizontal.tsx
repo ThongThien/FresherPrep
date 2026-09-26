@@ -124,21 +124,16 @@ export function PublicHome() {
 
   return (
     <>
-      <nav className="fixed bottom-5 left-1/2 z-30 hidden -translate-x-1/2 lg:block" aria-label={t("Home sections")}>
-        <div className="flex items-center gap-3 rounded-full border border-border bg-surface/95 px-3 py-2 shadow-card backdrop-blur-sm">
-          <SlideButton label={t("Previous slide")} disabled={activeIndex === 0} onClick={() => goToSlide(activeIndex - 1)}>←</SlideButton>
-          <ol className="flex items-center gap-1" aria-label={t("Slide {{current}} of {{total}}", { current: activeIndex + 1, total: sections.length })}>
-            {sections.map(([id, label], index) => (
-              <li key={id}>
-                <button type="button" className="group flex size-6 items-center justify-center" aria-label={t(label)} aria-current={activeIndex === index ? "step" : undefined} onClick={() => goToSlide(index)}>
-                  <span className={`block rounded-full transition-[width,height,background-color] motion-reduce:transition-none ${activeIndex === index ? "h-2.5 w-5 bg-primary" : "size-1.5 bg-border-strong group-hover:bg-primary"}`} />
-                </button>
-              </li>
-            ))}
-          </ol>
-          <span className="min-w-10 text-center font-mono text-xs text-text-muted" aria-hidden="true">{activeIndex + 1}/{sections.length}</span>
-          <SlideButton label={t("Next slide")} disabled={activeIndex === sections.length - 1} onClick={() => goToSlide(activeIndex + 1)}>→</SlideButton>
-        </div>
+      <nav className="fixed bottom-20 left-1/2 z-30 hidden -translate-x-1/2 lg:block" aria-label={t("Home sections")}>
+        <ol className="flex items-center gap-1 rounded-full border border-border bg-surface/95 px-3 py-2 shadow-card backdrop-blur-sm">
+          {sections.map(([id, label], index) => (
+            <li key={id}>
+              <button type="button" className="group flex size-6 items-center justify-center" aria-label={t(label)} aria-current={activeIndex === index ? "step" : undefined} onClick={() => goToSlide(index)}>
+                <span className={`block rounded-full transition-[width,height,background-color] motion-reduce:transition-none ${activeIndex === index ? "h-2.5 w-5 bg-primary" : "size-1.5 bg-border-strong group-hover:bg-primary"}`} />
+              </button>
+            </li>
+          ))}
+        </ol>
       </nav>
 
       <main id="main-content" ref={scrollRoot} tabIndex={0} className="public-snap-container focus:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-focus/25" onKeyDown={handleKeyDown}>
@@ -149,7 +144,7 @@ export function PublicHome() {
               <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-text sm:text-5xl sm:leading-[1.08]">{t("Build the Java foundation for your first backend role.")}</h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-text-muted sm:text-lg">{t("Learn Java from fundamentals through object-oriented concepts, practice with focused questions, and prepare for Java Backend Intern and Fresher interviews.")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row"><PrimaryLink href="/login">{t("Start learning")}</PrimaryLink><SectionLink href="#roadmap">{t("Explore content")}</SectionLink></div>
-              <p className="mt-5 text-sm leading-6 text-text-subtle">{t("Use the mouse wheel, arrow buttons, or keyboard arrows to move between slides.")}</p>
+              <p className="mt-5 text-sm leading-6 text-text-subtle">{t("Scroll naturally or select an indicator to move between sections.")}</p>
             </div>
             <div className="border-l-4 border-primary bg-surface p-6 shadow-card sm:p-7">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("A focused learning cycle")}</p>
@@ -197,10 +192,6 @@ export function PublicHome() {
 
 function HomeSection({ id, className = "", children }: { id: string; className?: string; children: React.ReactNode }) {
   return <section id={id} className={`public-snap-section ${className}`}><div className="mx-auto flex w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8 lg:pb-24">{children}</div></section>;
-}
-
-function SlideButton({ label, disabled, onClick, children }: { label: string; disabled: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" className="flex size-9 items-center justify-center rounded-full text-lg text-text transition-colors hover:bg-primary-subtle hover:text-primary disabled:cursor-not-allowed disabled:opacity-35" aria-label={label} disabled={disabled} onClick={onClick}>{children}</button>;
 }
 
 function PrimaryLink({ href, className = "", children }: { href: string; className?: string; children: React.ReactNode }) {

@@ -5,16 +5,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Lock;
 import jakarta.persistence.LockModeType;
 
-import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface ContentSubmissionRepository extends JpaRepository<ContentSubmission, UUID> {
+public interface ContentSubmissionRepository extends JpaRepository<ContentSubmission, UUID>,
+        JpaSpecificationExecutor<ContentSubmission> {
     @Override
     @EntityGraph(attributePaths = {"submittedBy", "reviewedBy"})
     Optional<ContentSubmission> findById(UUID id);
@@ -42,23 +43,4 @@ public interface ContentSubmissionRepository extends JpaRepository<ContentSubmis
             Pageable pageable
     );
 
-    @EntityGraph(attributePaths = {"submittedBy", "reviewedBy"})
-    @Query("""
-            select submission from ContentSubmission submission
-            where (:type is null or submission.contentType = :type)
-              and (:status is null or submission.status = :status)
-              and (:contributor is null
-                   or lower(submission.submittedBy.email) like lower(concat('%', :contributor, '%'))
-                   or lower(submission.submittedBy.displayName) like lower(concat('%', :contributor, '%')))
-              and (:submittedFrom is null or submission.submittedAt >= :submittedFrom)
-              and (:submittedTo is null or submission.submittedAt <= :submittedTo)
-            """)
-    Page<ContentSubmission> findForReview(
-            @Param("type") ContributionContentType type,
-            @Param("status") ReviewStatus status,
-            @Param("contributor") String contributor,
-            @Param("submittedFrom") Instant submittedFrom,
-            @Param("submittedTo") Instant submittedTo,
-            Pageable pageable
-    );
 }
