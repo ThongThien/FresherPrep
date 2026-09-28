@@ -34,11 +34,18 @@ public class PetRewardEvent extends BaseEntity {
     @Column(name = "points_awarded", nullable = false, updatable = false)
     private int pointsAwarded;
 
+    @Column(nullable = false)
+    private boolean applied;
+
     public PetRewardEvent(User user, PetActivityType activityType, UUID sourceId, int pointsAwarded) {
         this.user = Objects.requireNonNull(user, "User is required");
         this.activityType = Objects.requireNonNull(activityType, "Activity type is required");
         this.sourceId = Objects.requireNonNull(sourceId, "Activity source is required");
         if (pointsAwarded < 0) throw new IllegalArgumentException("Reward points cannot be negative");
         this.pointsAwarded = pointsAwarded;
+    }
+
+    public void markApplied() {
+        applied = true;
     }
 }

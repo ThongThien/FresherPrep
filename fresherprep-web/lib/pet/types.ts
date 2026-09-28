@@ -1,4 +1,25 @@
+export interface LocalizedPetText { vi: string; en: string }
+export interface PetLevelConfig {
+  level: number;
+  name: LocalizedPetText;
+  description: LocalizedPetText;
+  requiredEnergy: number;
+  assetReference: string;
+}
+export interface PetDefinition {
+  id: string;
+  code: string;
+  name: LocalizedPetText;
+  description: LocalizedPetText;
+  learningMeaning: LocalizedPetText;
+  active: boolean;
+  displayOrder: number;
+  levels: PetLevelConfig[];
+}
 export interface PetState {
+  progressionId: string;
+  petId: string;
+  petCode: string;
   totalLearningPoints: number;
   pointBalance: number;
   pointsPerFood: number;
@@ -7,31 +28,32 @@ export interface PetState {
   energyPerFood: number;
   currentLevel: number;
   maximumLevel: number;
-  name: string;
-  description: string;
+  petName: LocalizedPetText;
+  petDescription: LocalizedPetText;
+  learningMeaning: LocalizedPetText;
+  levelName: LocalizedPetText;
+  levelDescription: LocalizedPetText;
+  assetReference: string;
   requiredEnergy: number;
   canFeed: boolean;
   canUpgrade: boolean;
+  completed: boolean;
 }
-
-export interface PetLevelConfig {
-  level: number;
-  name: string;
-  description: string;
-  requiredEnergy: number;
+export interface PetCollection {
+  activePet: PetState | null;
+  completedPets: PetState[];
+  availablePets: PetDefinition[];
 }
-
 export interface PetConfiguration {
   lessonCompletionPoints: number;
   quizPassPoints: number;
   pointsPerFood: number;
   energyPerFood: number;
-  maximumLevel: number;
-  levels: PetLevelConfig[];
 }
-
 export interface AdminUserPet {
   petId: string;
+  petDefinitionId: string;
+  petCode: string;
   userId: string;
   email: string;
   displayName: string;
@@ -42,5 +64,6 @@ export interface AdminUserPet {
   availableFood: number;
   energy: number;
   currentLevel: number;
+  status: "ACTIVE" | "COMPLETED";
   updatedAt: string;
 }

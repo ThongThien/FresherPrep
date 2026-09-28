@@ -1,9 +1,6 @@
-export const PET_ASSET_BY_LEVEL: Readonly<Record<number, string>> = {
-  1: "/static/pet/lv1.webp",
-  2: "/static/pet/lv2.webp",
-  3: "/static/pet/lv3.webp",
-};
+const SAFE_ASSET = /^[a-zA-Z0-9/_-]+\.(webp|png|jpg|jpeg)$/;
 
-export function petAsset(level: number) {
-  return PET_ASSET_BY_LEVEL[level] ?? PET_ASSET_BY_LEVEL[1];
+export function petAsset(reference: string) {
+  const normalized = reference.replace(/^\/+/, "").replace(/^static\//, "");
+  return SAFE_ASSET.test(normalized) ? "/static/" + normalized : "/static/pets/placeholder.webp";
 }

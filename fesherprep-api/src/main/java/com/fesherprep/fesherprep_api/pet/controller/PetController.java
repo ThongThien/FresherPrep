@@ -2,6 +2,7 @@ package com.fesherprep.fesherprep_api.pet.controller;
 
 import com.fesherprep.fesherprep_api.config.OpenApiConfiguration;
 import com.fesherprep.fesherprep_api.pet.dto.PetStateResponse;
+import com.fesherprep.fesherprep_api.pet.dto.PetCollectionResponse;
 import com.fesherprep.fesherprep_api.pet.service.PetService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -21,11 +22,26 @@ public class PetController {
 
     @PostMapping("/feed")
     public PetStateResponse feedMyPet() {
-        return petService.feedMyPet();
+        return petService.feedMyPet(false);
+    }
+
+    @PostMapping("/feed-all")
+    public PetStateResponse feedAll() {
+        return petService.feedMyPet(true);
     }
 
     @PostMapping("/upgrade")
     public PetStateResponse upgradeMyPet() {
         return petService.upgradeMyPet();
+    }
+
+    @GetMapping("/collection")
+    public PetCollectionResponse collection() {
+        return petService.getMyCollection();
+    }
+
+    @PostMapping("/select/{petId}")
+    public PetStateResponse select(@PathVariable java.util.UUID petId) {
+        return petService.selectPet(petId);
     }
 }

@@ -63,16 +63,35 @@ WHERE NOT EXISTS (
 -- Initial Pet configuration. Existing Admin changes are preserved on rerun.
 INSERT INTO pet_settings (
     id, lesson_completion_points, quiz_pass_points, points_per_food,
-    energy_per_food, max_level, updated_at, version
+    energy_per_food, updated_at, version
 )
-VALUES (1, 20, 10, 10, 20, 3, CURRENT_TIMESTAMP, 0)
+VALUES (1, 10, 20, 10, 20, CURRENT_TIMESTAMP, 0)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO pet_level_configs (level, name, description, required_energy)
-VALUES
-    (1, 'Java Seedling', 'Pet dong hanh khi bat dau hanh trinh hoc tap.', 100),
-    (2, 'Code Explorer', 'Pet truong thanh nho viec hoc tap deu dan.', 250),
-    (3, 'Backend Guardian', 'Pet da san sang cho thu thach Fresher Backend.', 0)
-ON CONFLICT (level) DO NOTHING;
+INSERT INTO pets (
+    id, code, name_vi, name_en, description_vi, description_en,
+    learning_meaning_vi, learning_meaning_en, active, display_order, created_at, version
+)
+VALUES (
+    gen_random_uuid(), 'JAVA_SEEDLING', 'Mam Java', 'Java Seedling',
+    'Nguoi ban dong hanh bat dau hanh trinh Java.', 'A companion beginning its Java journey.',
+    'Tuong trung cho nen tang va thoi quen hoc deu dan.', 'Represents foundations and consistent learning.',
+    true, 1, CURRENT_TIMESTAMP, 0
+) ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO pet_level_configs (
+    id, pet_id, level_order, name_vi, name_en, description_vi, description_en,
+    required_energy, asset_reference, created_at
+)
+SELECT gen_random_uuid(), pet.id, seed.level_order, seed.name_vi, seed.name_en,
+       seed.description_vi, seed.description_en, seed.required_energy, seed.asset_reference, CURRENT_TIMESTAMP
+FROM pets pet
+CROSS JOIN (VALUES
+    (1, 'Mam Java', 'Java Seedling', 'Bat dau hanh trinh.', 'Beginning the journey.', 100, 'pets/java-seedling/lv1.webp'),
+    (2, 'Nha tham hiem Code', 'Code Explorer', 'Truong thanh qua hoc tap.', 'Growing through learning.', 250, 'pets/java-seedling/lv2.webp'),
+    (3, 'Ve binh Backend', 'Backend Guardian', 'San sang cho thu thach Fresher.', 'Ready for Fresher challenges.', 0, 'pets/java-seedling/lv3.webp')
+) AS seed(level_order, name_vi, name_en, description_vi, description_en, required_energy, asset_reference)
+WHERE pet.code = 'JAVA_SEEDLING'
+ON CONFLICT (pet_id, level_order) DO NOTHING;
 
 COMMIT;

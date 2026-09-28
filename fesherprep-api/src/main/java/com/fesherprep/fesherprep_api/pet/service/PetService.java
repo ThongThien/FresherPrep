@@ -11,27 +11,21 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 @Validated
 @RequiredArgsConstructor
 public class PetService {
-    private static final Set<String> ADMIN_PET_SORT_FIELDS =
-            Set.of("updatedAt", "petLevel", "totalLearningPoints");
+    private static final Set<String> ADMIN_SORT_FIELDS = Set.of("updatedAt", "petLevel", "totalLearningPoints");
     private final PetSettingsRepository settingsRepository;
+    private final PetRepository petRepository;
     private final PetLevelConfigRepository levelRepository;
     private final UserPetRepository userPetRepository;
     private final PetRewardEventRepository rewardRepository;
@@ -41,81 +35,137 @@ public class PetService {
     @Transactional
     public PetStateResponse getMyPet() {
         User user = currentUserForUpdate();
-        return response(getOrCreate(user), requireSettings());
+        return response(requireOrCreateInitialPet(user));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Transactional(readOnly = true)
+    public PetCollectionResponse getMyCollection() {
+        UUID userId = currentUserId();
+        List<UserPet> progressions = userPetRepository.findAllByUserIdOrderByCreatedAtAsc(userId);
+        PetStateResponse active = progressions.stream()
+                .filter(item -> item.getStatus() == UserPetStatus.ACTIVE).findFirst()
+                .map(this::response).orElse(null);
+        List<PetStateResponse> completed = progressions.stream()
+                .filter(item -> item.getStatus() == UserPetStatus.COMPLETED).map(this::response).toList();
+        Set<UUID> owned = progressions.stream().map(item -> item.getPet().getId()).collect(java.util.stream.Collectors.toSet());
+        List<PetDefinitionResponse> available = petRepository.findAllByActiveTrueOrderByDisplayOrderAsc().stream()
+                .filter(pet -> !owned.contains(pet.getId())).map(PetDefinitionResponse::from).toList();
+        return new PetCollectionResponse(active, completed, available);
     }
 
     @PreAuthorize("isAuthenticated()")
     @Transactional
-    public PetStateResponse feedMyPet() {
+    public PetStateResponse feedMyPet(boolean all) {
         User user = currentUserForUpdate();
+        UserPet progress = requireActiveForUpdate(user);
+        PetLevelConfig level = currentLevel(progress);
         PetSettings settings = requireSettings();
-        UserPet pet = getOrCreateForUpdate(user);
-        PetLevelConfig level = requireLevel(pet.getPetLevel());
-        pet.feed(settings.getEnergyPerFood(), level.getRequiredEnergy(), settings.getMaxLevel());
-        return PetStateResponse.from(pet, settings, level);
+        int food = 1;
+        if (all) {
+            int remaining = Math.max(0, level.getRequiredEnergy() - progress.getEnergy());
+            int useful = (remaining + settings.getEnergyPerFood() - 1) / settings.getEnergyPerFood();
+            food = Math.min(progress.getAvailableFood(), useful);
+        }
+        progress.feed(food, settings.getEnergyPerFood(), level.getRequiredEnergy());
+        return response(progress);
     }
 
     @PreAuthorize("isAuthenticated()")
     @Transactional
     public PetStateResponse upgradeMyPet() {
         User user = currentUserForUpdate();
-        PetSettings settings = requireSettings();
-        UserPet pet = getOrCreateForUpdate(user);
-        PetLevelConfig currentLevel = requireLevel(pet.getPetLevel());
-        pet.upgrade(currentLevel.getRequiredEnergy(), settings.getMaxLevel());
-        return response(pet, settings);
+        UserPet progress = requireActiveForUpdate(user);
+        List<PetLevelConfig> levels = levels(progress.getPet());
+        PetLevelConfig current = findLevel(levels, progress.getPetLevel());
+        progress.upgrade(current.getRequiredEnergy(), levels.size());
+        return response(progress);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public PetStateResponse selectPet(UUID petId) {
+        User user = currentUserForUpdate();
+        if (userPetRepository.findActiveByUserIdForUpdate(user.getId()).isPresent()) {
+            throw new IllegalStateException("Complete the active Pet before choosing another Pet");
+        }
+        Pet pet = petRepository.findWithLevelsById(petId)
+                .filter(Pet::isActive)
+                .orElseThrow(() -> new IllegalArgumentException("Pet is unavailable"));
+        if (userPetRepository.existsByUserIdAndPetId(user.getId(), petId)) {
+            throw new IllegalStateException("This Pet is already in the collection");
+        }
+        validateLevels(pet.getLevels());
+        UserPet progress = new UserPet(user, pet);
+        progress.completeIfAtMaximum(pet.getLevels().size());
+        UserPet saved = userPetRepository.saveAndFlush(progress);
+        applyPendingRewards(saved);
+        return response(saved);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly = true)
     public PetConfigResponse getConfiguration() {
-        return PetConfigResponse.from(requireSettings(), levelResponses());
+        return PetConfigResponse.from(requireSettings());
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public PetConfigResponse updateConfiguration(@Valid UpdatePetConfigRequest request) {
-        if (request.maximumLevel() < userPetRepository.findHighestCurrentLevel()) {
-            throw new IllegalStateException("Maximum level cannot be lower than an existing Pet level");
-        }
-        Map<Integer, PetLevelConfigRequest> requestedLevels = request.levels().stream()
-                .collect(Collectors.toMap(PetLevelConfigRequest::level, Function.identity(), (left, right) -> {
-                    throw new IllegalArgumentException("Pet level configuration contains duplicates");
-                }));
-        if (!requestedLevels.keySet().equals(Set.of(1, 2, 3))) {
-            throw new IllegalArgumentException("Pet levels 1, 2 and 3 must all be configured");
-        }
-        for (int level = 1; level < request.maximumLevel(); level++) {
-            if (requestedLevels.get(level).requiredEnergy() < 1) {
-                throw new IllegalArgumentException("Upgrade energy must be positive below the maximum level");
-            }
-        }
-
         PetSettings settings = requireSettings();
-        settings.update(
-                request.lessonCompletionPoints(), request.quizPassPoints(), request.pointsPerFood(),
-                request.energyPerFood(), request.maximumLevel()
-        );
-        Map<Integer, PetLevelConfig> storedLevels = levelRepository.findAllByOrderByLevelAsc().stream()
-                .collect(Collectors.toMap(PetLevelConfig::getLevel, Function.identity()));
-        if (!storedLevels.keySet().equals(Set.of(1, 2, 3))) {
-            throw new IllegalStateException("Pet level configuration has not been initialized");
+        settings.update(request.lessonCompletionPoints(), request.quizPassPoints(),
+                request.pointsPerFood(), request.energyPerFood());
+        return PetConfigResponse.from(settings);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional(readOnly = true)
+    public List<PetDefinitionResponse> getPetDefinitions() {
+        return petRepository.findAllByOrderByDisplayOrderAsc().stream().map(PetDefinitionResponse::from).toList();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public PetDefinitionResponse createPet(@Valid UpsertPetRequest request) {
+        if (petRepository.existsByCodeIgnoreCase(request.code())) {
+            throw new IllegalStateException("Pet code already exists");
         }
-        requestedLevels.forEach((level, requested) -> storedLevels.get(level)
-                .update(requested.name(), requested.description(), requested.requiredEnergy()));
-        return PetConfigResponse.from(settings, levelResponses());
+        Pet pet = new Pet(request.code(), request.name().vi(), request.name().en(),
+                request.description().vi(), request.description().en(),
+                request.learningMeaning().vi(), request.learningMeaning().en(),
+                request.active(), request.displayOrder());
+        pet.replaceLevels(buildLevels(pet, request.levels()));
+        return PetDefinitionResponse.from(petRepository.saveAndFlush(pet));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public PetDefinitionResponse updatePet(UUID petId, @Valid UpsertPetRequest request) {
+        Pet pet = petRepository.findWithLevelsById(petId)
+                .orElseThrow(() -> new IllegalArgumentException("Pet does not exist"));
+        if (petRepository.existsByCodeIgnoreCaseAndIdNot(request.code(), petId)) {
+            throw new IllegalStateException("Pet code already exists");
+        }
+        int existingMaximum = userPetRepository.findMaximumLevelByPetId(petId);
+        if (request.levels().size() < existingMaximum) {
+            throw new IllegalStateException("Cannot remove a level already reached by a user");
+        }
+        pet.update(request.code(), request.name().vi(), request.name().en(),
+                request.description().vi(), request.description().en(),
+                request.learningMeaning().vi(), request.learningMeaning().en(),
+                request.active(), request.displayOrder());
+        pet.replaceLevels(buildLevels(pet, request.levels()));
+        return PetDefinitionResponse.from(petRepository.saveAndFlush(pet));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly = true)
     public Page<AdminUserPetResponse> getAdminUserPets(String search, Pageable pageable) {
-        Pageable safePageable = adminPetPageable(pageable);
+        Pageable safe = safePageable(pageable);
         Page<UserPet> pets = search == null || search.isBlank()
-                ? userPetRepository.findAll(safePageable)
-                : userPetRepository
-                        .findAllByUserEmailContainingIgnoreCaseOrUserDisplayNameContainingIgnoreCase(
-                                search.strip(), search.strip(), safePageable
-                        );
+                ? userPetRepository.findAll(safe)
+                : userPetRepository.findAllByUserEmailContainingIgnoreCaseOrUserDisplayNameContainingIgnoreCase(
+                        search.strip(), search.strip(), safe);
         return pets.map(AdminUserPetResponse::from);
     }
 
@@ -130,33 +180,99 @@ public class PetService {
     }
 
     private void award(User user, PetActivityType activityType, UUID sourceId) {
-        User lockedUser = userRepository.findByIdForUpdate(user.getId())
+        User locked = userRepository.findByIdForUpdate(user.getId())
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("User is unavailable"));
-        if (rewardRepository.existsByUserIdAndActivityTypeAndSourceId(
-                lockedUser.getId(), activityType, sourceId
-        )) return;
-
+        if (rewardRepository.existsByUserIdAndActivityTypeAndSourceId(locked.getId(), activityType, sourceId)) return;
         PetSettings settings = requireSettings();
         int points = activityType == PetActivityType.LESSON_COMPLETED
-                ? settings.getLessonCompletionPoints()
-                : settings.getQuizPassPoints();
-        UserPet pet = getOrCreateForUpdate(lockedUser);
-        rewardRepository.save(new PetRewardEvent(lockedUser, activityType, sourceId, points));
-        pet.addLearningPoints(points, settings.getPointsPerFood());
+                ? settings.getLessonCompletionPoints() : settings.getQuizPassPoints();
+        Optional<UserPet> active = userPetRepository.findActiveByUserIdForUpdate(locked.getId());
+        if (active.isEmpty() && userPetRepository.findAllByUserIdOrderByCreatedAtAsc(locked.getId()).isEmpty()) {
+            active = Optional.of(initialPet(locked));
+        }
+        PetRewardEvent event = rewardRepository.save(new PetRewardEvent(locked, activityType, sourceId, points));
+        active.ifPresent(progress -> {
+            progress.addLearningPoints(points, settings.getPointsPerFood());
+            event.markApplied();
+        });
     }
 
-    private PetStateResponse response(UserPet pet, PetSettings settings) {
-        return PetStateResponse.from(pet, settings, requireLevel(pet.getPetLevel()));
+    private UserPet requireOrCreateInitialPet(User user) {
+        return userPetRepository.findActiveByUserIdForUpdate(user.getId()).orElseGet(() -> {
+            if (!userPetRepository.findAllByUserIdOrderByCreatedAtAsc(user.getId()).isEmpty()) {
+                throw new IllegalStateException("Choose the next Pet from your collection");
+            }
+            return initialPet(user);
+        });
     }
 
-    private UserPet getOrCreate(User user) {
-        return userPetRepository.findByUserId(user.getId())
-                .orElseGet(() -> userPetRepository.save(new UserPet(user)));
+    private UserPet initialPet(User user) {
+        Pet pet = petRepository.findAllByActiveTrueOrderByDisplayOrderAsc().stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("No active Pet has been configured"));
+        validateLevels(pet.getLevels());
+        UserPet progress = new UserPet(user, pet);
+        progress.completeIfAtMaximum(pet.getLevels().size());
+        UserPet saved = userPetRepository.saveAndFlush(progress);
+        applyPendingRewards(saved);
+        return saved;
     }
 
-    private UserPet getOrCreateForUpdate(User user) {
-        return userPetRepository.findByUserIdForUpdate(user.getId())
-                .orElseGet(() -> userPetRepository.saveAndFlush(new UserPet(user)));
+    private void applyPendingRewards(UserPet progress) {
+        PetSettings settings = requireSettings();
+        rewardRepository.findAllByUserIdAndAppliedFalseOrderByCreatedAtAsc(progress.getUser().getId())
+                .forEach(event -> {
+                    progress.addLearningPoints(event.getPointsAwarded(), settings.getPointsPerFood());
+                    event.markApplied();
+                });
+    }
+
+    private UserPet requireActiveForUpdate(User user) {
+        return userPetRepository.findActiveByUserIdForUpdate(user.getId())
+                .orElseThrow(() -> new IllegalStateException("Choose an active Pet first"));
+    }
+
+    private PetStateResponse response(UserPet progress) {
+        List<PetLevelConfig> levels = levels(progress.getPet());
+        return PetStateResponse.from(progress, requireSettings(),
+                findLevel(levels, progress.getPetLevel()), levels.size());
+    }
+
+    private List<PetLevelConfig> levels(Pet pet) {
+        List<PetLevelConfig> result = pet.getLevels().isEmpty()
+                ? levelRepository.findAllByPetIdOrderByLevelOrderAsc(pet.getId()) : pet.getLevels();
+        validateLevels(result);
+        return result;
+    }
+
+    private static PetLevelConfig findLevel(List<PetLevelConfig> levels, int order) {
+        return levels.stream().filter(level -> level.getLevelOrder() == order).findFirst()
+                .orElseThrow(() -> new IllegalStateException("Pet level configuration is missing"));
+    }
+
+    private static List<PetLevelConfig> buildLevels(Pet pet, List<PetLevelConfigRequest> requests) {
+        List<PetLevelConfigRequest> sorted = requests.stream()
+                .sorted(Comparator.comparingInt(PetLevelConfigRequest::level)).toList();
+        for (int index = 0; index < sorted.size(); index++) {
+            if (sorted.get(index).level() != index + 1) {
+                throw new IllegalArgumentException("Pet levels must be contiguous and start at 1");
+            }
+            if (index < sorted.size() - 1 && sorted.get(index).requiredEnergy() < 1) {
+                throw new IllegalArgumentException("Every non-final level requires positive Energy");
+            }
+        }
+        return sorted.stream().map(level -> new PetLevelConfig(
+                pet, level.level(), level.name().vi(), level.name().en(),
+                level.description().vi(), level.description().en(),
+                level.requiredEnergy(), level.assetReference())).toList();
+    }
+
+    private static void validateLevels(List<PetLevelConfig> levels) {
+        if (levels.isEmpty()) throw new IllegalStateException("Pet requires at least one level");
+        for (int index = 0; index < levels.size(); index++) {
+            if (levels.get(index).getLevelOrder() != index + 1) {
+                throw new IllegalStateException("Pet levels must be contiguous");
+            }
+        }
     }
 
     private PetSettings requireSettings() {
@@ -164,42 +280,26 @@ public class PetService {
                 .orElseThrow(() -> new IllegalStateException("Pet configuration has not been initialized"));
     }
 
-    private PetLevelConfig requireLevel(int level) {
-        return levelRepository.findById(level)
-                .orElseThrow(() -> new IllegalStateException("Pet level configuration is missing"));
-    }
-
-    private List<PetLevelConfigResponse> levelResponses() {
-        return levelRepository.findAllByOrderByLevelAsc().stream()
-                .map(PetLevelConfigResponse::from)
-                .toList();
-    }
-
     private User currentUserForUpdate() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return userRepository.findByIdForUpdate(currentUserId()).filter(User::isActive)
+                .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("User is unavailable"));
+    }
+
+    private static UUID currentUserId() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new AuthenticationCredentialsNotFoundException("Authentication is required");
         }
-        try {
-            return userRepository.findByIdForUpdate(UUID.fromString(authentication.getName()))
-                    .filter(User::isActive)
-                    .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("User is unavailable"));
-        } catch (IllegalArgumentException exception) {
+        try { return UUID.fromString(authentication.getName()); }
+        catch (IllegalArgumentException exception) {
             throw new AuthenticationCredentialsNotFoundException("Invalid authenticated principal");
         }
     }
 
-    private static Pageable adminPetPageable(Pageable pageable) {
+    private static Pageable safePageable(Pageable pageable) {
         List<Sort.Order> orders = pageable.getSort().stream()
-                .filter(order -> ADMIN_PET_SORT_FIELDS.contains(order.getProperty()))
-                .toList();
-        Sort sort = orders.isEmpty()
-                ? Sort.by(Sort.Direction.DESC, "updatedAt")
-                : Sort.by(orders);
-        return PageRequest.of(
-                pageable.getPageNumber(),
-                Math.min(pageable.getPageSize(), 100),
-                sort
-        );
+                .filter(order -> ADMIN_SORT_FIELDS.contains(order.getProperty())).toList();
+        return PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 100),
+                orders.isEmpty() ? Sort.by(Sort.Direction.DESC, "updatedAt") : Sort.by(orders));
     }
 }

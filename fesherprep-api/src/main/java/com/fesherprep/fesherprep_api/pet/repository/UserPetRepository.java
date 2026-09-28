@@ -12,22 +12,30 @@ import java.util.UUID;
 
 public interface UserPetRepository extends JpaRepository<UserPet, UUID> {
     @Override
-    @EntityGraph(attributePaths = "user")
+    @EntityGraph(attributePaths = {"user", "pet"})
     Page<UserPet> findAll(Pageable pageable);
 
-    @EntityGraph(attributePaths = "user")
+    @EntityGraph(attributePaths = {"user", "pet"})
     Page<UserPet> findAllByUserEmailContainingIgnoreCaseOrUserDisplayNameContainingIgnoreCase(
             String email,
             String displayName,
             Pageable pageable
     );
 
-    Optional<UserPet> findByUserId(UUID userId);
+    @EntityGraph(attributePaths = {"user", "pet", "pet.levels"})
+    Optional<UserPet> findByUserIdAndStatus(UUID userId, com.fesherprep.fesherprep_api.pet.domain.UserPetStatus status);
+
+    @EntityGraph(attributePaths = {"pet", "pet.levels"})
+    java.util.List<UserPet> findAllByUserIdOrderByCreatedAtAsc(UUID userId);
+
+    boolean existsByUserIdAndPetId(UUID userId, UUID petId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select pet from UserPet pet where pet.user.id = :userId")
-    Optional<UserPet> findByUserIdForUpdate(@Param("userId") UUID userId);
+    @Query("select progress from UserPet progress join fetch progress.pet where progress.user.id = :userId and progress.status = com.fesherprep.fesherprep_api.pet.domain.UserPetStatus.ACTIVE")
+    Optional<UserPet> findActiveByUserIdForUpdate(@Param("userId") UUID userId);
 
-    @Query("select coalesce(max(pet.petLevel), 1) from UserPet pet")
-    int findHighestCurrentLevel();
+    boolean existsByPetId(UUID petId);
+
+    @Query("select coalesce(max(progress.petLevel), 0) from UserPet progress where progress.pet.id = :petId")
+    int findMaximumLevelByPetId(@Param("petId") UUID petId);
 }

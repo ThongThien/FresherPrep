@@ -2,7 +2,9 @@ package com.fesherprep.fesherprep_api.pet.service;
 
 import com.fesherprep.fesherprep_api.pet.domain.PetLevelConfig;
 import com.fesherprep.fesherprep_api.pet.domain.PetSettings;
+import com.fesherprep.fesherprep_api.pet.domain.Pet;
 import com.fesherprep.fesherprep_api.pet.domain.UserPet;
+import com.fesherprep.fesherprep_api.pet.domain.UserPetStatus;
 import com.fesherprep.fesherprep_api.pet.repository.*;
 import com.fesherprep.fesherprep_api.user.domain.User;
 import com.fesherprep.fesherprep_api.user.repository.UserRepository;
@@ -27,6 +29,8 @@ class PetServiceTests {
     @Mock
     private PetLevelConfigRepository levelRepository;
     @Mock
+    private PetRepository petRepository;
+    @Mock
     private UserPetRepository userPetRepository;
     @Mock
     private PetRewardEventRepository rewardRepository;
@@ -45,19 +49,20 @@ class PetServiceTests {
         UserPet pet = mock(UserPet.class);
         PetSettings settings = mock(PetSettings.class);
         PetLevelConfig level = mock(PetLevelConfig.class);
+        Pet definition = mock(Pet.class);
         when(user.isActive()).thenReturn(true);
         when(user.getId()).thenReturn(userId);
         when(pet.getPetLevel()).thenReturn(1);
-        when(settings.getMaxLevel()).thenReturn(3);
+        when(pet.getPet()).thenReturn(definition);
+        when(pet.getStatus()).thenReturn(UserPetStatus.ACTIVE);
         when(settings.getPointsPerFood()).thenReturn(10);
         when(settings.getEnergyPerFood()).thenReturn(20);
+        when(level.getLevelOrder()).thenReturn(1);
         when(level.getRequiredEnergy()).thenReturn(100);
-        when(level.getName()).thenReturn("Java Seedling");
-        when(level.getDescription()).thenReturn("Level one");
+        when(definition.getLevels()).thenReturn(List.of(level));
         when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
-        when(userPetRepository.findByUserId(userId)).thenReturn(Optional.of(pet));
+        when(userPetRepository.findActiveByUserIdForUpdate(userId)).thenReturn(Optional.of(pet));
         when(settingsRepository.findById(PetSettings.SINGLETON_ID)).thenReturn(Optional.of(settings));
-        when(levelRepository.findById(1)).thenReturn(Optional.of(level));
         authenticate(userId);
 
         service().getMyPet();
@@ -69,6 +74,7 @@ class PetServiceTests {
     private PetService service() {
         return new PetService(
                 settingsRepository,
+                petRepository,
                 levelRepository,
                 userPetRepository,
                 rewardRepository,

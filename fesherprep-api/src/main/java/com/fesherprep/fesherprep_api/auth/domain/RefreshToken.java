@@ -49,7 +49,8 @@ public class RefreshToken extends BaseEntity {
     }
 
     public boolean isActiveAt(Instant instant) {
-        return revokedAt == null && expiresAt.isAfter(Objects.requireNonNull(instant, "instant"));
+        Objects.requireNonNull(instant, "instant");
+        return (revokedAt == null || revokedAt.isAfter(instant)) && expiresAt.isAfter(instant);
     }
 
     public void revoke(Instant revokedAt) {
@@ -57,7 +58,7 @@ public class RefreshToken extends BaseEntity {
         if (getCreatedAt() != null && revokedAt.isBefore(getCreatedAt())) {
             throw new IllegalArgumentException("Revocation time cannot be before token creation");
         }
-        if (this.revokedAt == null) {
+        if (this.revokedAt == null || revokedAt.isBefore(this.revokedAt)) {
             this.revokedAt = revokedAt;
         }
     }

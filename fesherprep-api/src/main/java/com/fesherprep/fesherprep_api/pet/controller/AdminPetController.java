@@ -29,6 +29,24 @@ public class AdminPetController {
         return petService.updateConfiguration(request);
     }
 
+    @GetMapping("/pets")
+    public java.util.List<PetDefinitionResponse> pets() {
+        return petService.getPetDefinitions();
+    }
+
+    @PostMapping("/pets")
+    public PetDefinitionResponse createPet(@Valid @RequestBody UpsertPetRequest request) {
+        return petService.createPet(request);
+    }
+
+    @PutMapping("/pets/{petId}")
+    public PetDefinitionResponse updatePet(
+            @PathVariable java.util.UUID petId,
+            @Valid @RequestBody UpsertPetRequest request
+    ) {
+        return petService.updatePet(petId, request);
+    }
+
     @GetMapping("/users")
     public Page<AdminUserPetResponse> getUserPets(
             @RequestParam(required = false) String search,

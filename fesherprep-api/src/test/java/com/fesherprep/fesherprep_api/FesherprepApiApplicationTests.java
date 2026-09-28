@@ -35,7 +35,7 @@ class FesherprepApiApplicationTests {
             "quiz_attempts", "quiz_attempt_questions", "quiz_attempt_answers",
             "content_submissions", "content_review_events",
             "content_comments", "admin_notifications",
-            "pet_settings", "pet_level_configs", "user_pets", "pet_reward_events"
+            "pets", "pet_settings", "pet_level_configs", "user_pets", "pet_reward_events"
     );
 
     @Test

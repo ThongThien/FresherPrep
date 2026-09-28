@@ -35,11 +35,6 @@ public class PetSettings {
     @Column(name = "energy_per_food", nullable = false)
     private int energyPerFood;
 
-    @Min(1)
-    @Max(3)
-    @Column(name = "max_level", nullable = false)
-    private int maxLevel;
-
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
@@ -52,8 +47,7 @@ public class PetSettings {
             int lessonCompletionPoints,
             int quizPassPoints,
             int pointsPerFood,
-            int energyPerFood,
-            int maxLevel
+            int energyPerFood
     ) {
         if (lessonCompletionPoints < 0 || quizPassPoints < 0) {
             throw new IllegalArgumentException("Activity points cannot be negative");
@@ -61,13 +55,9 @@ public class PetSettings {
         if (pointsPerFood < 1 || energyPerFood < 1) {
             throw new IllegalArgumentException("Food conversion values must be positive");
         }
-        if (maxLevel < 1 || maxLevel > 3) {
-            throw new IllegalArgumentException("Maximum pet level must be between 1 and 3");
-        }
         this.lessonCompletionPoints = lessonCompletionPoints;
         this.quizPassPoints = quizPassPoints;
         this.pointsPerFood = pointsPerFood;
         this.energyPerFood = energyPerFood;
-        this.maxLevel = maxLevel;
     }
 }

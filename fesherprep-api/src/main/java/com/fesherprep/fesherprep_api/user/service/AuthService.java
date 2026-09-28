@@ -31,6 +31,7 @@ import java.util.HexFormat;
 @RequiredArgsConstructor
 public class AuthService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final java.time.Duration REFRESH_ROTATION_GRACE = java.time.Duration.ofSeconds(5);
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -89,7 +90,10 @@ public class AuthService {
                 .filter(candidate -> candidate.isActiveAt(now) && candidate.getUser().isActive())
                 .orElseThrow(InvalidRefreshTokenException::new);
 
-        token.revoke(now);
+        // A page reload can trigger several BFF requests with the same cookie.
+        // Keep the rotated token valid briefly so concurrent requests cannot log
+        // each other out. Every response still receives a new refresh token.
+        token.revoke(now.plus(REFRESH_ROTATION_GRACE));
         return issueTokens(token.getUser());
     }
 

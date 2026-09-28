@@ -15,14 +15,18 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "user_pets", uniqueConstraints =
-        @UniqueConstraint(name = "uk_user_pet_user", columnNames = "user_id"))
-@Check(constraints = "total_learning_points >= 0 and point_balance >= 0 and available_food >= 0 and energy >= 0 and pet_level between 1 and 3")
+        @UniqueConstraint(name = "uk_user_pet_collection", columnNames = {"user_id", "pet_id"}))
+@Check(constraints = "total_learning_points >= 0 and point_balance >= 0 and available_food >= 0 and energy >= 0 and pet_level >= 1")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserPet extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, updatable = false)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "pet_id", nullable = false, updatable = false)
+    private Pet pet;
 
     @PositiveOrZero
     @Column(name = "total_learning_points", nullable = false)
@@ -41,9 +45,12 @@ public class UserPet extends BaseEntity {
     private int energy;
 
     @Min(1)
-    @Max(3)
     @Column(name = "pet_level", nullable = false)
     private int petLevel = 1;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserPetStatus status = UserPetStatus.ACTIVE;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
@@ -53,8 +60,9 @@ public class UserPet extends BaseEntity {
     @Column(nullable = false)
     private long version;
 
-    public UserPet(User user) {
+    public UserPet(User user, Pet pet) {
         this.user = Objects.requireNonNull(user, "User is required");
+        this.pet = Objects.requireNonNull(pet, "Pet is required");
     }
 
     public void addLearningPoints(int points, int pointsPerFood) {
@@ -65,21 +73,29 @@ public class UserPet extends BaseEntity {
         pointBalance %= pointsPerFood;
     }
 
-    public void feed(int energyPerFood, int requiredEnergy, int maximumLevel) {
-        if (petLevel >= maximumLevel) throw new IllegalStateException("Pet is already at the maximum level");
+    public void feed(int foodCount, int energyPerFood, int requiredEnergy) {
+        if (status != UserPetStatus.ACTIVE) throw new IllegalStateException("Pet progression is completed");
+        if (foodCount < 1 || availableFood < foodCount) throw new IllegalStateException("Not enough Food is available");
         if (availableFood < 1) throw new IllegalStateException("No Food is available");
         if (requiredEnergy < 1) throw new IllegalStateException("Pet level configuration is invalid");
         if (energy >= requiredEnergy) throw new IllegalStateException("Upgrade the Pet before feeding again");
-        availableFood--;
-        energy = Math.addExact(energy, energyPerFood);
+        availableFood -= foodCount;
+        energy = Math.addExact(energy, Math.multiplyExact(foodCount, energyPerFood));
     }
 
     public void upgrade(int requiredEnergy, int maximumLevel) {
+        if (status != UserPetStatus.ACTIVE) throw new IllegalStateException("Pet progression is completed");
         if (petLevel >= maximumLevel) throw new IllegalStateException("Pet is already at the maximum level");
         if (requiredEnergy < 1 || energy < requiredEnergy) {
             throw new IllegalStateException("Pet does not have enough Energy to upgrade");
         }
         energy -= requiredEnergy;
         petLevel++;
+        if (petLevel >= maximumLevel) status = UserPetStatus.COMPLETED;
+    }
+
+    public void completeIfAtMaximum(int maximumLevel) {
+        if (maximumLevel < 1) throw new IllegalArgumentException("Maximum level must be positive");
+        if (petLevel >= maximumLevel) status = UserPetStatus.COMPLETED;
     }
 }

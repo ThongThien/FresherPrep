@@ -9,6 +9,8 @@ import java.util.UUID;
 
 public record AdminUserPetResponse(
         UUID petId,
+        UUID petDefinitionId,
+        String petCode,
         UUID userId,
         String email,
         String displayName,
@@ -19,12 +21,15 @@ public record AdminUserPetResponse(
         int availableFood,
         int energy,
         int currentLevel,
+        String status,
         Instant updatedAt
 ) {
     public static AdminUserPetResponse from(UserPet pet) {
         User user = pet.getUser();
         return new AdminUserPetResponse(
                 pet.getId(),
+                pet.getPet().getId(),
+                pet.getPet().getCode(),
                 user.getId(),
                 user.getEmail(),
                 user.getDisplayName(),
@@ -35,6 +40,7 @@ public record AdminUserPetResponse(
                 pet.getAvailableFood(),
                 pet.getEnergy(),
                 pet.getPetLevel(),
+                pet.getStatus().name(),
                 pet.getUpdatedAt()
         );
     }
