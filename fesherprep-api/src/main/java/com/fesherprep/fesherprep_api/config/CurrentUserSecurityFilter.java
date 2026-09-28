@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
@@ -47,8 +48,7 @@ public class CurrentUserSecurityFilter extends OncePerRequestFilter {
         }
 
         Optional<User> user = currentUser(jwtAuthentication);
-        String tokenRole = jwtAuthentication.getToken().getClaimAsString("role");
-        if (user.isEmpty() || !user.get().isActive() || !user.get().getRole().name().equals(tokenRole)) {
+        if (user.isEmpty() || !user.get().isActive()) {
             SecurityContextHolder.clearContext();
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -63,6 +63,16 @@ public class CurrentUserSecurityFilter extends OncePerRequestFilter {
             );
             return;
         }
+
+        // The database owns the current authorization state. A role change must not
+        // invalidate an otherwise valid session, but it must take effect immediately.
+        JwtAuthenticationToken currentAuthentication = new JwtAuthenticationToken(
+                jwtAuthentication.getToken(),
+                java.util.List.of(new SimpleGrantedAuthority("ROLE_" + user.get().getRole().name())),
+                jwtAuthentication.getName()
+        );
+        currentAuthentication.setDetails(jwtAuthentication.getDetails());
+        SecurityContextHolder.getContext().setAuthentication(currentAuthentication);
         filterChain.doFilter(request, response);
     }
 

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiError, backendErrorResponse } from "@/lib/api/errors";
 import {
   clearAuthCookies,
+  getAccessTokenRole,
   getRequestTokens,
   isAuthTokens,
   isCurrentUser,
@@ -18,9 +19,10 @@ export async function GET(request: NextRequest) {
     if (accessToken) {
       const currentUser = await requestCurrentUser(accessToken);
       if (currentUser.response.ok && isCurrentUser(currentUser.payload)) {
-        return NextResponse.json({ user: currentUser.payload });
-      }
-      if (currentUser.response.status !== 401) {
+        if (!refreshToken || getAccessTokenRole(accessToken) === currentUser.payload.role) {
+          return NextResponse.json({ user: currentUser.payload });
+        }
+      } else if (currentUser.response.status !== 401) {
         return backendErrorResponse(currentUser.response.status, currentUser.payload);
       }
     }

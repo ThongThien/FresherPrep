@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,14 +47,23 @@ class CurrentUserSecurityFilterTests {
     }
 
     @Test
-    void rejectsAccessTokenAfterRoleChange() throws Exception {
+    void keepsSessionAndUsesCurrentDatabaseRoleAfterRoleChange() throws Exception {
         UUID userId = UUID.randomUUID();
         User user = new User("admin@example.com", "bcrypt-hash", "Admin");
-        user.changeRole(UserRole.USER);
+        user.changeRole(UserRole.ADMIN);
         when(repository.findById(userId)).thenReturn(Optional.of(user));
-        authenticate(userId, "ADMIN");
+        authenticate(userId, "USER");
 
-        assertEquals(401, invoke().getStatus());
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/admin/users");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean invoked = new AtomicBoolean();
+
+        filter.doFilter(request, response, (ignoredRequest, ignoredResponse) -> invoked.set(true));
+
+        assertTrue(invoked.get());
+        assertEquals(200, response.getStatus());
+        assertTrue(SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN")));
     }
 
     private MockHttpServletResponse invoke() throws Exception {

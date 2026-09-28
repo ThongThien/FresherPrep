@@ -20,6 +20,7 @@ type SessionState =
 export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const pathname = usePathname();
+  const [initialPathname] = useState(pathname);
   const [session, setSession] = useState<SessionState>({ status: "loading" });
   const [requestKey, setRequestKey] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -29,7 +30,7 @@ export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
     void fetch("/api/auth/session", { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
         if (response.status === 401) {
-          window.location.replace("/login?next=" + encodeURIComponent(pathname));
+          window.location.replace("/login?next=" + encodeURIComponent(initialPathname));
           return;
         }
         if (!response.ok) {
@@ -52,7 +53,7 @@ export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
         setSession({ status: "error", message: t("Unable to verify your admin account. Check your connection and try again.") });
       });
     return () => controller.abort();
-  }, [pathname, requestKey, t]);
+  }, [initialPathname, requestKey, t]);
 
   async function logout() {
     if (loggingOut) return;

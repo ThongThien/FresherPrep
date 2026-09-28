@@ -7,6 +7,8 @@ import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from "./constants";
 import type { AuthTokens, CurrentUser } from "./types";
 
 const DEFAULT_REFRESH_COOKIE_AGE_SECONDS = 30 * 24 * 60 * 60;
+type TokenRefreshResult = Awaited<ReturnType<typeof performTokenRefresh>>;
+const pendingTokenRefreshes = new Map<string, Promise<TokenRefreshResult>>();
 
 export function setAuthCookies(response: NextResponse, tokens: AuthTokens) {
   const accessExpiry = new Date(tokens.accessTokenExpiresAt);
@@ -63,13 +65,37 @@ export async function requestUpdateCurrentUser(accessToken: string, displayName:
   return { response, payload: await readResponseBody(response) };
 }
 
-export async function requestTokenRefresh(refreshToken: string) {
+export function requestTokenRefresh(refreshToken: string) {
+  const pending = pendingTokenRefreshes.get(refreshToken);
+  if (pending) return pending;
+
+  const refresh = performTokenRefresh(refreshToken).finally(() => {
+    pendingTokenRefreshes.delete(refreshToken);
+  });
+  pendingTokenRefreshes.set(refreshToken, refresh);
+  return refresh;
+}
+
+async function performTokenRefresh(refreshToken: string) {
   const response = await backendFetch("/api/auth/refresh", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refreshToken }),
   });
   return { response, payload: await readResponseBody(response) };
+}
+
+export function getAccessTokenRole(accessToken: string): CurrentUser["role"] | null {
+  try {
+    const payload = JSON.parse(Buffer.from(accessToken.split(".")[1], "base64url").toString("utf8")) as {
+      role?: unknown;
+    };
+    return payload.role === "USER" || payload.role === "CONTRIBUTOR" || payload.role === "ADMIN"
+      ? payload.role
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export function getRequestTokens(request: NextRequest) {
