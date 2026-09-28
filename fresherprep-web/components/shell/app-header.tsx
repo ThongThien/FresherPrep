@@ -6,10 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/lib/i18n";
 
-import {
-  isNavigationItemActive,
-  learningNavigation,
-} from "./navigation-items";
+import { isNavigationItemActive, learningNavigation } from "./navigation-items";
 import { UserArea, type UserState } from "./user-area";
 import { ThemeToggle } from "./theme-toggle";
 import { LanguageSwitcher } from "./language-switcher";
@@ -57,7 +54,9 @@ export function AppHeader({
           >
             FP
           </span>
-          <span className="text-base font-semibold tracking-tight text-text">FresherPrep</span>
+          <span className="text-base font-semibold tracking-tight text-text">
+            FresherPrep
+          </span>
         </Link>
 
         {currentContext ? (
@@ -85,7 +84,10 @@ export function AppHeader({
 
 function MenuGlyph({ className }: { className?: string }) {
   return (
-    <span className={cn("flex w-5 flex-col gap-1.5", className)} aria-hidden="true">
+    <span
+      className={cn("flex w-5 flex-col gap-1.5", className)}
+      aria-hidden="true"
+    >
       <span className="h-0.5 w-full rounded-full bg-current" />
       <span className="h-0.5 w-full rounded-full bg-current" />
       <span className="h-0.5 w-full rounded-full bg-current" />

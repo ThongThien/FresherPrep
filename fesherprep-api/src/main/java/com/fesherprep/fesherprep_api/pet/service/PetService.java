@@ -59,7 +59,7 @@ public class PetService {
     public PetStateResponse feedMyPet(boolean all) {
         User user = currentUserForUpdate();
         UserPet progress = requireActiveForUpdate(user);
-        PetLevelConfig level = currentLevel(progress);
+        PetLevelConfig level = findLevel(levels(progress.getPet()), progress.getPetLevel());
         PetSettings settings = requireSettings();
         int food = 1;
         if (all) {
