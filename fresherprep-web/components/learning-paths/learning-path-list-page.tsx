@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { Badge, Button, Feedback, Progress } from "@/components/ui";
+import { Badge, Button, Feedback, LoadingState, Progress } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
 import type { LearningPathListData, LearningPathListEntry } from "@/lib/learning-paths/types";
@@ -196,16 +196,5 @@ function LearningPathRow({ entry }: { entry: LearningPathListEntry }) {
 
 function LearningPathListSkeleton() {
   const { t } = useI18n();
-  return (
-    <div className="animate-pulse overflow-hidden rounded-lg border border-border bg-surface motion-reduce:animate-none" role="status">
-      <span className="sr-only">{t("Loading learning paths")}</span>
-      {[0, 1, 2].map((item) => (
-        <div key={item} className="border-b border-border p-6 last:border-b-0">
-          <div className="h-5 w-64 max-w-full rounded bg-surface-strong" />
-          <div className="mt-3 h-4 w-36 rounded bg-surface-strong" />
-          <div className="mt-6 h-2.5 w-full max-w-xl rounded bg-surface-strong" />
-        </div>
-      ))}
-    </div>
-  );
+  return <LoadingState title={t("Loading learning paths...")} description={t("Please wait a moment.")} />;
 }

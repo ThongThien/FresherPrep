@@ -131,7 +131,7 @@ export function LearningPathManagement() {
   }
 
   async function deletePath() {
-    if (!detail || !window.confirm("Delete this learning path? This cannot be undone.")) return;
+    if (!detail || !window.confirm(t("Delete this learning path? This cannot be undone."))) return;
     setPending(true);
     setError(undefined);
     try {
@@ -237,7 +237,7 @@ function PathItemEditor({ pathId, item, pending, setPending, onChanged, onError 
     } catch (reason) { onError(messageOf(reason)); } finally { setPending(false); }
   }
   async function remove() {
-    if (!window.confirm(`Remove ${item.lessonTitle} from this path?`)) return;
+    if (!window.confirm(t("Remove {{title}} from this path?", { title: item.lessonTitle }))) return;
     setPending(true);
     try {
       await adminRequest<void>(`learning-paths/${pathId}/items/${item.id}`, { method: "DELETE" });

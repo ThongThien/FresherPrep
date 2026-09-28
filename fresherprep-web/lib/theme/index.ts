@@ -2,7 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 
-export type ThemePreference = "light" | "dark" | "system";
+export type ThemePreference = "light" | "dark" | "coder" | "system";
 
 const storageKey = "fresherprep-theme";
 const changeEvent = "fresherprep-theme-change";
@@ -16,7 +16,7 @@ export function useThemePreference() {
       const resolved = preference === "system" ? (media.matches ? "dark" : "light") : preference;
       document.documentElement.dataset.theme = resolved;
       document.documentElement.dataset.themePreference = preference;
-      document.documentElement.style.colorScheme = resolved;
+      document.documentElement.style.colorScheme = resolved === "light" ? "light" : "dark";
     };
 
     if (preference === "system") {
@@ -34,11 +34,11 @@ export function useThemePreference() {
 
 function readPreference(): ThemePreference {
   const saved = window.localStorage.getItem(storageKey);
-  return saved === "light" || saved === "dark" || saved === "system" ? saved : "light";
+  return saved === "light" || saved === "dark" || saved === "coder" || saved === "system" ? saved : "system";
 }
 
 function readServerPreference(): ThemePreference {
-  return "light";
+  return "system";
 }
 
 function subscribe(onStoreChange: () => void) {

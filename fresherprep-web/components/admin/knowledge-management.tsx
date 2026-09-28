@@ -217,7 +217,7 @@ export function KnowledgeManagement() {
               <div>
                 <Label htmlFor="node-type">{t("Node type")}</Label>
                 <Select id="node-type" value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as KnowledgeNodeType, parentId: "" }))}>
-                  {nodeTypes.map((type) => <option key={type}>{type}</option>)}
+                  {nodeTypes.map((type) => <option key={type} value={type}>{t(type)}</option>)}
                 </Select>
               </div>
               {parentType ? <div>

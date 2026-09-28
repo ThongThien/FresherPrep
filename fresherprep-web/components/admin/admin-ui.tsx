@@ -251,7 +251,7 @@ export function AdminEmptyState({
 
 export function AdminLoadingState({ label }: { label: string }) {
   return (
-    <div className="rounded-lg border border-border bg-surface px-6 py-12 text-center text-sm text-text-muted" role="status">
+    <div className="rounded-lg border border-border bg-surface px-6 py-12 text-center text-sm text-text-muted" role="status" aria-live="polite" aria-busy="true">
       <span className="mx-auto mb-3 block size-5 animate-spin rounded-full border-2 border-primary border-r-transparent motion-reduce:animate-none" aria-hidden="true" />
       {label}
     </div>

@@ -31,6 +31,10 @@
   --ds-danger-strong: #a9272f;
   --ds-danger-subtle: #fff1f2;
   --ds-focus: #2563eb;
+  --ds-code-background: #101827;
+  --ds-code-surface: #172235;
+  --ds-code-text: #e5edf7;
+  --ds-overlay: rgb(15 23 42 / 0.45);
 
   --ds-space-1: 0.25rem;
   --ds-space-2: 0.5rem;
@@ -78,9 +82,51 @@
   --ds-danger-strong: #fda4af;
   --ds-danger-subtle: #3f171d;
   --ds-focus: #60a5fa;
+  --ds-code-background: #090f17;
+  --ds-code-surface: #111b27;
+  --ds-code-text: #e6edf5;
+  --ds-overlay: rgb(0 0 0 / 0.58);
   --ds-shadow-input: 0 1px 2px rgb(0 0 0 / 0.2);
   --ds-shadow-button: 0 1px 2px rgb(0 0 0 / 0.28);
   --ds-shadow-card: 0 1px 3px rgb(0 0 0 / 0.28), 0 1px 2px rgb(0 0 0 / 0.18);
+}
+
+:root[data-theme="coder"] {
+  color-scheme: dark;
+  --ds-canvas: #090d0c;
+  --ds-surface: #101614;
+  --ds-surface-muted: #16201c;
+  --ds-surface-strong: #223029;
+  --ds-text: #edf5f0;
+  --ds-text-muted: #b1c2b8;
+  --ds-text-subtle: #80958a;
+  --ds-border: #263a30;
+  --ds-border-strong: #3b5749;
+  --ds-primary: #4ade80;
+  --ds-primary-hover: #86efac;
+  --ds-primary-active: #bbf7d0;
+  --ds-primary-solid: #16834b;
+  --ds-primary-solid-hover: #11633a;
+  --ds-primary-solid-active: #0d4f2e;
+  --ds-primary-strong: #86efac;
+  --ds-primary-subtle: #10291c;
+  --ds-success: #4ade80;
+  --ds-success-strong: #86efac;
+  --ds-success-subtle: #10291c;
+  --ds-warning: #fbbf24;
+  --ds-warning-strong: #fde68a;
+  --ds-warning-subtle: #33270d;
+  --ds-danger: #fb7185;
+  --ds-danger-strong: #fda4af;
+  --ds-danger-subtle: #35151c;
+  --ds-focus: #4ade80;
+  --ds-code-background: #050807;
+  --ds-code-surface: #0c1210;
+  --ds-code-text: #d9fbe6;
+  --ds-overlay: rgb(0 0 0 / 0.62);
+  --ds-shadow-input: 0 1px 2px rgb(0 0 0 / 0.3);
+  --ds-shadow-button: 0 1px 2px rgb(0 0 0 / 0.34);
+  --ds-shadow-card: 0 1px 3px rgb(0 0 0 / 0.36), 0 1px 2px rgb(0 0 0 / 0.24);
 }
 
 @theme inline {
@@ -111,6 +157,10 @@
   --color-danger-strong: var(--ds-danger-strong);
   --color-danger-subtle: var(--ds-danger-subtle);
   --color-focus: var(--ds-focus);
+  --color-code-background: var(--ds-code-background);
+  --color-code-surface: var(--ds-code-surface);
+  --color-code-text: var(--ds-code-text);
+  --color-overlay: var(--ds-overlay);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --radius-sm: var(--ds-radius-sm);
@@ -151,6 +201,11 @@ body {
   color: #eff6ff;
 }
 
+:root[data-theme="coder"] ::selection {
+  background: #166534;
+  color: #ecfdf5;
+}
+
 a,
 button,
 input,
@@ -181,7 +236,8 @@ textarea {
 
 .lesson-prose { color: var(--ds-text); font-size: 1rem; line-height: 1.8; }
 .lesson-prose > * + * { margin-top: 1.35rem; }
-.lesson-prose h2, .lesson-prose h3, .lesson-prose h4 { color: var(--ds-text); font-weight: 650; letter-spacing: -0.015em; line-height: 1.3; scroll-margin-top: 6rem; }
+.lesson-prose h1, .lesson-prose h2, .lesson-prose h3, .lesson-prose h4 { color: var(--ds-text); font-weight: 650; letter-spacing: -0.015em; line-height: 1.3; scroll-margin-top: 6rem; }
+.lesson-prose h1 { font-size: 1.875rem; margin-top: 3rem; }
 .lesson-prose h2 { font-size: 1.5rem; margin-top: 3rem; }
 .lesson-prose h3 { font-size: 1.25rem; margin-top: 2.25rem; }
 .lesson-prose h4 { font-size: 1.0625rem; margin-top: 1.75rem; }
@@ -191,7 +247,23 @@ textarea {
 .lesson-prose ol { list-style: decimal; }
 .lesson-prose li + li { margin-top: 0.4rem; }
 .lesson-prose :not(pre) > code { border: 1px solid var(--ds-border); border-radius: 0.25rem; background: var(--ds-surface-muted); padding: 0.08rem 0.3rem; color: var(--ds-primary-strong); font-family: var(--font-geist-mono), monospace; font-size: 0.875em; }
-.lesson-callout { max-width: 44rem; border-left: 3px solid var(--ds-primary); background: var(--ds-primary-subtle); padding: 1rem 1.1rem; color: var(--ds-text-muted); }
+.lesson-prose blockquote { max-width: 44rem; border-left: 3px solid var(--ds-primary); background: var(--ds-primary-subtle); padding: 1rem 1.1rem; color: var(--ds-text-muted); }
+.lesson-prose blockquote > :first-child { margin-top: 0; }
+.lesson-prose blockquote > :last-child { margin-bottom: 0; }
+.lesson-prose a { color: var(--ds-primary); font-weight: 550; text-decoration: underline; text-underline-offset: 0.16em; }
+.lesson-prose a:hover { color: var(--ds-primary-hover); }
+.lesson-prose pre { max-width: 100%; overflow-x: auto; border: 1px solid var(--ds-border-strong); border-radius: var(--ds-radius-md); background: var(--ds-code-background); padding: 1rem; color: var(--ds-code-text); font-family: var(--font-geist-mono), monospace; font-size: 0.875rem; line-height: 1.65; white-space: pre; }
+.lesson-prose pre code { font: inherit; color: inherit; }
+.lesson-prose img { display: block; max-width: 100%; height: auto; margin-inline: auto; border-radius: var(--ds-radius-md); }
+.lesson-prose hr { height: 1px; border: 0; background: var(--ds-border); }
+.lesson-prose table { display: block; width: 100%; max-width: 100%; overflow-x: auto; border-collapse: collapse; white-space: nowrap; }
+.lesson-prose th, .lesson-prose td { border: 1px solid var(--ds-border); padding: 0.65rem 0.8rem; text-align: left; }
+.lesson-prose th { background: var(--ds-surface-muted); color: var(--ds-text); font-weight: 650; }
+.lesson-prose td { background: var(--ds-surface); color: var(--ds-text-muted); }
+.lesson-editor-content { min-height: 20rem; padding: 1rem; outline: none; }
+.lesson-editor-content > :first-child { margin-top: 0; }
+.lesson-editor-content p { max-width: none; }
+.lesson-editor-content .ProseMirror-selectednode { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
 
 @media (min-width: 1024px) {
   .public-snap-container {
@@ -240,10 +312,72 @@ textarea {
 }
 
 @keyframes pet-level-up {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgb(37 99 235 / 0); }
-  50% { transform: scale(1.06); box-shadow: 0 0 0 0.65rem rgb(37 99 235 / 0.12); }
-  100% { transform: scale(1); box-shadow: 0 0 0 1rem rgb(37 99 235 / 0); }
+  0% { transform: scale(0.96); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ds-primary) 0%, transparent); }
+  45% { transform: scale(var(--pet-level-scale, 1.05)); box-shadow: 0 0 0 var(--pet-level-ring, 0.7rem) color-mix(in srgb, var(--ds-primary) var(--pet-level-glow, 14%), transparent); }
+  100% { transform: scale(1); box-shadow: 0 0 0 calc(var(--pet-level-ring, 0.7rem) + 0.45rem) color-mix(in srgb, var(--ds-primary) 0%, transparent); }
 }
 
 .pet-feed-feedback { animation: pet-feed 420ms ease-out; }
-.pet-level-feedback { animation: pet-level-up 720ms ease-out; }
+.pet-level-feedback {
+  --pet-level-scale: 1.04;
+  --pet-level-ring: 0.55rem;
+  --pet-level-glow: 11%;
+  animation: pet-level-up 720ms ease-out;
+}
+.pet-level-medium {
+  --pet-level-scale: 1.06;
+  --pet-level-ring: 0.75rem;
+  --pet-level-glow: 16%;
+  animation-duration: 880ms;
+}
+.pet-level-high {
+  --pet-level-scale: 1.085;
+  --pet-level-ring: 1rem;
+  --pet-level-glow: 22%;
+  animation-duration: 1050ms;
+}
+.pet-upgrade-aura {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--ds-primary) 34%, transparent);
+  border-radius: 9999px;
+  animation: pet-aura 950ms ease-out both;
+}
+.pet-upgrade-particle {
+  --pet-x: 0rem;
+  --pet-y: -4rem;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 9999px;
+  background: var(--ds-primary);
+  opacity: 0;
+  animation: pet-particle 850ms ease-out both;
+}
+.pet-upgrade-particle:nth-child(2) { --pet-x: 3.25rem; --pet-y: -3.25rem; animation-delay: 40ms; }
+.pet-upgrade-particle:nth-child(3) { --pet-x: 4.5rem; --pet-y: 0rem; animation-delay: 80ms; }
+.pet-upgrade-particle:nth-child(4) { --pet-x: 3.25rem; --pet-y: 3.25rem; animation-delay: 120ms; }
+.pet-upgrade-particle:nth-child(5) { --pet-x: 0rem; --pet-y: 4.5rem; animation-delay: 160ms; }
+.pet-upgrade-particle:nth-child(6) { --pet-x: -3.25rem; --pet-y: 3.25rem; animation-delay: 200ms; }
+.pet-upgrade-particle:nth-child(7) { --pet-x: -4.5rem; --pet-y: 0rem; animation-delay: 240ms; }
+.pet-upgrade-particle:nth-child(8) { --pet-x: -3.25rem; --pet-y: -3.25rem; animation-delay: 280ms; }
+.pet-level-subtle .pet-upgrade-particle:nth-child(n+5) { display: none; }
+.pet-level-high .pet-upgrade-particle {
+  width: 0.45rem;
+  height: 0.45rem;
+  box-shadow: 0 0 0.8rem color-mix(in srgb, var(--ds-primary) 55%, transparent);
+}
+@keyframes pet-aura {
+  0% { opacity: 0; transform: scale(0.72); }
+  45% { opacity: 0.75; }
+  100% { opacity: 0; transform: scale(1.18); }
+}
+@keyframes pet-particle {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  28% { opacity: 0.8; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--pet-x)), calc(-50% + var(--pet-y))) scale(1); }
+}

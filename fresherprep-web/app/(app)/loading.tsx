@@ -1,5 +1,5 @@
 import { PageLoading } from "@/components/ui";
 
 export default function Loading() {
-  return <PageLoading label="Loading page" />;
+  return <PageLoading label="Loading learning workspace..." />;
 }

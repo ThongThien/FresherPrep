@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Badge, Button, Feedback } from "@/components/ui";
+import { Badge, Button, Feedback, LoadingState } from "@/components/ui";
 import { CommentSection } from "@/components/comments/comment-section";
 import { readApiError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
@@ -126,7 +126,7 @@ export function LessonPage({ lessonId, pathId }: { lessonId: string; pathId?: st
   if (error === "NOT_FOUND") return <div className="mx-auto max-w-2xl py-10"><h1 className="text-2xl font-semibold text-text">{t("Lesson not found")}</h1><p className="mt-3 text-text-muted">{t("This lesson may no longer be published.")}</p><Link className="mt-5 inline-flex text-sm font-semibold text-primary" href="/learning-paths">{t("Back to learning paths")}</Link></div>;
   if (error?.startsWith("LOCKED:")) return <div className="mx-auto max-w-2xl py-10"><Feedback tone="warning" title={t("Lesson locked")}>{error.slice("LOCKED:".length)}</Feedback><Link className="mt-5 inline-flex min-h-10 items-center text-sm font-semibold text-primary" href={pathId ? "/learning-paths/" + encodeURIComponent(pathId) : "/learning-paths"}>{t("Back to learning paths")}</Link></div>;
   if (error) return <div className="mx-auto max-w-2xl py-10"><Feedback tone="error" title={t("Lesson unavailable")}>{error}</Feedback><Button className="mt-4" variant="secondary" onClick={() => { setError(undefined); setReload((value) => value + 1); }}>{t("Try again")}</Button></div>;
-  if (!data) return <div className="mx-auto max-w-6xl animate-pulse motion-reduce:animate-none" role="status"><span className="sr-only">{t("Loading lesson")}</span><div className="h-4 w-48 rounded bg-surface-strong" /><div className="mt-8 h-10 w-2/3 rounded bg-surface-strong" /></div>;
+  if (!data) return <LoadingState className="mx-auto max-w-3xl" title={t("Loading lesson...")} description={t("Please wait a moment.")} />;
 
   const { lesson, pathContext } = data;
   const lessonHref = (id: string) => "/lessons/" + id + (pathContext ? "?pathId=" + encodeURIComponent(pathContext.id) : "");

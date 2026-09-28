@@ -110,13 +110,13 @@ function FlashcardSession({ deck }: { deck: LearningGameDeck }) {
       </button>
 
       <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => move(index - 1)} disabled={index === 0}>{t("Previous")}</Button>
-          <Button variant="secondary" onClick={() => move(index + 1)} disabled={index === deck.cards.length - 1}>{t("Next")}</Button>
+        <div className="flex w-full gap-2 sm:w-auto">
+          <Button className="flex-1 sm:flex-none" variant="secondary" onClick={() => move(index - 1)} disabled={index === 0}>{t("Previous")}</Button>
+          <Button className="flex-1 sm:flex-none" variant="secondary" onClick={() => move(index + 1)} disabled={index === deck.cards.length - 1}>{t("Next")}</Button>
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => mark("review")}>{t("Not remembered")}</Button>
-          <Button onClick={() => mark("remembered")}>{t("Remembered")}</Button>
+        <div className="flex w-full gap-2 sm:w-auto">
+          <Button className="min-w-0 flex-1 sm:flex-none" variant="secondary" onClick={() => mark("review")}>{t("Not remembered")}</Button>
+          <Button className="min-w-0 flex-1 sm:flex-none" onClick={() => mark("remembered")}>{t("Remembered")}</Button>
         </div>
       </div>
       <p className="mt-4 text-sm text-text-muted" aria-live="polite">

@@ -1,10 +1,11 @@
 import { readApiError } from "@/lib/api/client";
 
 export async function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
   const response = await fetch(`/api/admin/${path}`, {
     cache: "no-store",
     ...init,
-    headers: init?.body ? { "Content-Type": "application/json", ...init.headers } : init?.headers,
+    headers: init?.body && !isFormData ? { "Content-Type": "application/json", ...init.headers } : init?.headers,
   });
   if (response.status === 401) {
     window.location.replace(`/login?next=${encodeURIComponent(window.location.pathname)}`);

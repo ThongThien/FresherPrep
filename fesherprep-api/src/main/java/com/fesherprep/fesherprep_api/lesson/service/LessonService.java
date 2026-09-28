@@ -53,6 +53,7 @@ public class LessonService {
     private final PublishedLessonCacheService publishedLessonCacheService;
     private final Clock clock;
     private final ContentIdentityGenerator identityGenerator;
+    private final LessonContentSanitizer contentSanitizer;
 
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
@@ -191,7 +192,7 @@ public class LessonService {
                 subtopic,
                 request.title(),
                 slug,
-                request.content(),
+                contentSanitizer.sanitize(request.content()),
                 request.displayOrder(),
                 request.minimumReadSeconds(),
                 request.requiredScrollPercent()
@@ -213,7 +214,7 @@ public class LessonService {
         }
 
         lesson.assignSubtopic(subtopic);
-        lesson.updateContent(request.title(), slug, request.content(), request.displayOrder());
+        lesson.updateContent(request.title(), slug, contentSanitizer.sanitize(request.content()), request.displayOrder());
         lesson.configureReading(request.minimumReadSeconds(), request.requiredScrollPercent());
         return toDetail(save(lesson, slug), false);
     }

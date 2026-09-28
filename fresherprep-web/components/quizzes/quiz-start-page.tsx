@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { Badge, Button, Feedback } from "@/components/ui";
+import { Badge, Button, Feedback, LoadingState } from "@/components/ui";
 import { CommentSection } from "@/components/comments/comment-section";
 import { readApiError } from "@/lib/api/client";
 import type { PublishedQuiz, QuizAttempt } from "@/lib/quizzes/types";
@@ -45,7 +45,7 @@ export function QuizStartPage({ quizId }: { quizId: string }) {
   }
 
   if (error === "NOT_FOUND") return <State title={t("Quiz not found")} message={t("This quiz may not exist or may no longer be published.")} />;
-  if (!quiz && !error) return <div className="mx-auto max-w-3xl animate-pulse motion-reduce:animate-none" role="status"><span className="sr-only">{t("Loading quiz")}</span><div className="h-8 w-2/3 rounded bg-surface-strong" /><div className="mt-6 h-48 rounded-lg bg-surface" /></div>;
+  if (!quiz && !error) return <LoadingState className="mx-auto max-w-3xl" title={t("Loading quiz...")} description={t("Please wait a moment.")} />;
   if (!quiz) return <State title={t("Quiz unavailable")} message={error ?? t("Unable to load this quiz.")} onRetry={() => { setError(undefined); setReload((value) => value + 1); }} />;
 
   return <div className="mx-auto max-w-3xl">

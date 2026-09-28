@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { Badge, Button, Feedback, Progress } from "@/components/ui";
+import { Badge, Button, Feedback, LoadingState, Progress } from "@/components/ui";
 import { PetPanel } from "@/components/pet/pet-panel";
 import { readApiError } from "@/lib/api/client";
 import type { LessonProgress, QuizAttemptSummary } from "@/lib/dashboard/types";
@@ -85,6 +85,6 @@ function Summary({ label, value }: { label: string; value: string }) { return <d
 function SectionHeading({ id, title, description }: { id: string; title: string; description: string }) { return <div><h2 className="text-xl font-semibold text-text" id={id}>{title}</h2><p className="mt-2 text-sm leading-6 text-text-muted">{description}</p></div>; }
 function SectionError({ onRetry }: { onRetry: () => void }) { const { t } = useI18n(); return <Feedback className="mt-4" tone="warning" title={t("Section unavailable")}><p>{t("This information could not be loaded. Other progress data is unaffected.")}</p><Button className="mt-3" size="sm" variant="secondary" onClick={onRetry}>{t("Try again")}</Button></Feedback>; }
 function Empty({ title, message, action }: { title: string; message: string; action?: string }) { const { t } = useI18n(); return <div className="mt-5 rounded-lg border border-dashed border-border-strong bg-surface px-6 py-8 text-center"><h3 className="font-semibold text-text">{title}</h3><p className="mt-2 text-sm text-text-muted">{message}</p>{action ? <Link className="mt-4 inline-flex text-sm font-semibold text-primary" href={action}>{t("Browse learning paths")}</Link> : null}</div>; }
-function ProgressSkeleton() { const { t } = useI18n(); return <div className="mx-auto max-w-6xl animate-pulse motion-reduce:animate-none" role="status"><span className="sr-only">{t("Loading learning progress")}</span><div className="h-10 w-2/3 rounded bg-surface-strong" /><div className="mt-8 grid gap-4 sm:grid-cols-3">{[1, 2, 3].map((item) => <div className="h-28 rounded-lg bg-surface" key={item} />)}</div></div>; }
+function ProgressSkeleton() { const { t } = useI18n(); return <LoadingState className="mx-auto max-w-3xl" title={t("Loading learning progress...")} description={t("Please wait a moment.")} />; }
 function formatDate(value: string, locale: "vi" | "en") { return new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en", { dateStyle: "medium" }).format(new Date(value)); }
 function formatScore(value: number) { return Number(value).toFixed(1).replace(".0", "") + "%"; }

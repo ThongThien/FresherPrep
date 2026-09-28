@@ -11,6 +11,7 @@ import com.fesherprep.fesherprep_api.lesson.dto.*;
 import com.fesherprep.fesherprep_api.lesson.repository.LessonPrerequisiteRepository;
 import com.fesherprep.fesherprep_api.lesson.repository.LessonRepository;
 import com.fesherprep.fesherprep_api.lesson.service.LessonService;
+import com.fesherprep.fesherprep_api.lesson.service.LessonContentSanitizer;
 import com.fesherprep.fesherprep_api.question.domain.*;
 import com.fesherprep.fesherprep_api.question.dto.*;
 import com.fesherprep.fesherprep_api.question.repository.*;
@@ -61,6 +62,7 @@ public class ContributionService {
     private final QuizService quizService;
     private final ContentIdentityGenerator identityGenerator;
     private final QuestionBatchCreator questionBatchCreator;
+    private final LessonContentSanitizer lessonContentSanitizer;
     private final Clock clock;
 
     @PreAuthorize("hasRole('CONTRIBUTOR')")
@@ -106,7 +108,7 @@ public class ContributionService {
         User owner = currentUser();
         Lesson lesson = lessonRepository.saveAndFlush(new Lesson(
                 requireSubtopic(request.subtopicId()), request.title(), uniqueLessonSlug(request.title()),
-                request.content(), request.displayOrder(), request.minimumReadSeconds(),
+                lessonContentSanitizer.sanitize(request.content()), request.displayOrder(), request.minimumReadSeconds(),
                 request.requiredScrollPercent()
         ));
         return detail(createSubmission(ContributionContentType.LESSON, lesson.getId(), lesson.getTitle(), owner));
@@ -123,7 +125,8 @@ public class ContributionService {
             throw new IllegalStateException("Published lessons cannot be edited by a contributor");
         }
         lesson.assignSubtopic(requireSubtopic(request.subtopicId()));
-        lesson.updateContent(request.title(), lesson.getSlug(), request.content(), request.displayOrder());
+        lesson.updateContent(request.title(), lesson.getSlug(),
+                lessonContentSanitizer.sanitize(request.content()), request.displayOrder());
         lesson.configureReading(request.minimumReadSeconds(), request.requiredScrollPercent());
         submission.rename(lesson.getTitle());
         record(submission, owner, ReviewAction.EDITED, null);

@@ -25,7 +25,7 @@ import { cn } from "@/lib/cn";
 import { type Locale, useI18n } from "@/lib/i18n";
 import { type ThemePreference, useThemePreference } from "@/lib/theme";
 
-const themeOptions: ThemePreference[] = ["light", "dark", "system"];
+const themeOptions: ThemePreference[] = ["light", "dark", "coder", "system"];
 const localeOptions: Locale[] = ["vi", "en"];
 
 export function ProfilePage() {
@@ -109,9 +109,7 @@ export function ProfilePage() {
 
   function changeLocale(value: Locale) {
     setLocale(value);
-    setPreferenceNotice(
-      value === "vi" ? "Đã lưu ngôn ngữ." : "Language preference saved.",
-    );
+    setPreferenceNotice(t("Language preference saved."));
   }
 
   return (
@@ -320,7 +318,7 @@ function ChoiceGroup({
   return (
     <fieldset>
       <legend className="mb-2 text-sm font-semibold text-text">{legend}</legend>
-      <div className="grid grid-cols-3 gap-2">
+      <div className={cn("grid gap-2", options.length > 2 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2")}>
         {options.map((option) => (
           <label
             key={option.value}
@@ -348,7 +346,7 @@ function ChoiceGroup({
 }
 
 function themeLabel(theme: ThemePreference) {
-  return theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
+  return theme === "light" ? "Light" : theme === "dark" ? "Dark" : theme === "coder" ? "Coder" : "System";
 }
 
 function formatDate(value: string, locale: Locale) {

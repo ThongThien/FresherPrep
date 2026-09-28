@@ -1,41 +1,44 @@
-# FresherPrep — Phạm vi sản phẩm
+# FresherPrep — Phạm vi dự án
 
 ## 1. Mục tiêu
 
-FresherPrep là nền tảng web miễn phí, phi thương mại, giúp sinh viên/người mới học Java chuẩn bị phỏng vấn vị trí Java Intern và đạt kiến thức cần thiết để vượt qua phỏng vấn Java Fresher.
-
-Đối tượng và mục tiêu:
-
-- Đối tượng: ứng viên Java Intern hoặc người đang chuẩn bị ứng tuyển.
-- Kết quả học tập: nắm kiến thức Java ở mức Fresher và sẵn sàng phỏng vấn.
-- Không xây dựng cấp bậc hoặc lộ trình riêng cho Junior.
+FresherPrep là nền tảng miễn phí giúp người học Java Backend ở mức Intern ôn kiến thức, học theo lộ trình và chuẩn bị đạt năng lực Fresher.
 
 Luồng học chính:
 
-**Đọc tài liệu → Làm câu hỏi của bài → Đạt yêu cầu → Ôn quiz tổng hợp → Luyện phỏng vấn → Theo dõi mức độ sẵn sàng.**
+```text
+Cây kiến thức → Learning Path → Lesson → Điều kiện đọc
+→ Quiz/Assessment → Hoàn thành Lesson → Tiến độ Learning Path
+```
 
-## 2. Phạm vi V1
+Sản phẩm không cam kết kết quả tuyển dụng và không có lộ trình Junior trong phạm vi hiện tại.
 
-V1 tập trung vào nội dung Java thường gặp khi phỏng vấn Intern/Fresher:
+## 2. Vai trò
 
-- Java Core và cú pháp cơ bản
-- OOP
-- Exception Handling
-- Collections
-- Generics
-- Java 8: Lambda, Stream, Optional
-- Cơ bản về Multithreading/Concurrency và JVM
-- SQL/PostgreSQL cơ bản
-- Spring Core, Spring Boot, REST API
-- JPA/Hibernate và Spring Security cơ bản
+- **USER**: học lesson, làm quiz, theo dõi tiến độ, bình luận và sử dụng Pet/Learning Games.
+- **CONTRIBUTOR**: có quyền USER; tạo bản nháp nội dung được cho phép, gửi kiểm duyệt và theo dõi kết quả.
+- **ADMIN**: quản lý tài khoản, cây kiến thức, nội dung, kiểm duyệt, bình luận/thông báo và cấu hình Pet.
 
-Chỉ cần nội dung Java trong V1. SQL/PostgreSQL là kiến thức hỗ trợ phỏng vấn Java, không mở rộng sản phẩm thành nền tảng học nhiều ngôn ngữ.
+Phân quyền phải được kiểm tra ở backend. Việc đổi role chỉ thay đổi quyền, không tự làm mất phiên đăng nhập còn hợp lệ.
 
-## 3. Cấu trúc học tập
+## 3. Phạm vi chức năng hiện tại
 
-Nội dung được tổ chức theo:
+### 3.1. Tài khoản và bảo mật
 
-**Technology → Category → Topic → Subtopic → Lesson**
+- Đăng ký, đăng nhập, refresh access token, logout/revoke refresh token.
+- Lấy và cập nhật thông tin người dùng hiện tại.
+- Mật khẩu được băm; dùng JWT access token và refresh token.
+- Giới hạn tần suất các endpoint xác thực.
+- Java knowledge challenge có thời hạn được kích hoạt khi đăng nhập thất bại đáng ngờ.
+- Phân biệt rõ `401` chưa/xác thực không còn hợp lệ và `403` không đủ quyền.
+
+### 3.2. Nội dung học
+
+Cây kiến thức có đúng bốn tầng:
+
+```text
+TECHNOLOGY → CATEGORY → TOPIC → SUBTOPIC
+```
 
 Ví dụ:
 
@@ -47,37 +50,78 @@ Java
         └── HashMap
 ```
 
-Một lesson thuộc một subtopic chính. Cấu trúc kiến thức có thể bỏ qua tầng không cần thiết, nhưng phải giữ quan hệ cha/con để lọc nội dung và tổng hợp tiến độ.
+`SUBTOPIC` không phải `LESSON`. Một subtopic có thể có nhiều lesson; mỗi lesson thuộc đúng một subtopic.
 
-V1 chỉ có một lộ trình: **Java Intern → Sẵn sàng phỏng vấn Fresher**. Fresher là mục tiêu kiến thức/đầu ra, không phải một cấp tài khoản hoặc lộ trình song song. `Difficulty` của câu hỏi (Easy/Medium/Hard) là độ khó riêng và không thay thế mục tiêu đầu ra này.
+Lesson hỗ trợ nội dung HTML giàu định dạng đã sanitize, ảnh từ Supabase Storage, prerequisite, thời gian đọc tối thiểu, phần trăm cuộn tối thiểu và assessment quiz.
 
-## 4. Hình thức học và luyện tập
+### 3.3. Lộ trình và tiến độ
 
-1. **Tài liệu (Lesson):** giải thích kiến thức theo subtopic, có ví dụ code khi phù hợp.
-2. **Câu hỏi theo bài:** người học phải hoàn thành phần đọc và đạt bài kiểm tra gắn với lesson để lesson được tính hoàn thành.
-3. **Quiz tổng hợp:** trắc nghiệm một đáp án đúng, mỗi câu có bốn lựa chọn; quiz lấy câu theo topic/subtopic.
-4. **Coding practice:** bài tập Java quy mô nhỏ, phục vụ luyện kỹ năng thường gặp khi phỏng vấn.
-5. **Interview practice:** câu hỏi phỏng vấn dạng văn bản, có rubric và phản hồi AI mang tính tham khảo.
+- Learning Path gồm các lesson có thứ tự, cờ bắt buộc và trọng số.
+- User có thể tham gia một path một lần và xem các path đã tham gia.
+- Lesson progress lưu active time, last viewed, max scroll và thời điểm đạt điều kiện đọc.
+- Lesson không có assessment hoàn thành khi đạt điều kiện đọc.
+- Lesson có assessment chỉ hoàn thành khi vừa đạt điều kiện đọc vừa pass quiz.
+- Path progress/completion được suy ra từ lesson hiện tại, không cần bảng tổng hợp riêng.
 
-Thi chính thức, hệ thống chấm code quy mô lớn, và nội dung cho cấp Junior là ngoài phạm vi V1.
+### 3.4. Question Bank và Quiz
 
-## 5. Phạm vi người dùng
+- Question là câu hỏi logic, có `code` duy nhất, thuộc một subtopic và có nhiều phiên bản bất biến.
+- Phiên bản question chứa nội dung, giải thích và đúng bốn lựa chọn, trong đó đúng một lựa chọn chính xác.
+- Quiz hỗ trợ `FIXED` và `RULE_BASED`, có loại, ngôn ngữ, category, điểm tối đa, tỷ lệ pass và thời lượng nếu được cấu hình.
+- Khi bắt đầu attempt, backend snapshot quiz, question version, thứ tự và subtopic.
+- User giữ đáp án cục bộ khi đang làm và submit một lần; backend chấm điểm, xác định pass/fail và lưu lịch sử.
+- Không triển khai answer autosave hoặc lưu từng lựa chọn lên server trước khi submit.
 
-Người dùng có thể đăng ký/đăng nhập, theo dõi lộ trình, đọc tài liệu, làm bài kiểm tra và quiz không giới hạn, xem giải thích, ôn câu sai, theo dõi lịch sử, luyện coding/phỏng vấn, xem điểm yếu/thành tựu và bookmark nội dung.
+### 3.5. Contributor và kiểm duyệt
 
-## 6. Phạm vi quản trị
+- Contributor tạo/sửa nội dung nháp trong phạm vi được cấp và chỉ sửa bản nháp của mình.
+- Contributor gửi nội dung vào review; không được tự approve hoặc publish.
+- Admin xem review queue, approve/publish hoặc reject kèm lý do.
+- Lưu submission và review event để truy vết trạng thái.
 
-Admin quản lý nội dung không cần sửa mã nguồn: cây kiến thức, lesson, Question Bank, quiz, coding exercises, câu hỏi/rubric phỏng vấn, lộ trình, trạng thái xuất bản và thống kê sử dụng cơ bản.
+### 3.6. Tương tác và thông báo
 
-## 7. Ngoài phạm vi V1
+- User xem, tạo, sửa và xóa bình luận của chính mình trên Lesson/Quiz.
+- Admin xem bình luận mới qua notification, mở đúng nội dung và đánh dấu đã đọc.
+- Chưa yêu cầu WebSocket; unread count được lấy theo API.
 
-- Lộ trình Junior hoặc nhiều cấp nghề nghiệp.
-- Nhiều ngôn ngữ lập trình.
-- Mạng xã hội/cộng đồng và thu phí.
-- Nền tảng chấm code cạnh tranh quy mô lớn.
-- LMS doanh nghiệp, gamification nâng cao, microservices.
-- Ứng dụng mobile native.
+### 3.7. Dashboard, Progress và Learning Games
 
-## 8. Nguyên tắc sản phẩm
+- Dashboard/progress tổng hợp từ lesson progress, learning path và quiz attempts.
+- Achievement được suy ra từ dữ liệu học thật, không có bảng achievement riêng.
+- Flashcard và Matching tái sử dụng nội dung đã xuất bản; không có leaderboard, multiplayer hoặc spaced repetition.
 
-Mọi chức năng phải hỗ trợ ít nhất một mục tiêu: **học Java, luyện Java, đánh giá kiến thức Java, hoặc chuẩn bị phỏng vấn Intern/Fresher**. Tiến độ “sẵn sàng Fresher” là chỉ báo học tập trong ứng dụng, không phải chứng nhận tuyển dụng.
+### 3.8. Learning Pet
+
+- Hoạt động học hợp lệ tạo Learning Points; points đổi thành Food.
+- User chọn pet, cho ăn để tăng Energy và nâng cấp khi đủ điều kiện.
+- Backend là nguồn sự thật cho points, food, energy và level.
+- Admin quản lý cấu hình thưởng, tỷ lệ quy đổi, pet, level và trạng thái pet của user.
+- Ảnh Pet dùng Supabase Storage; đường dẫn asset được lưu tập trung, không lưu binary trong database.
+
+### 3.9. Giao diện
+
+- Next.js App Router, responsive và accessible cơ bản.
+- UI hỗ trợ tiếng Việt/tiếng Anh; nội dung học từ backend không tự động dịch.
+- Hỗ trợ Light, Dark, Coder và System theme.
+- Có khu vực User, Contributor và Admin riêng nhưng dùng chung design system.
+
+## 4. Ngoài phạm vi hiện tại
+
+- Chấm/chạy code Java không tin cậy.
+- Phỏng vấn AI, rubric AI và gọi model để chấm.
+- Junior track, thanh toán, leaderboard, multiplayer.
+- OAuth/social login, quên mật khẩu và xác minh email nếu backend chưa hỗ trợ.
+- Realtime notification, recommendation engine hoặc LMS doanh nghiệp.
+- Tự động dịch lesson/question.
+- Native mobile app và microservices.
+
+## 5. Khởi tạo dữ liệu
+
+`initial-setup.sql` chỉ tạo:
+
+- root `Java`;
+- 8 category placeholder, mỗi category có 10 topic, mỗi topic có 20 subtopic;
+- cấu hình Pet và bộ level ban đầu.
+
+Script không tạo user, lesson thật, question/version/option, quiz, learning path hoặc runtime progress/attempt. Admin đổi tên và publish các node placeholder; sau đó Admin/Contributor chỉ cần gắn lesson thật vào đúng subtopic.

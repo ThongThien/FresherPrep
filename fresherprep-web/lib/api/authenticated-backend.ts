@@ -50,6 +50,22 @@ export async function authenticatedBackendRequest(
   }
 
   if (backendResponse.status === 401) {
+    if (refreshedTokens) {
+      return {
+        authenticated: true,
+        accessToken,
+        refreshedTokens,
+        ok: false,
+        status: 503,
+        payload: {
+          status: 503,
+          error: "Service Unavailable",
+          code: "AUTH_UPSTREAM_INCONSISTENT",
+          message: "The refreshed session could not be verified. Please try again.",
+          fieldErrors: {},
+        },
+      };
+    }
     return { authenticated: false, response: unauthorizedResponse() };
   }
 

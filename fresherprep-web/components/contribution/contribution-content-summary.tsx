@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui";
+import { LessonContent } from "@/components/lessons/lesson-content";
 import type { ContributionContentType } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
 
@@ -10,7 +11,7 @@ export function ContributionContentSummary({ type, content }: { type: Contributi
 
   if (type === "LESSON") {
     const lesson = objectOf(value.lesson ?? value);
-    return <div className="mt-4 space-y-4"><div><h4 className="text-lg font-semibold text-text">{textOf(lesson.title)}</h4><p className="mt-2 text-sm text-text-muted">{t("Reading requirement: {{seconds}} seconds and {{percent}}% scroll.", { seconds: numberOf(lesson.minimumReadSeconds), percent: numberOf(lesson.requiredScrollPercent) })}</p></div><dl className="grid gap-3 text-sm sm:grid-cols-2"><Meta label={t("Display order")} value={textOf(lesson.displayOrder)} /><Meta label={t("Status")} value={t(textOf(lesson.status))} /></dl><div className="max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-muted p-4 text-sm leading-7 text-text">{textOf(lesson.content)}</div></div>;
+    return <div className="mt-4 space-y-4"><div><h4 className="text-lg font-semibold text-text">{textOf(lesson.title)}</h4><p className="mt-2 text-sm text-text-muted">{t("Reading requirement: {{seconds}} seconds and {{percent}}% scroll.", { seconds: numberOf(lesson.minimumReadSeconds), percent: numberOf(lesson.requiredScrollPercent) })}</p></div><dl className="grid gap-3 text-sm sm:grid-cols-2"><Meta label={t("Display order")} value={textOf(lesson.displayOrder)} /><Meta label={t("Status")} value={t(textOf(lesson.status))} /></dl><div className="max-h-[32rem] overflow-auto rounded-md bg-surface-muted p-4"><LessonContent content={textOf(lesson.content)} /></div></div>;
   }
 
   if (type === "QUESTION") {

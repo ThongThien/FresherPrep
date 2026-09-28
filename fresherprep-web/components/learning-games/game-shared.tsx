@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { Button, Feedback, Select } from "@/components/ui";
+import { Button, Feedback, LoadingState, Select } from "@/components/ui";
 import { useI18n } from "@/lib/i18n";
 import type { LearningGameDeckSummary } from "@/lib/learning-games/types";
 
@@ -39,13 +39,7 @@ export function DeckPicker({ decks, value, onChange }: {
 
 export function GameLoading() {
   const { t } = useI18n();
-  return (
-    <div className="mt-8 animate-pulse space-y-4 motion-reduce:animate-none" role="status">
-      <span className="sr-only">{t("Loading game")}</span>
-      <div className="h-5 w-40 rounded bg-surface-strong" />
-      <div className="h-72 rounded-xl border border-border bg-surface" />
-    </div>
-  );
+  return <LoadingState className="mt-8" title={t("Loading game...")} description={t("Please wait a moment.")} />;
 }
 
 export function GameError({ message, onRetry }: { message: string; onRetry: () => void }) {

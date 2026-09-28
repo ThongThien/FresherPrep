@@ -3,17 +3,20 @@ package com.fesherprep.fesherprep_api.lesson.controller;
 import com.fesherprep.fesherprep_api.config.OpenApiConfiguration;
 import com.fesherprep.fesherprep_api.lesson.dto.*;
 import com.fesherprep.fesherprep_api.lesson.service.LessonAssessmentService;
+import com.fesherprep.fesherprep_api.lesson.service.LessonAssetStorageService;
 import com.fesherprep.fesherprep_api.lesson.service.LessonService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +28,7 @@ import java.util.UUID;
 public class LessonController {
     private final LessonService lessonService;
     private final LessonAssessmentService lessonAssessmentService;
+    private final LessonAssetStorageService lessonAssetStorageService;
 
     @GetMapping
     public Page<LessonSummaryResponse> getPublishedLessons(
@@ -92,6 +96,13 @@ public class LessonController {
             @Valid @RequestBody CreateLessonRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(lessonService.createLesson(request));
+    }
+
+    @PostMapping(value = "/admin/assets", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public LessonAssetUploadResponse uploadLessonImage(
+            @RequestPart("file") MultipartFile file
+    ) {
+        return lessonAssetStorageService.upload(file);
     }
 
     @PutMapping("/admin/{lessonId}")

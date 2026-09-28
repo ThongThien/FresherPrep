@@ -57,11 +57,20 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
 
 function toPlainText(content: string) {
   return content
+    .replace(/<pre[\s\S]*?<\/pre>/gi, " ")
+    .replace(/<img\b[^>]*\balt=["']([^"']*)["'][^>]*>/gi, " $1 ")
+    .replace(/<[^>]+>/g, " ")
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/^\s*(?:[-*>]|\d+\.)\s+/gm, "")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+    .replace(/&nbsp;|&#160;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;|&#34;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 600);

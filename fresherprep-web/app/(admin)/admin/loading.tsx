@@ -1,5 +1,5 @@
 import { PageLoading } from "@/components/ui";
 
 export default function Loading() {
-  return <PageLoading label="Loading admin page" />;
+  return <PageLoading label="Loading admin workspace..." />;
 }

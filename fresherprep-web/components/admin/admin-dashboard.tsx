@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { Badge, Button, Feedback } from "@/components/ui";
+import { Badge, Button, Feedback, LoadingState } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { AdminDashboardData, ContentStatus } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
@@ -83,5 +83,5 @@ export function AdminDashboard() {
 
 function DashboardSkeleton() {
   const { t } = useI18n();
-  return <div className="mx-auto max-w-6xl animate-pulse motion-reduce:animate-none" role="status"><span className="sr-only">{t("Loading admin dashboard")}</span><div className="h-10 w-64 rounded bg-surface-strong" /><div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{[1, 2, 3, 4, 5].map((item) => <div key={item} className="h-28 rounded-lg bg-surface" />)}</div></div>;
+  return <LoadingState className="mx-auto max-w-3xl" title={t("Loading admin dashboard...")} description={t("Please wait a moment.")} />;
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
+import Image from "next/image";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/lib/i18n";
 
@@ -48,15 +48,14 @@ export function AppHeader({
           className="flex shrink-0 items-center gap-2.5 rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20"
           aria-label={t("FresherPrep dashboard")}
         >
-          <span
+          <Image
+            src="/static/logo.png"
+            alt=""
+            width={500}
+            height={500}
             aria-hidden="true"
-            className="flex size-8 items-center justify-center rounded-md bg-primary-solid text-xs font-bold tracking-tight text-white"
-          >
-            FP
-          </span>
-          <span className="text-base font-semibold tracking-tight text-text">
-            FresherPrep
-          </span>
+            className="h-35 w-auto max-w-35 object-contain"
+          />
         </Link>
 
         {currentContext ? (

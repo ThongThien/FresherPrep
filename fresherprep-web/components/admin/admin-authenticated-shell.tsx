@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
 import { CurrentUserProvider } from "@/components/auth/current-user-context";
-import { Button, Feedback } from "@/components/ui";
+import { Button, Feedback, LoadingState } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { CurrentUser } from "@/lib/auth/types";
 import { useI18n } from "@/lib/i18n";
@@ -73,5 +73,5 @@ export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
 
 function AdminGateLoading() {
   const { t } = useI18n();
-  return <div className="min-h-dvh bg-background" role="status"><span className="sr-only">{t("Verifying admin access")}</span><div className="h-16 border-b border-border bg-surface" /><div className="mx-auto max-w-4xl animate-pulse space-y-5 px-4 py-10 motion-reduce:animate-none"><div className="h-8 w-52 rounded bg-surface-strong" /><div className="h-32 rounded-lg bg-surface" /></div></div>;
+  return <div className="min-h-dvh bg-background"><div className="h-16 border-b border-border bg-surface" /><LoadingState className="mx-auto mt-10 max-w-3xl" title={t("Verifying admin access...")} description={t("Please wait a moment.")} /></div>;
 }

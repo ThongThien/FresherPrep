@@ -147,7 +147,7 @@ export function QuestionManagement() {
   }
 
   async function deleteQuestion() {
-    if (!selected || !window.confirm("Delete this question? Questions with version or quiz history cannot be deleted.")) return;
+    if (!selected || !window.confirm(t("Delete this question? Questions with version or quiz history cannot be deleted."))) return;
     setPending(true);
     setError(undefined);
     try {

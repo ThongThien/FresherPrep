@@ -174,9 +174,9 @@ export function UserManagement() {
           <AdminSearch value={search} onChange={setSearch} label={t("Search users")} placeholder={t("Search name or email")} />
           <AdminFilter label={t("Filter by role")} value={role} onChange={(value) => { setRole(value); setPage(0); }}>
             <option value="">{t("All roles")}</option>
-            <option value="USER">USER</option>
-            <option value="CONTRIBUTOR">CONTRIBUTOR</option>
-            <option value="ADMIN">ADMIN</option>
+            <option value="USER">{t("USER")}</option>
+            <option value="CONTRIBUTOR">{t("CONTRIBUTOR")}</option>
+            <option value="ADMIN">{t("ADMIN")}</option>
           </AdminFilter>
           <AdminFilter label={t("Filter by status")} value={status} onChange={(value) => { setStatus(value); setPage(0); }}>
             <option value="">{t("All statuses")}</option>
@@ -296,7 +296,7 @@ function UserDetail({ detail, currentUserId, dateFormatter, onClose, onChange }:
             rows={detail.recentLessons.map((item) => ({
               id: item.lessonId,
               title: item.lessonTitle,
-              meta: t("{{scroll}}% scroll � {{seconds}} active seconds", { scroll: item.maxScrollPercent, seconds: item.activeSeconds }),
+              meta: t("{{scroll}}% scroll · {{seconds}} active seconds", { scroll: item.maxScrollPercent, seconds: item.activeSeconds }),
               badge: item.readingQualified ? t("Reading qualified") : t("In progress"),
               success: item.readingQualified,
             }))}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { Badge, Button, Feedback, Progress } from "@/components/ui";
+import { Badge, Button, Feedback, LoadingState, Progress } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
 import type { AttemptQuestion, QuizAttempt } from "@/lib/quizzes/types";
@@ -83,6 +83,6 @@ function ReviewRow({ label, value, tone }: { label: string; value: string; tone:
 function Summary({ label, value }: { label: string; value: string }) { return <div className="rounded-lg border border-border bg-surface p-5"><p className="text-sm text-text-muted">{label}</p><p className="mt-2 text-2xl font-semibold tabular-nums text-text">{value}</p></div>; }
 function LinkButton({ href, children }: { href: string; children: ReactNode }) { return <Link className="inline-flex min-h-10 items-center justify-center rounded-md border border-border-strong px-4 text-sm font-semibold text-text hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20" href={href}>{children}</Link>; }
 function ResultState({ title, message, onRetry }: { title: string; message: string; onRetry?: () => void }) { const { t } = useI18n(); return <div className="mx-auto max-w-2xl py-10"><Feedback tone="error" title={title}>{message}</Feedback>{onRetry ? <Button className="mt-4" variant="secondary" onClick={onRetry}>{t("Try again")}</Button> : null}</div>; }
-function ResultSkeleton() { const { t } = useI18n(); return <div className="mx-auto max-w-5xl animate-pulse motion-reduce:animate-none" role="status"><span className="sr-only">{t("Loading quiz result")}</span><div className="h-10 w-2/3 rounded bg-surface-strong" /><div className="mt-8 grid gap-4 sm:grid-cols-3">{[1, 2, 3].map((item) => <div className="h-28 rounded-lg bg-surface" key={item} />)}</div></div>; }
+function ResultSkeleton() { const { t } = useI18n(); return <LoadingState className="mx-auto max-w-3xl" title={t("Loading quiz result...")} description={t("Please wait a moment.")} />; }
 function formatAssessmentScore(attempt: QuizAttempt) { return attempt.score === null ? "-" : Number(attempt.score).toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1") + " / " + attempt.maximumScore; }
 function formatDate(value: string | null, locale: "vi" | "en") { return value ? new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : locale === "vi" ? "gần đây" : "recently"; }

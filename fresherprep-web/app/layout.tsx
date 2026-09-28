@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
 const themeScript = `
 (() => {
   try {
     const saved = localStorage.getItem("fresherprep-theme");
-    const preference = saved === "light" || saved === "dark" || saved === "system" ? saved : "light";
+    const preference = saved === "light" || saved === "dark" || saved === "coder" || saved === "system" ? saved : "system";
     const resolved = preference === "system"
       ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
       : preference;
     document.documentElement.dataset.theme = resolved;
     document.documentElement.dataset.themePreference = preference;
-    document.documentElement.style.colorScheme = resolved;
+    document.documentElement.style.colorScheme = resolved === "light" ? "light" : "dark";
   } catch {
-    document.documentElement.dataset.theme = "light";
+    const resolved = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.dataset.theme = resolved;
+    document.documentElement.dataset.themePreference = "system";
+    document.documentElement.style.colorScheme = resolved;
   }
 })();
 `;
@@ -46,7 +48,8 @@ export const metadata: Metadata = {
     default: "FresherPrep",
     template: "%s | FresherPrep",
   },
-  description: "A focused Java Backend learning and interview preparation platform.",
+  description:
+    "A focused Java Backend learning and interview preparation platform.",
   icons: {
     icon: "/static/logo.png",
     shortcut: "/static/logo.png",

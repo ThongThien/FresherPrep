@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Badge, Button, Feedback, Progress } from "@/components/ui";
+import { Badge, Button, Feedback, LoadingState, Progress } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { QuizAttempt } from "@/lib/quizzes/types";
 import { useI18n } from "@/lib/i18n";
@@ -131,7 +131,7 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
 
   if (error === "NOT_FOUND") return <Message title={t("Attempt not found")} message={t("This attempt does not exist or is not available to your account.")} />;
   if (!attempt && error) return <Message title={t("Attempt unavailable")} message={error} retry={() => setReload((value) => value + 1)} />;
-  if (!attempt || !question) return <div className="mx-auto max-w-5xl animate-pulse motion-reduce:animate-none" role="status"><span className="sr-only">{t("Loading quiz attempt")}</span><div className="h-8 w-2/3 rounded bg-surface-strong" /><div className="mt-8 h-80 rounded-lg bg-surface" /></div>;
+  if (!attempt || !question) return <LoadingState className="mx-auto max-w-3xl" title={t("Loading questions...")} description={t("Please wait a moment.")} />;
 
   const expired = remainingSeconds === 0;
   return <div className="mx-auto max-w-5xl">

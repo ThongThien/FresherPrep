@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Badge, Button, Card, CardContent, Feedback, FieldError, Input, Label, Select, Textarea } from "@/components/ui";
+import { Badge, Button, Card, CardContent, Feedback, FieldError, Input, Label, Select } from "@/components/ui";
 import { adminOptional, adminRequest, jsonBody } from "@/lib/admin/client";
 import type {
   AdminPage,
@@ -15,7 +15,10 @@ import type {
 } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
 import { KnowledgePathSelect, knowledgePathLabel } from "@/components/content/knowledge-path-select";
+import { LessonContent } from "@/components/lessons/lesson-content";
+import { hasMeaningfulLessonContent } from "@/lib/lessons/content";
 import { AdminPagination } from "./admin-ui";
+import { LessonRichTextEditor } from "./lesson-rich-text-editor";
 
 const statuses: ContentStatus[] = ["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"];
 const emptyForm = {
@@ -130,7 +133,7 @@ export function LessonManagement() {
     const errors: Record<string, string> = {};
     if (!form.subtopicId) errors.subtopicId = "Select a subtopic.";
     if (!form.title.trim()) errors.title = "Title is required.";
-    if (!form.content.trim()) errors.content = "Lesson content is required.";
+    if (!hasMeaningfulLessonContent(form.content)) errors.content = "Lesson content is required.";
     if (form.displayOrder < 0) errors.displayOrder = "Display order cannot be negative.";
     if (form.minimumReadSeconds < 1) errors.minimumReadSeconds = "Minimum read time must be at least one second.";
     if (form.requiredScrollPercent < 1 || form.requiredScrollPercent > 100) errors.requiredScrollPercent = "Scroll requirement must be between 1 and 100.";
@@ -176,7 +179,7 @@ export function LessonManagement() {
   }
 
   async function deleteLesson() {
-    if (!detail || !window.confirm("Delete this lesson? This cannot be undone.")) return;
+    if (!detail || !window.confirm(t("Delete this lesson? This cannot be undone."))) return;
     setPending(true);
     setError(undefined);
     try {
@@ -225,7 +228,7 @@ export function LessonManagement() {
               <Field label={t("Display order")} htmlFor="lesson-order" error={validation.displayOrder}><Input id="lesson-order" type="number" min={0} aria-invalid={Boolean(validation.displayOrder)} value={form.displayOrder} onChange={(event) => setForm((current) => ({ ...current, displayOrder: Number(event.target.value) }))} /></Field>
               <Field label={t("Minimum read seconds")} htmlFor="lesson-read-time" error={validation.minimumReadSeconds}><Input id="lesson-read-time" type="number" min={1} aria-invalid={Boolean(validation.minimumReadSeconds)} value={form.minimumReadSeconds} onChange={(event) => setForm((current) => ({ ...current, minimumReadSeconds: Number(event.target.value) }))} /></Field>
               <Field label={t("Required scroll percent")} htmlFor="lesson-scroll" error={validation.requiredScrollPercent}><Input id="lesson-scroll" type="number" min={1} max={100} aria-invalid={Boolean(validation.requiredScrollPercent)} value={form.requiredScrollPercent} onChange={(event) => setForm((current) => ({ ...current, requiredScrollPercent: Number(event.target.value) }))} /></Field>
-              <div className="sm:col-span-2"><Label htmlFor="lesson-content">{t("Content")}</Label><p className="mb-2 text-xs text-text-muted">{t("Use headings, lists and fenced code blocks. The learner view renders this content as a technical lesson.")}</p><Textarea id="lesson-content" className="min-h-80 font-mono text-sm" aria-invalid={Boolean(validation.content)} value={form.content} onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))} />{validation.content ? <FieldError>{validation.content}</FieldError> : null}{form.content.trim() ? <details className="mt-3 rounded-md border border-border p-4"><summary className="cursor-pointer text-sm font-semibold text-text">{t("Content preview")}</summary><div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-text">{form.content}</div></details> : null}</div>
+              <div className="sm:col-span-2"><Label>{t("Content")}</Label><p className="mb-2 text-xs text-text-muted">{t("Format lesson content, insert code or tables, and upload images without leaving the editor.")}</p><LessonRichTextEditor invalid={Boolean(validation.content)} value={form.content} onChange={(content) => setForm((current) => ({ ...current, content }))} />{validation.content ? <FieldError>{validation.content}</FieldError> : null}{hasMeaningfulLessonContent(form.content) ? <details className="mt-3 rounded-md border border-border p-4"><summary className="cursor-pointer text-sm font-semibold text-text">{t("Content preview")}</summary><div className="mt-5"><LessonContent content={form.content} /></div></details> : null}</div>
               <div className="sm:col-span-2"><Button type="submit" loading={pending}>{detail ? t("Save lesson") : t("Create lesson")}</Button></div>
             </form>
             {detail ? <div className="mt-7 border-t border-border pt-6"><h3 className="text-sm font-semibold text-text">{t("Publishing status")}</h3><div className="mt-3 flex flex-wrap gap-2">{statuses.map((status) => <Button key={status} size="sm" variant="secondary" disabled={pending || detail.status === status} onClick={() => void changeStatus(status)}>{t(status)}</Button>)}</div><Button className="mt-6" size="sm" variant="danger" loading={pending} onClick={() => void deleteLesson()}>{t("Delete lesson")}</Button></div> : null}

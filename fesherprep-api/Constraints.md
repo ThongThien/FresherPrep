@@ -1,117 +1,159 @@
 # FresherPrep — Ràng buộc
 
-## 1. Ràng buộc sản phẩm
+## 1. Sản phẩm
 
-- Dự án phi thương mại, cung cấp học liệu miễn phí.
-- Không chức năng học cốt lõi nào phụ thuộc thanh toán.
-- Không giới hạn nhân tạo số lần quiz, retry hoặc xem giải thích.
-- Đối tượng V1 là ứng viên Java Intern; mục tiêu kiến thức là sẵn sàng phỏng vấn Fresher.
-- Không có lộ trình hoặc nội dung dành riêng cho Junior trong V1.
-- Chỉ tập trung nội dung Java và kiến thức hỗ trợ phỏng vấn Java.
+- Nền tảng miễn phí cho Java Backend Intern chuẩn bị năng lực Fresher.
+- Không có Junior track, thanh toán hoặc giới hạn nhân tạo lượt học/Quiz.
+- Không tuyên bố progress/readiness là bảo đảm đậu phỏng vấn.
+- Không tự động dịch nội dung Lesson/Question do tác giả nhập.
 
-## 2. Ràng buộc công nghệ
-
-### Frontend
-
-- Next.js
-- TypeScript
-- Giao diện responsive
+## 2. Công nghệ hiện tại
 
 ### Backend
 
-- Java, Spring Boot, Spring Security
-- Spring Data JPA/Hibernate
-- REST API, DTO
-- Validation và xử lý exception tập trung
+- Java, Spring Boot, Spring Security.
+- Spring Data JPA/Hibernate, Bean Validation.
+- Modular monolith theo domain; Controller chỉ binding/gọi Service.
+- PostgreSQL trên Supabase, schema `fresherprep`.
+- JWT access token + refresh token.
+- Redis là cache tùy chọn/fallback được; không phải nguồn sự thật.
+- Supabase Storage dùng cho Pet/Lesson assets.
 
-### Database
+### Frontend
 
-- Supabase PostgreSQL
-- Backend sở hữu business logic.
-- Hạn chế phụ thuộc sâu vào tính năng riêng của Supabase khi không có lý do rõ ràng.
+- Next.js App Router, TypeScript.
+- Server/BFF route và API client hiện có phải được tái sử dụng.
+- Design tokens/components hiện có; responsive và accessible cơ bản.
+- Light/Dark/Coder/System theme và UI tiếng Việt/tiếng Anh.
 
-### Triển khai
+Không thay stack hoặc thêm dependency lớn nếu chức năng hiện tại đã giải quyết được yêu cầu.
 
-Ưu tiên GitHub/GitHub Actions, Vercel cho frontend khi phù hợp, Supabase PostgreSQL và dịch vụ backend miễn phí/chi phí thấp.
+## 3. Kiến trúc và domain
 
-## 3. Ràng buộc kiến trúc
+### CC-01 — Modular monolith
 
-### CC-01 — Monolith theo module
+Không tách microservice, queue hoặc event platform khi chưa có nhu cầu vận hành thực tế.
 
-V1 dùng Spring Boot modular monolith; không thêm microservices nếu chưa có yêu cầu thực tế.
-
-### CC-02 — Tổ chức theo nghiệp vụ
-
-Ưu tiên module theo feature/domain, ví dụ:
+### CC-02 — Cây kiến thức cố định bốn cấp
 
 ```text
-AUTH, USER, KNOWLEDGE, LESSON, QUESTION, QUIZ,
-CODING, INTERVIEW, PROGRESS, ACHIEVEMENT, ADMIN
+TECHNOLOGY → CATEGORY → TOPIC → SUBTOPIC
 ```
 
-### CC-03 — Cây kiến thức linh hoạt
+Mọi nhánh phải đúng quan hệ type. Lesson/Question tham chiếu `SUBTOPIC`; chúng không phải node thứ năm trong cùng bảng.
 
-Hỗ trợ **Technology → Category → Topic → Subtopic → Lesson**. Có thể biểu diễn node bằng `parent_id`; không buộc mọi nhánh phải có đủ mọi cấp. Java là dữ liệu trong mô hình kiến thức, không phải cấu trúc hard-code.
+### CC-03 — Nội dung tái sử dụng
 
-### CC-04 — Nội dung tái sử dụng
+Question có thể dùng trong nhiều Quiz. Lesson có thể dùng trong nhiều Learning Path. Không sao chép nội dung chỉ để thay đổi ngữ cảnh.
 
-Lesson và Question là nội dung độc lập, được liên kết với subtopic và ngữ cảnh học. Question có thể xuất hiện trong nhiều quiz mà không bị nhân bản.
+### CC-04 — Lịch sử bất biến
 
-### CC-05 — Giữ lịch sử
+Attempt phải lưu QuestionVersion và snapshot Quiz/Question tại thời điểm start. Không chỉnh sửa version đã dùng để thay đổi lịch sử.
 
-Quiz attempt phải tham chiếu đúng phiên bản question và thứ tự đã làm. Câu trả lời interview, rubric và kết quả AI cần được lưu đủ để giải thích đánh giá đã tạo ra.
+### CC-05 — Status
 
-## 4. Ràng buộc bảo mật
+Các transition phải tuân theo domain hiện tại cho `DRAFT`, `REVIEW`, `PUBLISHED`, `ARCHIVED`. Không publish bằng cập nhật trực tiếp status để bỏ qua validation.
 
-- Hash mật khẩu an toàn.
-- Quản lý JWT/refresh token an toàn.
-- Backend bắt buộc kiểm tra quyền admin.
-- Không tin role từ frontend.
-- AI API key/secret chỉ được lưu và sử dụng ở backend.
-- Validate toàn bộ input từ người dùng.
-- Không trả đáp án quiz trước khi nộp bài.
-- Không chạy code không tin cậy trực tiếp trong tiến trình Spring Boot.
+## 4. Dữ liệu
 
-## 5. Ràng buộc dữ liệu
+- Entity/schema hiện tại là source of truth; không thêm cột/bảng khi có thể suy ra dữ liệu đúng và hiệu quả.
+- Foreign key, unique constraint và optimistic locking phải được giữ.
+- Slug/code là định danh nghiệp vụ ổn định và duy nhất trong phạm vi đã khai báo.
+- Collection có thể tăng theo thời gian phải pagination.
+- Không trả Entity trực tiếp nếu DTO kiểm soát dữ liệu tốt hơn.
+- Dashboard, achievement và path completion được derive; chưa có bảng aggregate riêng.
+- Runtime data (refresh token, progress, join, attempts, answers, user pet) phải sinh qua nghiệp vụ/API, không qua seed.
+- Script setup phải idempotent và chỉ cleanup đúng bộ seed legacy đã định danh; không xóa dữ liệu production khác.
 
-- Dùng foreign key và constraint phù hợp.
-- Các entity lưu trữ chính có timestamps.
-- Tạo index cho các đường truy vấn phổ biến: user, lesson, subtopic, quiz, attempt và trạng thái nội dung.
-- Dùng pagination cho danh sách có thể lớn.
-- Không gom toàn bộ dữ liệu thành JSON. Chỉ dùng JSON/JSONB cho cấu trúc thực sự linh hoạt, ví dụ payload đánh giá AI đã validate.
-- Có thể dùng bảng phiên bản cho Question để attempt cũ không đổi khi nội dung được chỉnh sửa.
-- Không tạo bảng dashboard/progress tổng hợp trong V1; query từ `lesson_progress`, `quiz_attempts`, `quiz_attempt_answers`, coding và interview history. Chỉ thêm cache sau khi đo được nhu cầu hiệu năng.
+## 5. Question và Quiz
 
-## 6. Ràng buộc nội dung
+- `Question.code` và `Quiz.code` đã tồn tại; không tạo lại/đổi tên.
+- QuestionVersion bất biến; update nội dung tạo revision mới.
+- Mỗi version có đúng 4 option, position 1–4 và đúng 1 correct.
+- Question publish cần published version hợp lệ và Subtopic publish.
+- Quiz `FIXED` giữ display position; `RULE_BASED` phải đủ question publish theo từng rule.
+- Attempt snapshot QuestionVersion; backend chấm score/pass/fail.
+- Không expose correct option trong active attempt.
+- Không thay đổi kiến trúc:
 
-- Admin quản lý nội dung mà không sửa source code.
-- Nội dung hỗ trợ vòng đời `DRAFT → REVIEW → PUBLISHED → ARCHIVED`.
-- Mỗi quiz question trắc nghiệm có 4 lựa chọn, 1 đáp án đúng và giải thích; 3 phương án nhiễu thuộc cùng question và hợp lý trong cùng topic.
-- Hệ thống cho phép thư viện Java phát triển mà không phải thiết kế lại luồng học.
+```text
+Start → lưu snapshot → answers cục bộ → submit một lần
+→ backend grade → result
+```
 
-## 7. Ràng buộc AI
+- Không thêm answer autosave, request theo từng answer hoặc selected-answer persistence trước submit.
+- Client timeout không được dùng để tự quyết điểm; enforcement cuối cùng phải dựa vào contract backend hiện có.
 
-- AI chỉ được gọi qua backend.
-- Dùng contract có cấu trúc khi khả thi và validate output trước khi lưu.
-- Lỗi AI không được làm hỏng lịch sử interview hoặc ngăn lưu câu trả lời gốc.
-- Không phụ thuộc AI để chấm quiz trắc nghiệm hoặc vận hành nội dung học cốt lõi.
-- Đánh giá interview dựa trên rubric cho mục tiêu Intern/Fresher; feedback là tham khảo.
+## 6. Lesson và nội dung
 
-## 8. Ràng buộc UX
+- Một Lesson thuộc đúng một Subtopic.
+- Progress duy nhất theo user + lesson và cập nhật trong transaction.
+- Reading qualification chỉ do backend suy ra từ active time + max scroll.
+- Prerequisite không self-reference/duplicate.
+- Rich content lưu HTML đã sanitize; cấm script, event handler, iframe không cần thiết, arbitrary CSS và URL scheme nguy hiểm.
+- Image upload phải kiểm tra role, MIME và size; không lưu binary trong PostgreSQL.
+- Nội dung plain text cũ phải tiếp tục render.
 
-Ứng dụng ưu tiên lộ trình học rõ ràng, dễ tìm hành động tiếp theo, giải thích dễ đọc, phân cấp thị giác tốt, responsive và điều hướng đơn giản. Giao diện người học phải giống sản phẩm học tập, không giống trang quản trị.
+## 7. Authentication và Authorization
 
-## 9. Kiểm soát phạm vi
+- Password dùng hash an toàn; không log/trả password.
+- Access token invalid/expired có thể refresh; refresh thành công phải persist token mới trước khi retry.
+- Refresh token invalid/revoked/expired mới làm session kết thúc.
+- Đổi role không revoke refresh token hoặc invalidate session chỉ vì claim role cũ.
+- Backend áp dụng quyền hiện tại; USER/CONTRIBUTOR gọi ADMIN endpoint nhận `403`.
+- Ownership được kiểm tra ở Service/Repository, không dựa vào UUID khó đoán hoặc frontend.
+- Secret, Supabase service key, JWT key và database credential chỉ ở biến môi trường phía server.
+- CORS chỉ cho origin cấu hình; production không dùng wildcard credentials.
+- Error response không lộ SQL, stack trace, filesystem path hoặc secret.
 
-Không đưa sớm các thành phần sau vào kiến trúc cốt lõi:
+## 8. Contributor và Review
 
-- Junior track hoặc nhiều ngôn ngữ lập trình.
-- Microservices, Kafka/event-driven hoặc cache phức tạp.
-- Hạ tầng chấm code cạnh tranh quy mô lớn.
-- Recommendation engine nâng cao.
-- Hệ thống cộng đồng/xã hội phức tạp.
-- LMS doanh nghiệp hoặc gamification nâng cao.
+- Contributor không tự approve/publish, không sửa draft người khác và không quản lý user/role.
+- Admin review phải giữ audit event.
+- Reject reason bắt buộc theo workflow hiện tại.
+- Approve vẫn chạy toàn bộ validation của loại nội dung.
+- UI ẩn action không thay thế backend authorization.
 
-## 10. Nguyên tắc kỹ thuật
+## 9. Comment, Notification và Pet
 
-**Giữ V1 đủ đơn giản để một developer xây dựng và bảo trì, đồng thời giữ ranh giới domain/API sạch để có thể mở rộng khi có nhu cầu thật.**
+- Comment edit/delete phải kiểm tra owner.
+- Notification chỉ được đọc/mark-read bởi recipient phù hợp.
+- Pet reward phải idempotent theo activity/source; retry không cộng trùng.
+- Point/Food/Energy/Level không nhận dưới dạng giá trị đích từ client.
+- Feed/upgrade và admin configuration phải transaction + authorization phù hợp.
+- Asset Pet lưu ở Supabase Storage; database chỉ lưu path/metadata.
+
+## 10. Cache và hiệu năng
+
+- Redis chỉ cache dữ liệu không nhạy cảm phù hợp; key user-specific phải tách theo user.
+- Cache miss/error fallback về PostgreSQL và không được bỏ qua authorization.
+- Mutation phải evict/update cache liên quan.
+- Không dùng fetch join collection tùy tiện cùng pagination.
+- Chỉ tối ưu N+1 đã đo/quan sát; không hy sinh rule bảo mật.
+
+## 11. UX
+
+- Content first, interaction second, decoration last.
+- Không redesign các flow đã ổn khi thêm feature mới.
+- Loading/empty/error/retry và trạng thái disabled phải rõ.
+- Màu sắc không là tín hiệu duy nhất; keyboard focus/touch target cần dùng được.
+- Animation ngắn, tôn trọng `prefers-reduced-motion`.
+- Không horizontal overflow ngoài code block/table có container cuộn chủ đích.
+
+## 12. Khởi tạo và triển khai
+
+- Hibernate/schema phải tồn tại trước khi chạy `initial-setup.sql`.
+- Setup chỉ tạo Java root, placeholder Knowledge DRAFT và Pet configuration; không tạo học liệu thật.
+- User đầu tiên được tạo bằng Register API; không seed plaintext password.
+- Supabase bucket/policy và environment secret cần cấu hình riêng theo hướng dẫn triển khai.
+- Swagger/Actuator/debug/test account/seed script không được public không kiểm soát ở production.
+- HTTPS, security headers, backup, DB least privilege và secret rotation là checklist bắt buộc khi deploy.
+
+## 13. Ngoài phạm vi kỹ thuật
+
+- Coding judge/sandbox thực thi Java.
+- AI interview/grading.
+- OAuth, payment, leaderboard, multiplayer.
+- WebSocket notification.
+- Spaced repetition, recommendation engine, analytics phức tạp.
+- Native mobile và hạ tầng microservice.

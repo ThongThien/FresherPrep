@@ -3,7 +3,7 @@
 import { useI18n } from "@/lib/i18n";
 import { type ThemePreference, useThemePreference } from "@/lib/theme";
 
-const order: ThemePreference[] = ["system", "light", "dark"];
+const order: ThemePreference[] = ["system", "light", "dark", "coder"];
 export function ThemeToggle() {
   const { t } = useI18n();
   const { preference, setPreference } = useThemePreference();
@@ -25,7 +25,7 @@ export function ThemeToggle() {
 }
 
 function themeLabel(theme: ThemePreference) {
-  return theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
+  return theme === "light" ? "Light" : theme === "dark" ? "Dark" : theme === "coder" ? "Coder" : "System";
 }
 
 function ThemeIcon({ theme }: { theme: ThemePreference }) {
@@ -34,6 +34,9 @@ function ThemeIcon({ theme }: { theme: ThemePreference }) {
   }
   if (theme === "dark") {
     return <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-current" strokeWidth="1.8"><path d="M20.4 15.2A8.5 8.5 0 0 1 8.8 3.6 8.5 8.5 0 1 0 20.4 15.2Z" /></svg>;
+  }
+  if (theme === "coder") {
+    return <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-current" strokeWidth="1.8"><path d="m8.5 8-4 4 4 4M15.5 8l4 4-4 4M13.5 5l-3 14" /></svg>;
   }
   return <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-current" strokeWidth="1.8"><rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></svg>;
 }

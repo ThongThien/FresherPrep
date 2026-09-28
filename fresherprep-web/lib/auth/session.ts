@@ -11,7 +11,6 @@ type TokenRefreshResult = Awaited<ReturnType<typeof performTokenRefresh>>;
 const pendingTokenRefreshes = new Map<string, Promise<TokenRefreshResult>>();
 
 export function setAuthCookies(response: NextResponse, tokens: AuthTokens) {
-  const accessExpiry = new Date(tokens.accessTokenExpiresAt);
   const common = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -21,7 +20,6 @@ export function setAuthCookies(response: NextResponse, tokens: AuthTokens) {
 
   response.cookies.set(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
     ...common,
-    expires: Number.isNaN(accessExpiry.getTime()) ? undefined : accessExpiry,
   });
   response.cookies.set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
     ...common,
@@ -83,19 +81,6 @@ async function performTokenRefresh(refreshToken: string) {
     body: JSON.stringify({ refreshToken }),
   });
   return { response, payload: await readResponseBody(response) };
-}
-
-export function getAccessTokenRole(accessToken: string): CurrentUser["role"] | null {
-  try {
-    const payload = JSON.parse(Buffer.from(accessToken.split(".")[1], "base64url").toString("utf8")) as {
-      role?: unknown;
-    };
-    return payload.role === "USER" || payload.role === "CONTRIBUTOR" || payload.role === "ADMIN"
-      ? payload.role
-      : null;
-  } catch {
-    return null;
-  }
 }
 
 export function getRequestTokens(request: NextRequest) {

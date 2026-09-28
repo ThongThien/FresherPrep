@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { Badge, Button, Feedback, Progress } from "@/components/ui";
+import { Badge, Button, Feedback, LoadingState, Progress } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
 import type {
@@ -359,16 +359,5 @@ function BackLink({ className = "" }: { className?: string }) {
 
 function LearningPathDetailSkeleton() {
   const { t } = useI18n();
-  return (
-    <div className="mx-auto w-full max-w-6xl animate-pulse motion-reduce:animate-none" role="status">
-      <span className="sr-only">{t("Loading learning path")}</span>
-      <div className="h-4 w-32 rounded bg-surface-strong" />
-      <div className="mt-8 h-10 w-96 max-w-full rounded bg-surface-strong" />
-      <div className="mt-4 h-4 w-full max-w-2xl rounded bg-surface-strong" />
-      <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="h-96 rounded-lg border border-border bg-surface" />
-        <div className="h-52 rounded-lg border border-border bg-surface" />
-      </div>
-    </div>
-  );
+  return <LoadingState className="mx-auto max-w-3xl" title={t("Loading learning path...")} description={t("Please wait a moment.")} />;
 }

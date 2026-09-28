@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useCurrentUser } from "@/components/auth";
-import { Badge, Button, Feedback, Progress } from "@/components/ui";
+import { Badge, Button, Feedback, LoadingState, Progress } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import {
   achievementDefinitions,
@@ -588,31 +588,7 @@ function TextLink({ href, children, className = "" }: { href: string; children: 
 
 function DashboardSkeleton() {
   const { t } = useI18n();
-  return (
-    <div className="mx-auto w-full max-w-6xl animate-pulse space-y-10 motion-reduce:animate-none" role="status">
-      <span className="sr-only">{t("Loading dashboard")}</span>
-      <div className="space-y-3">
-        <div className="h-4 w-32 rounded bg-surface-strong" />
-        <div className="h-8 w-72 max-w-full rounded bg-surface-strong" />
-        <div className="h-4 w-full max-w-xl rounded bg-surface-strong" />
-      </div>
-      <div className="h-48 rounded-lg border border-border bg-surface" />
-      <div className="space-y-4">
-        <div className="h-6 w-52 rounded bg-surface-strong" />
-        <div className="h-44 rounded-lg border border-border bg-surface" />
-      </div>
-      <div className="space-y-4">
-        <div className="h-6 w-44 rounded bg-surface-strong" />
-        <div className="flex gap-3 overflow-hidden">
-          {[0, 1, 2, 3].map((item) => <div key={item} className="h-52 w-[17rem] shrink-0 rounded-lg border border-border bg-surface" />)}
-        </div>
-      </div>
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div className="h-64 rounded-lg border border-border bg-surface" />
-        <div className="h-64 rounded-lg border border-border bg-surface" />
-      </div>
-    </div>
-  );
+  return <LoadingState className="mx-auto max-w-3xl" title={t("Loading dashboard...")} description={t("Please wait a moment.")} />;
 }
 
 function selectContinueLesson(data: DashboardData, t: (key: string, values?: Record<string, string | number>) => string, locale: Locale): ContinueLesson | null {

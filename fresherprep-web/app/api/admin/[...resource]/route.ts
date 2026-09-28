@@ -44,13 +44,16 @@ async function forwardRequest(request: NextRequest, context: Context) {
   }
 
   const suffix = segments.length ? `/${segments.map(encodeURIComponent).join("/")}` : "";
+  const contentType = request.headers.get("content-type") ?? "";
   const body = request.method === "GET" || request.method === "DELETE"
     ? undefined
-    : await request.text();
+    : contentType.startsWith("multipart/form-data")
+      ? await request.arrayBuffer()
+      : await request.text();
   const result = await authenticatedBackendRequest(request, `${base}${suffix}${request.nextUrl.search}`, {
     method: request.method,
     body: body || undefined,
-    headers: body ? { "Content-Type": request.headers.get("content-type") ?? "application/json" } : undefined,
+    headers: body ? { "Content-Type": contentType || "application/json" } : undefined,
   });
   if (!result.authenticated) return result.response;
 

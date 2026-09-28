@@ -42,7 +42,8 @@ import tools.jackson.databind.ObjectMapper;
 @EnableConfigurationProperties({
         JwtProperties.class,
         AuthRateLimitProperties.class,
-        LoginChallengeProperties.class
+        LoginChallengeProperties.class,
+        SupabaseStorageProperties.class
 })
 public class SecurityConfiguration {
 

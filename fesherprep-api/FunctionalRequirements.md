@@ -1,201 +1,189 @@
 # FresherPrep — Yêu cầu chức năng
 
-Phần cốt lõi gồm tài khoản, tài liệu, Question Bank, quiz, lộ trình và dashboard. Coding practice, interview/AI, thành tựu và bookmark là chức năng tùy chọn; chỉ tạo bảng tương ứng khi triển khai.
+## 1. Tài khoản, xác thực và quyền
 
-## 1. Tài khoản và phân quyền
+### FR-01 — Tài khoản
 
-### FR-01 — Xác thực
+User có thể đăng ký, đăng nhập, logout, refresh phiên, xem user hiện tại và cập nhật thông tin cơ bản. Email/username phải hợp lệ và duy nhất; mật khẩu không được lưu plaintext.
 
-Hệ thống hỗ trợ đăng ký, đăng nhập, đăng xuất, refresh token và phiên đăng nhập đã xác thực.
+### FR-02 — Phiên đăng nhập
 
-### FR-02 — Vai trò
+Backend cấp JWT access token ngắn hạn và refresh token có thể revoke. Frontend phải lưu token mới sau khi refresh thành công và chỉ xóa phiên khi refresh thật sự không hợp lệ/hết hạn/bị revoke hoặc user không còn hoạt động.
 
-Mỗi tài khoản có một vai trò, lưu tại `users.role` bằng enum `user_roles` gồm `USER` và `ADMIN`. Tài khoản đăng ký mới mặc định là `USER`. Không tạo bảng `roles` hoặc bảng liên kết `user_roles`.
+### FR-03 — Role
 
-Backend phải bảo vệ thao tác admin; không tin role do frontend gửi lên. Quyền sử dụng chức năng thông thường của admin được cấu hình ở backend. Thiết kế này dùng một role cho mỗi user.
+Hệ thống dùng enum `USER`, `CONTRIBUTOR`, `ADMIN` trong `users.role`. Đổi role không tự revoke refresh token. Endpoint thiếu quyền trả `403`; endpoint chưa xác thực hoặc phiên không hợp lệ trả `401`.
 
-## 2. Kiến thức và tài liệu
+### FR-04 — Chống lạm dụng đăng nhập
 
-### FR-03 — Cây kiến thức
+Rate limit áp dụng cho register/login/refresh. Sau số lần thất bại được cấu hình, login yêu cầu Java knowledge challenge có ID, hạn dùng và trạng thái dùng một lần. Câu trả lời không nằm trong HTML/JavaScript frontend.
 
-Tổ chức nội dung theo **Technology → Category → Topic → Subtopic**. Java là công nghệ được triển khai trong V1. Cây phải hỗ trợ truy vấn node cha/con và mở rộng về sau.
+## 2. Cây kiến thức
 
-### FR-04 — Lesson
+### FR-05 — Cấu trúc
 
-Lesson có tiêu đề, nội dung, ví dụ code tùy chọn, subtopic chính, trạng thái xuất bản và thứ tự học. Có thể khai báo prerequisite nếu bài học cần kiến thức trước.
+Admin quản lý cây bốn tầng bắt buộc:
 
-### FR-05 — Theo dõi đọc và hoàn thành
+```text
+TECHNOLOGY → CATEGORY → TOPIC → SUBTOPIC
+```
 
-Hệ thống lưu tiến độ theo user và lesson, gồm trạng thái, thời điểm truy cập, thời gian hoạt động và phần trăm scroll lớn nhất. Đọc đủ điều kiện chưa tự động hoàn tất lesson: người dùng còn phải đạt bài kiểm tra gắn với lesson.
+Node có name, slug duy nhất, type, status, display order và parent. Quan hệ cha/con sai type phải bị từ chối.
 
-### FR-06 — Lộ trình
+### FR-06 — Truy cập cây
 
-V1 có một lộ trình Java Intern hướng tới sẵn sàng phỏng vấn Fresher. Người dùng xem được thứ tự lesson, mục bắt buộc và tiến độ. Không có lộ trình Junior.
+Khách/User chỉ xem node `PUBLISHED`. Admin xem và quản lý mọi trạng thái. Contributor có thể chọn node phù hợp để tạo nội dung theo quyền hiện tại.
 
-## 3. Question Bank và Quiz
+### FR-07 — Xóa node
 
-### FR-07 — Question Bank
+Chỉ node `DRAFT` hoặc `ARCHIVED` được xóa. Khi Admin xác nhận, backend xóa node cùng cây con; nếu vẫn có dữ liệu nghiệp vụ tham chiếu thì phải trả conflict thay vì làm mất dữ liệu ngoài ý muốn.
 
-Câu hỏi được lưu độc lập với quiz để tái sử dụng. Mỗi câu trắc nghiệm V1 có đúng bốn lựa chọn, đúng một đáp án, giải thích đáp án đúng và giải thích vì sao lựa chọn sai không phù hợp. Câu hỏi gắn với subtopic, difficulty và trạng thái xuất bản.
+## 3. Lesson
 
-Ba đáp án nhiễu phải được biên soạn cùng câu hỏi và phù hợp với cùng chủ đề kiến thức. Hệ thống không lấy lựa chọn sai từ câu hỏi khác hoặc từ topic khác.
+### FR-08 — Quản lý Lesson
 
-Question có phiên bản để lịch sử làm bài tham chiếu đúng nội dung đã hiển thị tại thời điểm đó.
+Admin tạo, sửa, publish, archive, gán Lesson vào đúng một `SUBTOPIC`, đặt display order, minimum read seconds, required scroll percent và prerequisite. Không cho self-reference prerequisite.
 
-### FR-08 — Tạo quiz
+### FR-09 — Nội dung giàu định dạng
 
-Quiz có thể là bài kiểm tra gắn với một lesson (cần đạt điểm tối thiểu để hoàn tất lesson), quiz tổng hợp lấy câu theo quy tắc (topic/subtopic, số lượng, difficulty), hoặc quiz cố định do admin chọn sẵn. Backend chọn câu và không trả đáp án đúng trước khi nộp.
+Admin/Contributor dùng Rich Text Editor. Backend sanitize HTML trước khi lưu; loại bỏ script, event handler, iframe, `javascript:` URL và style nguy hiểm. Nội dung plain text cũ vẫn phải hiển thị được.
 
-### FR-09 — Lịch sử làm quiz
+### FR-10 — Ảnh Lesson
 
-Mỗi lần làm tạo một attempt với thời điểm bắt đầu/nộp, điểm, trạng thái và lịch sử câu trả lời. Danh sách câu, thứ tự và phiên bản câu hỏi của attempt phải ổn định.
+Người có quyền upload ảnh hợp lệ lên Supabase Storage rồi chèn URL/path vào content. Validate MIME, dung lượng và quyền; database không lưu binary.
 
-### FR-10 — Chấm điểm và ôn tập
+### FR-11 — Đọc và progress
 
-Backend xác định đúng/sai và tính điểm. Sau khi nộp, người dùng xem giải thích không giới hạn, làm lại quiz và ôn các câu sai.
+User chỉ mở Lesson đã publish. Backend tạo tối đa một `lesson_progress` cho mỗi user + lesson, cập nhật `active_seconds`, `last_viewed_at`, `max_scroll_percent`, `read_qualified_at` và dùng optimistic locking.
 
-## 4. Dashboard; thành tựu và bookmark tùy chọn
+### FR-12 — Hoàn thành Lesson
 
-### FR-11 — Dashboard người học
+Reading qualification đạt khi đủ cả thời gian đọc tối thiểu và tỷ lệ cuộn. Lesson không có assessment hoàn thành khi đủ đọc. Lesson có assessment chỉ hoàn thành khi đủ đọc và có quiz attempt pass.
 
-Dashboard hiển thị số lượt quiz đã hoàn thành; tổng câu đã trả lời, số đúng và sai; số lesson đã hoàn thành; tiến độ theo topic/subtopic; thanh tiến độ Java Intern → sẵn sàng Fresher; hoạt động gần đây và topic yếu.
+## 4. Learning Path
 
-Các số liệu được query từ `lesson_progress`, `quiz_attempts`, `quiz_attempt_questions` và `quiz_attempt_answers`, kết hợp với cây kiến thức/lộ trình. Chỉ thống kê kết quả quiz đã nộp; câu bỏ trống được tách khỏi số câu đã trả lời. Khi JOIN nhiều quan hệ một-nhiều, cần tổng hợp từng nguồn trước hoặc đếm theo đúng khóa để tránh nhân số liệu.
+### FR-13 — Quản lý Path
 
-Thành tựu là phần hiển thị tùy chọn, được tính từ dữ liệu đã có và quy tắc backend. Ví dụ: huy hiệu “Hoàn thành 10 lượt quiz” xuất hiện khi user có ít nhất 10 attempt đã nộp. Không cần bảng `achievements` hoặc `user_achievements`. Nếu thay đổi điều kiện hoặc dữ liệu nguồn, thành tựu hiển thị có thể thay đổi; thiết kế hiện tại không lưu lịch sử trao thành tựu cố định.
+Admin CRUD Learning Path, trạng thái publish/archive và items. Mỗi item gắn Lesson, có display order, required và weight; không trùng Lesson trong cùng Path.
 
-Streak là tùy chọn. Có thể tính streak làm quiz theo ngày nộp attempt và múi giờ thống nhất. `lesson_progress` chỉ lưu trạng thái/thời gian tổng hợp nên không đủ để tái dựng mọi ngày đọc; muốn tính streak bao gồm hoạt động đọc thì cần bổ sung lịch sử hoạt động khi triển khai. Hiện tại chưa tạo bảng `user_activity_days`.
+### FR-14 — Học theo Path
 
-Dashboard không phụ thuộc coding hoặc interview/AI. Chỉ bổ sung thống kê của các phần này khi triển khai; chưa cần bảng tổng hợp dashboard riêng.
+User xem path publish, join một lần, xem path đã join và lesson theo thứ tự. Progress/completion được tính từ trạng thái Lesson theo required/weight hiện có, không nhận giá trị completion trực tiếp từ client.
 
-### FR-12 — Cách tính tiến độ đầu ra
+## 5. Question Bank
 
-Tiến độ lộ trình dựa trên lesson/bài kiểm tra bắt buộc đã đạt và trọng số do lộ trình khai báo. Có thể hiển thị riêng điểm readiness từ bài đánh giá cuối lộ trình. Thanh tiến độ là tín hiệu học tập, không phải lời bảo đảm đậu phỏng vấn.
+### FR-15 — Logical Question
 
-Hoàn thành lộ trình cốt lõi không yêu cầu coding, interview/AI hoặc thành tựu.
+Admin quản lý Question có `code` duy nhất, difficulty, language, category, status và đúng một `SUBTOPIC`.
 
-### FR-13 — Bookmark (tùy chọn)
+### FR-16 — Phiên bản Question
 
-Khi triển khai bookmark, người dùng có thể lưu lesson và câu hỏi quiz. Bookmark câu hỏi phỏng vấn chỉ áp dụng khi có module interview. Bookmark là lựa chọn riêng của user nên cần lưu dữ liệu khi bật chức năng này.
+Question có nhiều `QuestionVersion` bất biến. Sửa nội dung tạo revision mới với version number kế tiếp; không sửa lịch sử đã dùng. `published_version_id` trỏ đến phiên bản đang xuất bản.
 
-## 5. Coding practice (tùy chọn)
+### FR-17 — Options và publish
 
-Chỉ áp dụng các yêu cầu và tạo bảng của mục này khi triển khai coding practice.
+Mỗi phiên bản hợp lệ có đúng 4 option, position 1–4 không trùng, đúng 1 option correct, content/explanation hợp lệ. Chỉ publish khi subtopic đã publish và phiên bản hợp lệ.
 
-### FR-14 — Bài tập Java
+### FR-18 — Batch Question
 
-Bài coding có đề bài, ví dụ, constraints, starter code và test cases. Lưu từng submission và kết quả. V1 dùng mô hình đánh giá đơn giản; không xây dựng hạ tầng chấm code cạnh tranh đầy đủ.
+Admin/Contributor có thể tạo batch theo contract hiện tại. Mỗi phần tử vẫn phải qua cùng validation code/subtopic/version/options; batch lỗi không được tạo dữ liệu nửa chừng.
 
-## 6. Luyện phỏng vấn và AI (tùy chọn)
+## 6. Quiz và Attempt
 
-Chỉ áp dụng các yêu cầu và tạo bảng của mục này khi triển khai interview/AI.
+### FR-19 — Quản lý Quiz
 
-### FR-15 — Interview session
+Admin quản lý Quiz với `code` duy nhất, title, type, selection mode, status, language, category, maximum score, pass percentage và duration khi có.
 
-Người dùng chọn topic/hình thức phỏng vấn Intern, nhận câu hỏi và gửi câu trả lời dạng văn bản.
+### FR-20 — FIXED và RULE_BASED
 
-### FR-16 — Rubric
+- `FIXED`: quản lý danh sách Question publish và display position duy nhất.
+- `RULE_BASED`: mỗi rule chọn theo knowledge node, difficulty tùy chọn và question count dương.
+- Không publish Quiz có cấu hình thiếu hoặc không hợp lệ.
 
-Câu hỏi phỏng vấn có tiêu chí đánh giá phù hợp mục tiêu Intern/Fresher: ý chính cần có, ý bổ sung, lỗi thường gặp và câu trả lời tham khảo.
+### FR-21 — Assessment
 
-### FR-17 — AI đánh giá
+Admin gắn tối đa một assessment Quiz cho Lesson. Quiz assessment phải có type `LESSON`, đã publish khi Lesson publish và dùng pass percentage 80 theo domain hiện tại.
 
-Backend gửi câu trả lời cùng rubric tới dịch vụ AI và nhận phản hồi có cấu trúc: điểm, ý đã đạt, ý còn thiếu/sai, góp ý và lesson đề xuất. API key chỉ nằm ở backend; phản hồi AI phải được kiểm tra trước khi lưu.
+### FR-22 — Start Attempt
 
-### FR-18 — Lịch sử interview
+Chỉ start Quiz publish. Backend chọn Question một lần, yêu cầu RULE_BASED đủ số lượng và lưu snapshot vào attempt: quiz title, pass percentage, language/category/score/duration, question, question version, subtopic và thứ tự. Reload không chọn lại câu.
 
-Lưu session, câu hỏi, câu trả lời gốc, rubric/ngữ cảnh và kết quả đánh giá để người dùng xem lại.
+### FR-23 — Submit và chấm điểm
 
-## 7. Quản trị nội dung và thống kê
+Frontend giữ lựa chọn cục bộ rồi submit một lần. Backend kiểm tra ownership, answer thuộc attempt question, option thuộc đúng version, ngăn duplicate và submit lần hai; backend tính score, đúng/sai và pass/fail. Không trả đáp án đúng trong active attempt.
 
-### FR-19 — Quản lý nội dung
+### FR-24 — Kết quả và lịch sử
 
-Admin tạo, sửa, xem trước, xuất bản và lưu trữ cây kiến thức, lesson, question, quiz và lộ trình. Quản lý bài coding và câu hỏi/rubric interview chỉ áp dụng khi triển khai module tương ứng.
+User xem attempt của chính mình, lịch sử, số câu đúng/sai/chưa trả lời, score, pass/fail, đáp án và explanation sau khi submit. Admin không được dựa vào frontend để bảo vệ ownership.
 
-### FR-20 — Trạng thái nội dung
+## 7. Contributor và kiểm duyệt
 
-Nội dung hỗ trợ `DRAFT → REVIEW → PUBLISHED → ARCHIVED`. Người dùng thường chỉ xem nội dung đã xuất bản.
+### FR-25 — Workspace Contributor
 
-### FR-21 — Thống kê admin
+Contributor tạo và sửa draft nội dung theo phạm vi service hiện tại, xem trạng thái của mình và gửi review. Contributor không được sửa draft của người khác, tự approve hoặc tự publish.
 
-Admin xem nội dung được làm nhiều, câu hay sai, topic yếu và thống kê hoàn thành cơ bản. Các số liệu này được tổng hợp từ lịch sử hoạt động.
+### FR-26 — Review
 
-## 8. Danh sách bảng database cho phạm vi V1
+Admin xem review queue, approve để publish hoặc reject. Reject bắt buộc có lý do khi review comment được hỗ trợ. Hệ thống lưu `content_submissions` và `content_review_events` để truy vết reviewer, thời điểm và quyết định.
 
-Danh sách gồm **19 bảng thuộc phần cốt lõi** và **14 bảng tùy chọn** cho coding, interview/AI và bookmark. Chưa cần tạo bảng tùy chọn khi xây dựng phần cốt lõi. Dashboard, tiến độ tổng hợp và thành tựu được truy vấn/tính từ dữ liệu gốc.
+## 8. Bình luận và thông báo
 
-### Tài khoản và quyền
+### FR-27 — Comment
 
-| Bảng | Mục đích |
+Authenticated user xem/tạo comment trên Lesson/Quiz; chỉ tác giả được sửa/xóa comment của mình, Admin có quyền quản trị theo endpoint hiện tại. Không cho gắn một comment đồng thời vào cả Lesson và Quiz.
+
+### FR-28 — Admin Notification
+
+Comment mới tạo notification cho Admin. Admin xem unread count/danh sách, mở đúng nội dung/comment và đánh dấu một hoặc nhiều notification đã đọc. Không bắt buộc realtime.
+
+## 9. Dashboard, Progress và Learning Games
+
+### FR-29 — Dashboard/Progress
+
+Hiển thị path progress, Lesson đã hoàn thành/đang học và Quiz history từ dữ liệu thật. Achievement được derive từ progress hiện có; không bịa metric hoặc tạo bảng tổng hợp nếu chưa cần.
+
+### FR-30 — Learning Games
+
+Flashcard/Matching dùng nội dung đã publish. UI có progress, remembered/not remembered, matched/correct/incorrect/completion; không yêu cầu lưu game state, leaderboard hay spaced repetition.
+
+## 10. Learning Pet
+
+### FR-31 — Phần thưởng
+
+Lesson completion và Quiz pass hợp lệ tạo Learning Points đúng một lần cho mỗi nguồn hoạt động. Points được quy đổi thành Food theo cấu hình backend.
+
+### FR-32 — Nuôi và nâng cấp
+
+User xem collection, chọn active pet, dùng Food để tăng Energy và upgrade khi đủ ngưỡng. Backend khóa/transaction các thao tác cần thiết, không nhận trực tiếp point/food/energy/level do client đặt.
+
+### FR-33 — Quản trị Pet
+
+Admin cấu hình điểm thưởng, points-per-food, energy-per-food, danh mục Pet, level, asset path, maximum level và có thể xem/quản lý trạng thái Pet user theo API hiện tại.
+
+## 11. UI và vận hành
+
+### FR-34 — Giao diện
+
+Frontend hỗ trợ desktop/tablet/mobile, keyboard/focus cơ bản, loading/empty/error/retry, tiếng Việt/tiếng Anh và Light/Dark/Coder/System. Preference ngôn ngữ/theme được persist; nội dung học không tự dịch.
+
+### FR-35 — Lỗi thống nhất
+
+API dùng error response thống nhất gồm status, code, message, timestamp/field errors khi phù hợp. Validation `400`, authentication `401`, authorization `403`, not found `404`, conflict/state `409`.
+
+### FR-36 — Initial setup
+
+`initial-setup.sql` phải idempotent và chỉ tạo cấu trúc placeholder Java + Pet setup. Không seed user, Lesson, Question, option, Quiz, attempt hoặc progress. Node placeholder mặc định `DRAFT`.
+
+## 12. Bảng dữ liệu hiện có
+
+| Nhóm | Bảng |
 |---|---|
-| `users` | Tài khoản, thông tin người dùng và cột `role` kiểu enum `user_roles` (`USER`, `ADMIN`) |
-| `refresh_tokens` | Quản lý phiên/refresh token; `user_id` tham chiếu `users.id` |
+| Tài khoản | `users`, `refresh_tokens` |
+| Kiến thức/Lesson | `knowledge_nodes`, `lessons`, `lesson_prerequisites`, `lesson_progress` |
+| Learning Path | `learning_paths`, `learning_path_items`, `user_learning_paths` |
+| Question/Quiz | `questions`, `question_versions`, `question_options`, `quizzes`, `quiz_rules`, `quiz_fixed_questions`, `lesson_assessments`, `quiz_attempts`, `quiz_attempt_questions`, `quiz_attempt_answers` |
+| Review | `content_submissions`, `content_review_events` |
+| Tương tác | `content_comments`, `admin_notifications` |
+| Pet | `pet_settings`, `pets`, `pet_level_configs`, `user_pets`, `pet_reward_events` |
 
-Nhóm này chỉ có hai bảng. `user_roles` là kiểu enum, không phải table.
-
-### Cây kiến thức, lesson và lộ trình
-
-| Bảng                   | Mục đích                                               |
-| ---------------------- | ------------------------------------------------------ |
-| `knowledge_nodes`      | Cây Technology/Category/Topic/Subtopic; có `parent_id` |
-| `lessons`              | Tài liệu theo subtopic                                 |
-| `lesson_prerequisites` | Quan hệ bài học tiên quyết, nếu có                     |
-| `lesson_progress`      | Tiến độ đọc, thời gian và trạng thái lesson theo user  |
-| `learning_paths`       | Định nghĩa lộ trình Java Intern → Fresher-ready        |
-| `learning_path_items`  | Lesson bắt buộc, thứ tự và trọng số trong lộ trình     |
-| `user_learning_paths`  | Lộ trình người dùng bắt đầu theo dõi                   |
-
-### Question Bank, quiz và lịch sử
-
-| Bảng                     | Mục đích                                             |
-| ------------------------ | ---------------------------------------------------- |
-| `questions`              | Metadata câu hỏi và subtopic                         |
-| `question_versions`      | Nội dung/lời giải theo phiên bản                     |
-| `question_options`       | Bốn lựa chọn cho phiên bản câu hỏi và cờ đáp án đúng |
-| `quizzes`                | Quiz lesson, quiz tổng hợp hoặc readiness assessment |
-| `quiz_rules`             | Quy tắc chọn câu theo node, số lượng và difficulty   |
-| `quiz_fixed_questions`   | Câu hỏi cố định do admin chọn                        |
-| `lesson_assessments`     | Gắn lesson với quiz bắt buộc và điểm đạt             |
-| `quiz_attempts`          | Một lần làm quiz của một user                        |
-| `quiz_attempt_questions` | Câu/phiên bản/thứ tự đã chọn trong attempt           |
-| `quiz_attempt_answers`   | Câu trả lời và kết quả chấm của user                 |
-
-### Coding practice (tùy chọn — 4 bảng)
-
-| Bảng                  | Mục đích                                   |
-| --------------------- | ------------------------------------------ |
-| `coding_exercises`    | Đề bài và starter code                     |
-| `coding_test_cases`   | Test công khai/ẩn dùng để đánh giá         |
-| `coding_submissions`  | Code người dùng gửi và trạng thái thực thi |
-| `coding_test_results` | Kết quả từng test case                     |
-
-### Interview và đánh giá AI (tùy chọn — 7 bảng)
-
-| Bảng                          | Mục đích                                          |
-| ----------------------------- | ------------------------------------------------- |
-| `interview_questions`         | Câu hỏi phỏng vấn theo subtopic                   |
-| `interview_rubrics`           | Hướng dẫn chấm cho từng câu hỏi                   |
-| `interview_rubric_criteria`   | Các tiêu chí cụ thể trong rubric                  |
-| `interview_sessions`          | Một phiên luyện phỏng vấn                         |
-| `interview_session_questions` | Câu hỏi và thứ tự trong session                   |
-| `interview_answers`           | Câu trả lời gốc của user                          |
-| `ai_evaluations`              | Điểm, model, trạng thái và kết quả AI đã xác thực |
-
-### Thành tựu và bookmark (tùy chọn — 3 bảng bookmark)
-
-Thành tựu được tính theo FR-11 và không cần bảng riêng. Chỉ tạo các bảng dưới đây khi triển khai bookmark; `interview_question_bookmarks` còn phụ thuộc module interview.
-
-| Bảng                           | Mục đích                                 |
-| ------------------------------ | ---------------------------------------- |
-| `lesson_bookmarks`             | Lesson được user lưu                     |
-| `question_bookmarks`           | Question được user lưu                   |
-| `interview_question_bookmarks` | Interview question được user lưu         |
-
-Không tạo bảng `achievements`, `user_achievements`, `user_activity_days`, `dashboard_stats`, `topic_progress` hoặc `user_node_progress` trong thiết kế hiện tại. Có thể thêm cache tổng hợp sau nếu đo đạc cho thấy truy vấn thực tế chậm.
-
-## 9. Ảnh hưởng tới các bảng khác
-
-- Các bảng nghiệp vụ vẫn tham chiếu `users.id`; dùng enum cho role không làm thay đổi các khóa ngoại này. Logic phân quyền đọc trực tiếp `users.role`.
-- Bảng cốt lõi không có khóa ngoại bắt buộc tới bảng tùy chọn. Bảng tùy chọn có thể tham chiếu bảng cốt lõi nên có thể bổ sung sau.
-- Tính thành tựu qua truy vấn không thay đổi quan hệ lesson/quiz/attempt. Cần giữ dữ liệu hoạt động gốc để tính đúng kết quả.
-- Nếu đã triển khai quan hệ user-role nhiều-nhiều, cần chuyển dữ liệu sang `users.role` và cập nhật logic phân quyền trước khi bỏ bảng cũ. Việc sửa tài liệu này không tự thay đổi database đang chạy.
+Không có bảng coding, AI interview, bookmark, achievement, game progress hoặc dashboard aggregate trong phạm vi đã triển khai.

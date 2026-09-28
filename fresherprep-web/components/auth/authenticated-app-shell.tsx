@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/shell";
-import { Button, Feedback } from "@/components/ui";
+import { Button, Feedback, LoadingState } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { CurrentUser } from "@/lib/auth/types";
 import { useI18n } from "@/lib/i18n";
@@ -117,12 +117,6 @@ export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) 
 }
 
 function WorkspaceLoading({ label }: { label: string }) {
-  return (
-    <div className="mx-auto max-w-3xl animate-pulse space-y-5 py-4 motion-reduce:animate-none" role="status">
-      <span className="sr-only">{label}</span>
-      <div className="h-7 w-52 rounded bg-surface-strong" />
-      <div className="h-4 w-full max-w-xl rounded bg-surface-strong" />
-      <div className="mt-8 h-36 rounded-lg border border-border bg-surface" />
-    </div>
-  );
+  const { t } = useI18n();
+  return <LoadingState className="mx-auto max-w-3xl" title={label} description={t("Please wait a moment.")} />;
 }

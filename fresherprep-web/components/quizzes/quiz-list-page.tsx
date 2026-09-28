@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { Badge, Button, Feedback, Label, Select, Skeleton } from "@/components/ui";
+import { Badge, Button, Feedback, Label, LoadingState, Select } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { PageResponse } from "@/lib/dashboard/types";
 import type { PublishedQuiz } from "@/lib/quizzes/types";
@@ -42,7 +42,7 @@ export function QuizListPage() {
   }, [page, reload, t, tab, category]);
 
   if (error && !data) return <div className="mx-auto max-w-3xl py-10"><Feedback tone="error" title={t("Quizzes unavailable")}>{error}</Feedback><Button className="mt-4" variant="secondary" onClick={() => { setError(undefined); setReload((value) => value + 1); }}>{t("Try again")}</Button></div>;
-  if (!data) return <div className="mx-auto max-w-6xl" role="status"><span className="sr-only">{t("Loading quizzes")}</span><Skeleton className="h-9 w-60" /><div className="mt-8 grid gap-4 md:grid-cols-2"><Skeleton className="h-40 rounded-lg" /><Skeleton className="h-40 rounded-lg" /></div></div>;
+  if (!data) return <LoadingState className="mx-auto max-w-3xl" title={t("Loading quizzes...")} description={t("Please wait a moment.")} />;
 
   return <div className="mx-auto w-full max-w-6xl">
     <header className="max-w-3xl"><p className="text-sm font-semibold text-primary">{t("Assessments")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text sm:text-4xl">{t("Quizzes")}</h1><p className="mt-3 text-sm leading-6 text-text-muted">{t("Choose a published assessment. Questions are created by the backend when you start an attempt.")}</p></header>
