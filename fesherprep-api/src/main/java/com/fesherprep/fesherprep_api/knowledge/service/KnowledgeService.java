@@ -183,11 +183,25 @@ public class KnowledgeService {
         if (node.getStatus() != ContentStatus.DRAFT && node.getStatus() != ContentStatus.ARCHIVED) {
             throw new IllegalStateException("Only draft or archived nodes can be deleted");
         }
-        if (knowledgeNodeRepository.existsByParentId(id)) {
-            throw new IllegalStateException("Delete or move child nodes first");
-        }
-        knowledgeNodeRepository.delete(node);
+        knowledgeNodeRepository.deleteAllByIdInBatch(collectSubtreeIds(id));
         knowledgeNodeRepository.flush();
+    }
+
+    private List<UUID> collectSubtreeIds(UUID rootId) {
+        List<UUID> subtreeIds = new ArrayList<>();
+        Deque<UUID> pending = new ArrayDeque<>();
+        pending.add(rootId);
+
+        while (!pending.isEmpty()) {
+            UUID currentId = pending.removeFirst();
+            subtreeIds.add(currentId);
+            knowledgeNodeRepository.findAllByParentIdOrderByDisplayOrderAscNameAsc(currentId)
+                    .stream()
+                    .map(KnowledgeNode::getId)
+                    .forEach(pending::addLast);
+        }
+
+        return subtreeIds;
     }
 
     private KnowledgeNode requirePublished(UUID id) {

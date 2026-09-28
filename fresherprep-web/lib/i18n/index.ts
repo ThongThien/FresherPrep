@@ -1032,6 +1032,9 @@ Object.assign(vi, {
   "Feed Pet": "Cho Pet \u0103n",
   "Upgrade Pet": "N\u00e2ng c\u1ea5p Pet",
   "Complete lessons and pass quizzes to earn Learning Points and Food.": "Ho\u00e0n th\u00e0nh b\u00e0i h\u1ecdc v\u00e0 \u0111\u1ea1t Quiz \u0111\u1ec3 nh\u1eadn \u0110i\u1ec3m h\u1ecdc t\u1eadp v\u00e0 Th\u1ee9c \u0103n.",
+  "Delete \"{{name}}\" and {{count}} descendant knowledge nodes? This cannot be undone.": "X\u00f3a \"{{name}}\" v\u00e0 {{count}} n\u00fat ki\u1ebfn th\u1ee9c con? Thao t\u00e1c n\u00e0y kh\u00f4ng th\u1ec3 ho\u00e0n t\u00e1c.",
+  "Delete \"{{name}}\"? This cannot be undone.": "X\u00f3a \"{{name}}\"? Thao t\u00e1c n\u00e0y kh\u00f4ng th\u1ec3 ho\u00e0n t\u00e1c.",
+  "Knowledge subtree deleted.": "\u0110\u00e3 x\u00f3a n\u00fat cha v\u00e0 to\u00e0n b\u1ed9 n\u00fat con.",
 });
 
 export function useI18n() {

@@ -62,6 +62,8 @@ export function KnowledgeManagement() {
   );
   const parentType = expectedParent[form.type];
   const parentOptions = parentType ? nodes.filter((node) => node.type === parentType && node.id !== selectedId) : [];
+  const selectedNode = selectedId ? nodes.find((node) => node.id === selectedId) : undefined;
+  const selectedDescendantCount = selectedId ? countDescendants(nodes, selectedId) : 0;
 
   function startCreate() {
     setSelectedId(undefined);
@@ -134,14 +136,21 @@ export function KnowledgeManagement() {
   }
 
   async function deleteNode() {
-    if (!selectedId || !window.confirm(t("Delete this knowledge node? This cannot be undone."))) return;
+    if (!selectedId || !selectedNode) return;
+    const confirmation = selectedDescendantCount > 0
+      ? t('Delete "{{name}}" and {{count}} descendant knowledge nodes? This cannot be undone.', {
+          name: selectedNode.name,
+          count: selectedDescendantCount,
+        })
+      : t('Delete "{{name}}"? This cannot be undone.', { name: selectedNode.name });
+    if (!window.confirm(confirmation)) return;
     setPending(true);
     setError(undefined);
     try {
       await adminRequest<void>(`knowledge/nodes/${selectedId}`, { method: "DELETE" });
       startCreate();
       await load();
-      setSuccess(t("Knowledge node deleted."));
+      setSuccess(t(selectedDescendantCount > 0 ? "Knowledge subtree deleted." : "Knowledge node deleted."));
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
@@ -245,6 +254,26 @@ export function KnowledgeManagement() {
       </div>
     </div>
   );
+}
+
+function countDescendants(nodes: KnowledgeNode[], rootId: string) {
+  const childrenByParent = new Map<string, string[]>();
+  for (const node of nodes) {
+    if (!node.parentId) continue;
+    const children = childrenByParent.get(node.parentId) ?? [];
+    children.push(node.id);
+    childrenByParent.set(node.parentId, children);
+  }
+
+  let count = 0;
+  const pending = [...(childrenByParent.get(rootId) ?? [])];
+  while (pending.length) {
+    const currentId = pending.pop();
+    if (!currentId) continue;
+    count += 1;
+    pending.push(...(childrenByParent.get(currentId) ?? []));
+  }
+  return count;
 }
 
 function flattenTree(nodes: KnowledgeNode[]) {
