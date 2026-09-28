@@ -165,7 +165,6 @@ public class UserService {
         User user = requireUser(userId);
         if (user.getRole() != role) {
             user.changeRole(role);
-            refreshTokenRepository.revokeActiveByUserId(userId, clock.instant());
         }
         return user;
     }
