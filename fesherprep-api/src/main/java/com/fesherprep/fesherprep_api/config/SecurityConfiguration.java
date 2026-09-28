@@ -39,7 +39,11 @@ import tools.jackson.databind.ObjectMapper;
 
 @Configuration(proxyBeanMethods = false)
 @EnableMethodSecurity
-@EnableConfigurationProperties({ JwtProperties.class, AuthRateLimitProperties.class })
+@EnableConfigurationProperties({
+        JwtProperties.class,
+        AuthRateLimitProperties.class,
+        LoginChallengeProperties.class
+})
 public class SecurityConfiguration {
 
     @Bean

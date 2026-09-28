@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final LoginChallengeService loginChallengeService;
     private final JwtService jwtService;
     private final JwtProperties jwtProperties;
     private final Clock clock;
@@ -57,12 +59,24 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthenticationResponse login(@Valid LoginRequest request) {
+    public AuthenticationResponse login(@Valid LoginRequest request, String clientAddress) {
         String email = FresherPrepUserDetailsService.normalizeEmail(request.email());
         validatePassword(request.password());
-        authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken.unauthenticated(email, request.password())
+        loginChallengeService.verifyIfRequired(
+                email, clientAddress, request.challengeId(), request.challengeAnswer()
         );
+        try {
+            authenticationManager.authenticate(
+                    UsernamePasswordAuthenticationToken.unauthenticated(email, request.password())
+            );
+        } catch (AuthenticationException exception) {
+            var challenge = loginChallengeService.recordAuthenticationFailure(email, clientAddress);
+            if (challenge.isPresent()) {
+                throw new LoginChallengeRequiredException(challenge.get());
+            }
+            throw exception;
+        }
+        loginChallengeService.clear(email, clientAddress);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists"));
         return new AuthenticationResponse(UserResponse.from(user), issueTokens(user));

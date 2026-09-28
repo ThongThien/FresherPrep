@@ -10,6 +10,7 @@ import com.fesherprep.fesherprep_api.lesson.domain.LessonProgress;
 import com.fesherprep.fesherprep_api.lesson.dto.*;
 import com.fesherprep.fesherprep_api.lesson.repository.LessonPrerequisiteRepository;
 import com.fesherprep.fesherprep_api.lesson.repository.LessonProgressRepository;
+import com.fesherprep.fesherprep_api.pet.service.PetService;
 import com.fesherprep.fesherprep_api.lesson.repository.LessonRepository;
 import com.fesherprep.fesherprep_api.learningpath.domain.LearningPathItem;
 import com.fesherprep.fesherprep_api.learningpath.repository.LearningPathItemRepository;
@@ -47,6 +48,7 @@ public class LessonService {
     private final UserRepository userRepository;
     private final LessonAssessmentRepository assessmentRepository;
     private final LessonCompletionService completionService;
+    private final PetService petService;
     private final LearningPathItemRepository learningPathItemRepository;
     private final PublishedLessonCacheService publishedLessonCacheService;
     private final Clock clock;
@@ -123,7 +125,12 @@ public class LessonService {
                 .findByUserIdAndLessonId(user.getId(), lessonId)
                 .orElseThrow(() -> new IllegalStateException("Start the lesson before recording progress"));
         progress.recordReading(request.activeSeconds(), request.scrollPercent(), clock.instant());
-        return progressResponse(user.getId(), progress);
+        LessonCompletionService.LessonCompletionResult completion =
+                completionService.evaluate(user.getId(), lesson, progress);
+        if (completion.completed()) {
+            petService.awardLessonCompletion(user, lesson);
+        }
+        return progressResponse(progress, completion);
     }
 
     @PreAuthorize("isAuthenticated()")

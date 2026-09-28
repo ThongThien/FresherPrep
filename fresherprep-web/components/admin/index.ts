@@ -10,3 +10,4 @@ export * from "./quiz-management";
 export * from "./ui-foundation-preview";
 export * from "./user-management";
 export * from "./review-management";
+export * from "./pet-configuration";

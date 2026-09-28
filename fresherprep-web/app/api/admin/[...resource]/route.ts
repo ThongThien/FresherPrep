@@ -12,6 +12,8 @@ const targets: Record<string, string> = {
   questions: "/api/questions",
   users: "/api/admin/users",
   reviews: "/api/admin/reviews",
+  notifications: "/api/admin/notifications",
+  "pet-config": "/api/admin/pet-config",
 };
 
 type Context = { params: Promise<{ resource: string[] }> };

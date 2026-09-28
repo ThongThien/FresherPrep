@@ -29,11 +29,21 @@ export interface ApiError {
   code: string;
   message: string;
   fieldErrors: Record<string, string>;
+  challenge?: LoginChallenge;
 }
 
 export interface LoginInput {
   email: string;
   password: string;
+  challengeId?: string;
+  challengeAnswer?: string;
+}
+
+export interface LoginChallenge {
+  id: string;
+  question: string;
+  hint: string;
+  expiresAt: string;
 }
 
 export interface RegisterInput extends LoginInput {

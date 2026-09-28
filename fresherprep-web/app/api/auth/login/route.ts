@@ -43,7 +43,12 @@ async function readLoginInput(request: NextRequest): Promise<LoginInput | null> 
   try {
     const value = (await request.json()) as Partial<LoginInput>;
     if (typeof value.email !== "string" || typeof value.password !== "string") return null;
-    return { email: value.email.trim(), password: value.password };
+    return {
+      email: value.email.trim(),
+      password: value.password,
+      challengeId: typeof value.challengeId === "string" ? value.challengeId : undefined,
+      challengeAnswer: typeof value.challengeAnswer === "string" ? value.challengeAnswer : undefined,
+    };
   } catch {
     return null;
   }

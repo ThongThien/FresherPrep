@@ -3,6 +3,7 @@ package com.fesherprep.fesherprep_api.user.controller;
 import com.fesherprep.fesherprep_api.user.dto.*;
 import com.fesherprep.fesherprep_api.user.service.AuthService;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,8 +21,11 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public AuthenticationResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public AuthenticationResponse login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        return authService.login(request, servletRequest.getRemoteAddr());
     }
 
     @PostMapping("/refresh")

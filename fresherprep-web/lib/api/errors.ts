@@ -35,6 +35,7 @@ export function backendErrorResponse(status: number, payload: unknown) {
         code: payload.code || "REQUEST_FAILED",
         message: payload.message || ERROR_MESSAGES[status] || "The request could not be completed.",
         fieldErrors: payload.fieldErrors ?? {},
+        challenge: payload.challenge,
       },
       { status },
     );

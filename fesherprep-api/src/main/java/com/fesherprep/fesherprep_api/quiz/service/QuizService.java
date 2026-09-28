@@ -5,6 +5,8 @@ import com.fesherprep.fesherprep_api.knowledge.domain.KnowledgeNode;
 import com.fesherprep.fesherprep_api.knowledge.repository.KnowledgeNodeRepository;
 import com.fesherprep.fesherprep_api.lesson.domain.LessonProgress;
 import com.fesherprep.fesherprep_api.lesson.repository.LessonProgressRepository;
+import com.fesherprep.fesherprep_api.lesson.service.LessonCompletionService;
+import com.fesherprep.fesherprep_api.pet.service.PetService;
 import com.fesherprep.fesherprep_api.question.domain.Question;
 import com.fesherprep.fesherprep_api.question.domain.QuestionOption;
 import com.fesherprep.fesherprep_api.question.domain.QuestionCategory;
@@ -48,6 +50,8 @@ public class QuizService {
     private final KnowledgeNodeRepository knowledgeNodeRepository;
     private final UserRepository userRepository;
     private final LessonProgressRepository lessonProgressRepository;
+    private final LessonCompletionService lessonCompletionService;
+    private final PetService petService;
     private final Clock clock;
 
     @PreAuthorize("isAuthenticated()")
@@ -152,6 +156,21 @@ public class QuizService {
                 .filter(Objects::nonNull)
                 .toList());
         attemptRepository.flush();
+        if (attempt.isPassed()) {
+            petService.awardQuizPass(user, attempt.getQuiz());
+            for (LessonAssessment assessment : lessonAssessmentRepository.findAllByQuizId(
+                    attempt.getQuiz().getId()
+            )) {
+                LessonProgress progress = lessonProgressRepository
+                        .findFirstByUserIdAndLessonId(user.getId(), assessment.getLesson().getId())
+                        .orElse(null);
+                if (lessonCompletionService.evaluate(
+                        user.getId(), assessment.getLesson(), progress
+                ).completed()) {
+                    petService.awardLessonCompletion(user, assessment.getLesson());
+                }
+            }
+        }
         return QuizAttemptResponse.from(attempt);
     }
 

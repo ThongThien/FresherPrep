@@ -13,6 +13,7 @@ export async function readApiError(response: Response): Promise<ApiError> {
           : "The request could not be completed. Please try again.",
       fieldErrors:
         value.fieldErrors && typeof value.fieldErrors === "object" ? value.fieldErrors : {},
+      challenge: isLoginChallenge(value.challenge) ? value.challenge : undefined,
     };
   } catch {
     return {
@@ -23,6 +24,15 @@ export async function readApiError(response: Response): Promise<ApiError> {
       fieldErrors: {},
     };
   }
+}
+
+function isLoginChallenge(value: unknown): value is NonNullable<ApiError["challenge"]> {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<NonNullable<ApiError["challenge"]>>;
+  return typeof candidate.id === "string"
+    && typeof candidate.question === "string"
+    && typeof candidate.hint === "string"
+    && typeof candidate.expiresAt === "string";
 }
 
 export function userFacingAuthMessage(error: ApiError, operation: "login" | "register") {

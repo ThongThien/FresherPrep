@@ -12,6 +12,7 @@ export const adminNavigation: readonly AdminNavigationItem[] = [
   { label: "Questions", href: "/admin/questions" },
   { label: "Quizzes", href: "/admin/quizzes" },
   { label: "Reviews", href: "/admin/reviews" },
+  { label: "Learning Pet", href: "/admin/pet" },
   { label: "UI foundation", href: "/admin/ui-foundation" },
   { label: "Users", href: "/admin/users" },
 ];

@@ -1,5 +1,7 @@
 package com.fesherprep.fesherprep_api.shared.exception;
 
+import com.fesherprep.fesherprep_api.comment.service.CommentNotFoundException;
+import com.fesherprep.fesherprep_api.comment.service.NotificationNotFoundException;
 import com.fesherprep.fesherprep_api.contribution.service.ContributionNotFoundException;
 import com.fesherprep.fesherprep_api.knowledge.service.DuplicateKnowledgeSlugException;
 import com.fesherprep.fesherprep_api.knowledge.service.KnowledgeNodeNotFoundException;
@@ -16,7 +18,9 @@ import com.fesherprep.fesherprep_api.quiz.service.QuizAttemptNotFoundException;
 import com.fesherprep.fesherprep_api.quiz.service.QuizNotFoundException;
 import com.fesherprep.fesherprep_api.shared.dto.ApiErrorResponse;
 import com.fesherprep.fesherprep_api.user.service.EmailAlreadyUsedException;
+import com.fesherprep.fesherprep_api.user.service.LoginChallengeRequiredException;
 import com.fesherprep.fesherprep_api.user.service.UserNotFoundException;
+import com.fesherprep.fesherprep_api.user.dto.LoginChallengeErrorResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -49,7 +53,9 @@ public class GlobalExceptionHandler {
             QuizNotFoundException.class,
             QuizAttemptNotFoundException.class,
             UserNotFoundException.class,
-            ContributionNotFoundException.class
+            ContributionNotFoundException.class,
+            CommentNotFoundException.class,
+            NotificationNotFoundException.class
     })
     public ResponseEntity<ApiErrorResponse> handleNotFound(RuntimeException exception) {
         return response(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", exception.getMessage());
@@ -150,6 +156,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiErrorResponse> handleAuthentication(AuthenticationException exception) {
         return response(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Authentication is required or invalid");
+    }
+
+    @ExceptionHandler(LoginChallengeRequiredException.class)
+    public ResponseEntity<LoginChallengeErrorResponse> handleLoginChallenge(
+            LoginChallengeRequiredException exception
+    ) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(LoginChallengeErrorResponse.required(exception.getChallenge()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

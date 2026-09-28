@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Badge, Button, Feedback } from "@/components/ui";
+import { CommentSection } from "@/components/comments/comment-section";
 import { readApiError } from "@/lib/api/client";
 import type { PublishedQuiz, QuizAttempt } from "@/lib/quizzes/types";
 import { useI18n } from "@/lib/i18n";
@@ -67,6 +68,7 @@ export function QuizStartPage({ quizId }: { quizId: string }) {
       {error ? <Feedback className="mt-5" tone="error" title={t("Unable to start")}>{error}</Feedback> : null}
       <Button className="mt-6 w-full sm:w-auto" size="lg" loading={starting} onClick={() => void start()}>{starting ? t("Starting...") : t("Start quiz")}</Button>
     </section>
+    <CommentSection targetType="quizzes" targetId={quizId} />
   </div>;
 }
 
