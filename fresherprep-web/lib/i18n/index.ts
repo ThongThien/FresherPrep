@@ -1035,6 +1035,18 @@ Object.assign(vi, {
   "Delete \"{{name}}\" and {{count}} descendant knowledge nodes? This cannot be undone.": "X\u00f3a \"{{name}}\" v\u00e0 {{count}} n\u00fat ki\u1ebfn th\u1ee9c con? Thao t\u00e1c n\u00e0y kh\u00f4ng th\u1ec3 ho\u00e0n t\u00e1c.",
   "Delete \"{{name}}\"? This cannot be undone.": "X\u00f3a \"{{name}}\"? Thao t\u00e1c n\u00e0y kh\u00f4ng th\u1ec3 ho\u00e0n t\u00e1c.",
   "Knowledge subtree deleted.": "\u0110\u00e3 x\u00f3a n\u00fat cha v\u00e0 to\u00e0n b\u1ed9 n\u00fat con.",
+  "User Pets": "Pet c\u1ee7a ng\u01b0\u1eddi d\u00f9ng",
+  "Monitor Pet progress for users who have initialized their Learning Pet.": "Theo d\u00f5i ti\u1ebfn \u0111\u1ed9 Pet c\u1ee7a nh\u1eefng ng\u01b0\u1eddi d\u00f9ng \u0111\u00e3 kh\u1edfi t\u1ea1o Pet h\u1ecdc t\u1eadp.",
+  "Search Pet users": "T\u00ecm ng\u01b0\u1eddi d\u00f9ng c\u00f3 Pet",
+  "Search by name or email": "T\u00ecm theo t\u00ean ho\u1eb7c email",
+  "Loading user Pets...": "\u0110ang t\u1ea3i Pet ng\u01b0\u1eddi d\u00f9ng...",
+  "Unable to load user Pets.": "Kh\u00f4ng th\u1ec3 t\u1ea3i Pet ng\u01b0\u1eddi d\u00f9ng.",
+  "Unable to load user Pets": "Kh\u00f4ng th\u1ec3 t\u1ea3i Pet ng\u01b0\u1eddi d\u00f9ng",
+  "No initialized Pets": "Ch\u01b0a c\u00f3 Pet \u0111\u01b0\u1ee3c kh\u1edfi t\u1ea1o",
+  "A Pet appears here after a user opens their Learning Pet for the first time.": "Pet s\u1ebd xu\u1ea5t hi\u1ec7n \u1edf \u0111\u00e2y sau khi ng\u01b0\u1eddi d\u00f9ng m\u1edf Pet h\u1ecdc t\u1eadp l\u1ea7n \u0111\u1ea7u.",
+  "Pet user accounts": "Danh s\u00e1ch Pet ng\u01b0\u1eddi d\u00f9ng",
+  "Pet Level": "C\u1ea5p Pet",
+  "Energy": "N\u0103ng l\u01b0\u1ee3ng",
 });
 
 export function useI18n() {

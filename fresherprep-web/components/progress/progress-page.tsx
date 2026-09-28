@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Badge, Button, Feedback, Progress } from "@/components/ui";
+import { PetPanel } from "@/components/pet/pet-panel";
 import { readApiError } from "@/lib/api/client";
 import type { LessonProgress, QuizAttemptSummary } from "@/lib/dashboard/types";
 import { useI18n } from "@/lib/i18n";
@@ -43,6 +44,10 @@ export function LearningProgressPage() {
       <Summary label={t("Active paths")} value={String(data.paths.totalElements)} />
       <Summary label={t("Completed lessons")} value={String(completedLessons.length)} />
       <Summary label={t("Submitted quizzes")} value={String(submittedAttempts.length)} />
+    </section>
+
+    <section className="mt-10" aria-label={t("Learning Pet")}>
+      <PetPanel />
     </section>
 
     <section className="mt-10" aria-labelledby="paths-title">

@@ -29,3 +29,18 @@ export interface PetConfiguration {
   maximumLevel: number;
   levels: PetLevelConfig[];
 }
+
+export interface AdminUserPet {
+  petId: string;
+  userId: string;
+  email: string;
+  displayName: string;
+  role: "USER" | "CONTRIBUTOR" | "ADMIN";
+  active: boolean;
+  totalLearningPoints: number;
+  pointBalance: number;
+  availableFood: number;
+  energy: number;
+  currentLevel: number;
+  updatedAt: string;
+}

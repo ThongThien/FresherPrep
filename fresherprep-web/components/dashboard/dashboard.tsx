@@ -12,7 +12,6 @@ import {
   type AchievementIcon as AchievementIconName,
 } from "@/lib/dashboard/achievements";
 import { useI18n, type Locale } from "@/lib/i18n";
-import { PetPanel } from "@/components/pet/pet-panel";
 import type {
   DashboardData,
   DashboardSection as DashboardSectionKey,
@@ -108,8 +107,6 @@ function DashboardContent({ data, onRetry }: { data: DashboardData; onRetry: () 
         hasDataError={hasAnyIssue(data, ["lessons", "paths", "pathProgress"])}
         onRetry={onRetry}
       />
-
-      <PetPanel />
 
       <DashboardSection
         eyebrow={t("Current progress")}

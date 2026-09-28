@@ -13,6 +13,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -25,6 +29,8 @@ import java.util.stream.Collectors;
 @Validated
 @RequiredArgsConstructor
 public class PetService {
+    private static final Set<String> ADMIN_PET_SORT_FIELDS =
+            Set.of("updatedAt", "petLevel", "totalLearningPoints");
     private final PetSettingsRepository settingsRepository;
     private final PetLevelConfigRepository levelRepository;
     private final UserPetRepository userPetRepository;
@@ -100,6 +106,19 @@ public class PetService {
         return PetConfigResponse.from(settings, levelResponses());
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional(readOnly = true)
+    public Page<AdminUserPetResponse> getAdminUserPets(String search, Pageable pageable) {
+        Pageable safePageable = adminPetPageable(pageable);
+        Page<UserPet> pets = search == null || search.isBlank()
+                ? userPetRepository.findAll(safePageable)
+                : userPetRepository
+                        .findAllByUserEmailContainingIgnoreCaseOrUserDisplayNameContainingIgnoreCase(
+                                search.strip(), search.strip(), safePageable
+                        );
+        return pets.map(AdminUserPetResponse::from);
+    }
+
     @Transactional
     public void awardLessonCompletion(User user, Lesson lesson) {
         award(user, PetActivityType.LESSON_COMPLETED, lesson.getId());
@@ -161,10 +180,26 @@ public class PetService {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new AuthenticationCredentialsNotFoundException("Authentication is required");
         }
-        User current = userRepository.findByEmail(authentication.getName())
-                .filter(User::isActive)
-                .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("User is unavailable"));
-        return userRepository.findByIdForUpdate(current.getId())
-                .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("User is unavailable"));
+        try {
+            return userRepository.findByIdForUpdate(UUID.fromString(authentication.getName()))
+                    .filter(User::isActive)
+                    .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("User is unavailable"));
+        } catch (IllegalArgumentException exception) {
+            throw new AuthenticationCredentialsNotFoundException("Invalid authenticated principal");
+        }
+    }
+
+    private static Pageable adminPetPageable(Pageable pageable) {
+        List<Sort.Order> orders = pageable.getSort().stream()
+                .filter(order -> ADMIN_PET_SORT_FIELDS.contains(order.getProperty()))
+                .toList();
+        Sort sort = orders.isEmpty()
+                ? Sort.by(Sort.Direction.DESC, "updatedAt")
+                : Sort.by(orders);
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                Math.min(pageable.getPageSize(), 100),
+                sort
+        );
     }
 }

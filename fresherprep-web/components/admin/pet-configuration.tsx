@@ -1,13 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Button, Card, CardContent, Feedback, Input, Label, Textarea } from "@/components/ui";
+import { Badge, Button, Card, CardContent, Feedback, Input, Label, Textarea } from "@/components/ui";
 import { adminRequest, jsonBody } from "@/lib/admin/client";
-import type { PetConfiguration } from "@/lib/pet/types";
+import type { AdminPage } from "@/lib/admin/types";
+import type { AdminUserPet, PetConfiguration } from "@/lib/pet/types";
 import { useI18n } from "@/lib/i18n";
 
-import { AdminPageHeader } from "./admin-ui";
+import {
+  AdminDataTable,
+  AdminEmptyState,
+  AdminErrorState,
+  AdminLoadingState,
+  AdminPageHeader,
+  AdminPagination,
+  AdminSearch,
+  AdminToolbar,
+  type AdminTableColumn,
+} from "./admin-ui";
 
 export function PetConfigurationPage() {
   const { t } = useI18n();
@@ -85,10 +96,107 @@ export function PetConfigurationPage() {
         </div>
         <Button type="submit" size="lg" loading={pending}>{t("Save Pet configuration")}</Button>
       </form> : null}
+      <UserPetManagement />
     </div>
   );
 }
 
 function NumberField({ id, label, value, min, max, onChange }: { id: string; label: string; value: number; min: number; max?: number; onChange: (value: string) => void }) {
   return <div><Label htmlFor={id}>{label}</Label><Input id={id} type="number" min={min} max={max} required value={value} onChange={(event) => onChange(event.target.value)} /></div>;
+}
+
+function UserPetManagement() {
+  const { locale, t } = useI18n();
+  const [pets, setPets] = useState<AdminUserPet[]>([]);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(0);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(undefined);
+    const params = new URLSearchParams({
+      page: String(page),
+      size: "20",
+      sort: "updatedAt,desc",
+    });
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    try {
+      const result = await adminRequest<AdminPage<AdminUserPet>>("pet-config/users?" + params.toString());
+      setPets(result.content);
+      setTotalPages(result.totalPages);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t("Unable to load user Pets."));
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedSearch, page, t]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(
+    locale === "vi" ? "vi-VN" : "en-US",
+    { dateStyle: "medium", timeStyle: "short" },
+  ), [locale]);
+
+  const columns: readonly AdminTableColumn<AdminUserPet>[] = [
+    {
+      key: "user",
+      header: t("User"),
+      cell: (pet) => <div><p className="font-semibold text-text">{pet.displayName}</p><p className="mt-1 text-xs">{pet.email}</p></div>,
+    },
+    {
+      key: "role",
+      header: t("Role"),
+      cell: (pet) => <Badge variant={pet.role === "ADMIN" ? "info" : pet.role === "CONTRIBUTOR" ? "warning" : "neutral"}>{pet.role}</Badge>,
+    },
+    { key: "level", header: t("Pet Level"), cell: (pet) => <span className="font-semibold text-text">{pet.currentLevel}</span> },
+    { key: "points", header: t("Learning Points"), cell: (pet) => pet.totalLearningPoints },
+    { key: "food", header: t("Available Food"), cell: (pet) => pet.availableFood },
+    { key: "energy", header: t("Energy"), cell: (pet) => pet.energy },
+    { key: "updated", header: t("Updated at"), cell: (pet) => dateFormatter.format(new Date(pet.updatedAt)) },
+  ];
+
+  return (
+    <section className="mt-12 border-t border-border pt-8" aria-labelledby="user-pets-title">
+      <div>
+        <h2 className="text-2xl font-semibold text-text" id="user-pets-title">{t("User Pets")}</h2>
+        <p className="mt-2 text-sm leading-6 text-text-muted">{t("Monitor Pet progress for users who have initialized their Learning Pet.")}</p>
+      </div>
+      <div className="mt-5">
+        <AdminToolbar>
+          <AdminSearch value={search} onChange={setSearch} label={t("Search Pet users")} placeholder={t("Search by name or email")} />
+        </AdminToolbar>
+      </div>
+      <div className="mt-5">
+        {loading ? <AdminLoadingState label={t("Loading user Pets...")} /> : error ? (
+          <AdminErrorState title={t("Unable to load user Pets")} message={error} onRetry={() => void load()} />
+        ) : pets.length ? (
+          <>
+            <AdminDataTable columns={columns} rows={pets} rowKey={(pet) => pet.petId} caption={t("Pet user accounts")} />
+            <AdminPagination page={page} totalPages={totalPages} disabled={loading} onPageChange={setPage} />
+          </>
+        ) : (
+          <AdminEmptyState
+            title={t("No initialized Pets")}
+            description={t("A Pet appears here after a user opens their Learning Pet for the first time.")}
+          />
+        )}
+      </div>
+    </section>
+  );
 }

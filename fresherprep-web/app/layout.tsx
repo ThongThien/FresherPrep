@@ -47,6 +47,11 @@ export const metadata: Metadata = {
     template: "%s | FresherPrep",
   },
   description: "A focused Java Backend learning and interview preparation platform.",
+  icons: {
+    icon: "/static/logo.png",
+    shortcut: "/static/logo.png",
+    apple: "/static/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -6,6 +6,10 @@ import com.fesherprep.fesherprep_api.pet.service.PetService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,5 +27,14 @@ public class AdminPetController {
     @PutMapping
     public PetConfigResponse updateConfiguration(@Valid @RequestBody UpdatePetConfigRequest request) {
         return petService.updateConfiguration(request);
+    }
+
+    @GetMapping("/users")
+    public Page<AdminUserPetResponse> getUserPets(
+            @RequestParam(required = false) String search,
+            @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC)
+            Pageable pageable
+    ) {
+        return petService.getAdminUserPets(search, pageable);
     }
 }
