@@ -193,6 +193,7 @@ export interface Question {
   category: QuestionCategory;
   status: ContentStatus;
   publishedVersionId: string | null;
+  publishedContent: string | null;
   createdAt: string;
   updatedAt: string;
 }

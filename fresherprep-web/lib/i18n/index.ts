@@ -8,6 +8,14 @@ const storageKey = "fresherprep-language";
 const changeEvent = "fresherprep-language-change";
 
 const vi: Record<string, string> = {
+  "Topic": "Ch\u1ee7 \u0111\u1ec1",
+  "Select category": "Ch\u1ecdn danh m\u1ee5c",
+  "Select topic": "Ch\u1ecdn ch\u1ee7 \u0111\u1ec1",
+  "Choose questions by knowledge path": "Ch\u1ecdn c\u00e2u h\u1ecfi theo c\u00e2y ki\u1ebfn th\u1ee9c",
+  "Code or question content": "M\u00e3 ho\u1eb7c n\u1ed9i dung c\u00e2u h\u1ecfi",
+  "Select a category, topic, and subtopic to view questions.": "Ch\u1ecdn danh m\u1ee5c, ch\u1ee7 \u0111\u1ec1 v\u00e0 ch\u1ee7 \u0111\u1ec1 con \u0111\u1ec3 xem c\u00e2u h\u1ecfi.",
+  "Unable to load questions": "Kh\u00f4ng th\u1ec3 t\u1ea3i c\u00e2u h\u1ecfi",
+  "Knowledge filters stay selected after questions are added.": "B\u1ed9 l\u1ecdc ki\u1ebfn th\u1ee9c \u0111\u01b0\u1ee3c gi\u1eef nguy\u00ean sau khi th\u00eam c\u00e2u h\u1ecfi.",
   "Return to learning path": "Quay l\u1ea1i l\u1ed9 tr\u00ecnh",
   "Practice with quizzes": "L\u00e0m quiz c\u1ee7ng c\u1ed1 ki\u1ebfn th\u1ee9c",
   "You have completed every lesson in this learning path. Continue learning or reinforce your knowledge with a quiz.": "B\u1ea1n \u0111\u00e3 ho\u00e0n th\u00e0nh t\u1ea5t c\u1ea3 b\u00e0i h\u1ecdc trong l\u1ed9 tr\u00ecnh. H\u00e3y ch\u1ecdn ti\u1ebfp t\u1ee5c h\u1ecdc ho\u1eb7c l\u00e0m quiz \u0111\u1ec3 c\u1ee7ng c\u1ed1 ki\u1ebfn th\u1ee9c.",

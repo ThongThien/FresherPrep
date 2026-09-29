@@ -18,6 +18,7 @@ public record QuestionResponse(
         QuestionCategory category,
         ContentStatus status,
         UUID publishedVersionId,
+        String publishedContent,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -31,6 +32,7 @@ public record QuestionResponse(
                 question.getCategory(),
                 question.getStatus(),
                 question.getPublishedVersion() == null ? null : question.getPublishedVersion().getId(),
+                question.getPublishedVersion() == null ? null : question.getPublishedVersion().getContent(),
                 question.getCreatedAt(),
                 question.getUpdatedAt()
         );
