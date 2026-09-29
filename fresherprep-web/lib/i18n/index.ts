@@ -279,7 +279,7 @@ const vi: Record<string, string> = {
   "Add another question": "Th\u00eam c\u00e2u h\u1ecfi",
   "Create {{count}} questions": "T\u1ea1o {{count}} c\u00e2u h\u1ecfi",
   "{{count}} question drafts created.": "\u0110\u00e3 t\u1ea1o {{count}} b\u1ea3n nh\u00e1p c\u00e2u h\u1ecfi.",
-  "{{count}} questions created with their first version.": "\u0110\u00e3 t\u1ea1o {{count}} c\u00e2u h\u1ecfi k\u00e8m phi\u00ean b\u1ea3n \u0111\u1ea7u ti\u00ean.",
+  "{{count}} questions created and published.": "\u0110\u00e3 t\u1ea1o v\u00e0 xu\u1ea5t b\u1ea3n {{count}} c\u00e2u h\u1ecfi.",
   "Search published questions": "T\u00ecm c\u00e2u h\u1ecfi \u0111\u00e3 xu\u1ea5t b\u1ea3n",
   "No eligible questions found.": "Kh\u00f4ng c\u00f3 c\u00e2u h\u1ecfi ph\u00f9 h\u1ee3p.",
   "Add selected ({{count}})": "Th\u00eam c\u00e2u \u0111\u00e3 ch\u1ecdn ({{count}})",

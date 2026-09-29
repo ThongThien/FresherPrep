@@ -125,7 +125,7 @@ export function QuestionManagement() {
       );
       await loadQuestions();
       await selectQuestion(saved.id);
-      setSuccess(selected ? "Question metadata updated." : "Question created. Add its first immutable version next.");
+      setSuccess(selected ? "Question metadata updated." : "Question created. Add its first immutable version to publish it.");
     } catch (reason) { setError(messageOf(reason)); } finally { setPending(false); }
   }
 
@@ -135,7 +135,7 @@ export function QuestionManagement() {
       await adminRequest("questions/batch", { method: "POST", ...jsonBody(payload) });
       setKnowledgeFilter(payload.subtopicId);
       setPage(0);
-      setSuccess(t("{{count}} questions created with their first version.", { count: payload.questions.length }));
+      setSuccess(t("{{count}} questions created and published.", { count: payload.questions.length }));
       await loadQuestions();
     } catch (reason) { setError(messageOf(reason)); throw reason; }
     finally { setPending(false); }
@@ -202,8 +202,11 @@ export function QuestionManagement() {
       const refreshed = await adminRequest<QuestionVersion[]>(`questions/${selected.id}/versions`);
       setVersions(refreshed);
       setSelectedVersionId(created.id);
+      if (subtopics.find((node) => node.id === selected.subtopicId)?.status === "PUBLISHED") {
+        setSelected({ ...selected, status: "PUBLISHED", publishedVersionId: created.id });
+      }
       resetVersionEditor();
-      setSuccess(`Version ${created.versionNumber} created. Existing versions remain unchanged.`);
+      setSuccess(`Version ${created.versionNumber} created and published. Existing versions remain unchanged.`);
     } catch (reason) { setError(messageOf(reason)); } finally { setPending(false); }
   }
 
@@ -256,7 +259,7 @@ export function QuestionManagement() {
           {selected ? <div className="mt-7 border-t border-border pt-6"><div className="flex flex-wrap gap-2">{questionTransitions(selected.status).map((status) => <Button key={status} size="sm" variant="secondary" disabled={pending} onClick={() => void changeStatus(status)}>{status === "REVIEW" ? t("Submit for review") : status === "DRAFT" ? t("Move to draft") : t("Archive")}</Button>)}</div><Button className="mt-5" size="sm" variant="danger" loading={pending} onClick={() => void deleteQuestion()}>{t("Delete question")}</Button></div> : null}
         </CardContent></Card>
         {selected ? <Card><CardContent><div><h2 className="text-lg font-semibold text-text">{t("Version history")}</h2><p className="mt-1 text-sm text-text-muted">{t("Versions and options are never edited in place. A revision creates a new version.")}</p></div>
-          {versions.length ? <div className="mt-5 space-y-3">{versions.map((version) => <div key={version.id} className={`rounded-md border p-4 ${selectedVersionId === version.id ? "border-primary/40 bg-primary-subtle" : "border-border"}`}><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><button type="button" className="min-w-0 text-left" onClick={() => setSelectedVersionId(version.id)}><span className="font-semibold text-text">{t("Version {{number}}", { number: version.versionNumber })}</span>{selected.publishedVersionId === version.id ? <Badge className="ml-2" variant="success">{t("Published")}</Badge> : null}<span className="mt-1 block line-clamp-2 text-sm text-text-muted">{version.content}</span></button><div className="flex shrink-0 gap-2"><Button size="sm" variant="secondary" onClick={() => editAsRevision(version)}>{t("Create revision")}</Button><Button size="sm" disabled={pending || selected.publishedVersionId === version.id || (selected.status !== "REVIEW" && selected.status !== "PUBLISHED")} onClick={() => void publishVersion(version.id)}>{t("Publish")}</Button></div></div>{selectedVersionId === version.id ? <div className="mt-4 border-t border-border pt-4"><p className="text-sm text-text">{version.explanation}</p><ol className="mt-3 space-y-2">{version.options.map((option) => <li key={option.id} className="text-sm text-text-muted"><span className="font-semibold text-text">{option.position}. {option.content}</span>{option.correct ? <span className="ml-2 font-semibold text-success-strong">{t("Correct")}</span> : null}<span className="block text-xs">{option.explanation}</span></li>)}</ol></div> : null}</div>)}</div> : <p className="mt-5 text-sm text-text-muted">{t("No versions yet.")}</p>}
+          {versions.length ? <div className="mt-5 space-y-3">{versions.map((version) => <div key={version.id} className={`rounded-md border p-4 ${selectedVersionId === version.id ? "border-primary/40 bg-primary-subtle" : "border-border"}`}><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><button type="button" className="min-w-0 text-left" onClick={() => setSelectedVersionId(version.id)}><span className="font-semibold text-text">{t("Version {{number}}", { number: version.versionNumber })}</span>{selected.publishedVersionId === version.id && selected.status === "PUBLISHED" ? <Badge className="ml-2" variant="success">{t("Published")}</Badge> : null}<span className="mt-1 block line-clamp-2 text-sm text-text-muted">{version.content}</span></button><div className="flex shrink-0 gap-2"><Button size="sm" variant="secondary" onClick={() => editAsRevision(version)}>{t("Create revision")}</Button><Button size="sm" disabled={pending || selected.status === "ARCHIVED" || (selected.status === "PUBLISHED" && selected.publishedVersionId === version.id)} onClick={() => void publishVersion(version.id)}>{t("Publish")}</Button></div></div>{selectedVersionId === version.id ? <div className="mt-4 border-t border-border pt-4"><p className="text-sm text-text">{version.explanation}</p><ol className="mt-3 space-y-2">{version.options.map((option) => <li key={option.id} className="text-sm text-text-muted"><span className="font-semibold text-text">{option.position}. {option.content}</span>{option.correct ? <span className="ml-2 font-semibold text-success-strong">{t("Correct")}</span> : null}<span className="block text-xs">{option.explanation}</span></li>)}</ol></div> : null}</div>)}</div> : <p className="mt-5 text-sm text-text-muted">{t("No versions yet.")}</p>}
           <form className="mt-7 border-t border-border pt-6" onSubmit={submitVersion}><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold text-text">{revisionSource ? t("Create revision") : t("Create new version")}</h3><p className="mt-1 text-xs text-text-muted">{revisionSource ? t("The selected version is copied into a new immutable version.") : t("The backend requires next version number {{number}}.", { number: Math.max(0, ...versions.map((version) => version.versionNumber)) + 1 })}</p></div>{revisionSource ? <Button size="sm" variant="ghost" onClick={resetVersionEditor}>{t("Cancel revision")}</Button> : null}</div>
             <div className="mt-5"><Label htmlFor="version-content">{t("Question content")}</Label><Textarea id="version-content" aria-invalid={Boolean(validation.versionContent)} value={versionForm.content} onChange={(event) => setVersionForm((current) => ({ ...current, content: event.target.value }))} />{validation.versionContent ? <FieldError>{validation.versionContent}</FieldError> : null}</div>
             <div className="mt-4"><Label htmlFor="version-explanation">{t("Question explanation")}</Label><Textarea id="version-explanation" aria-invalid={Boolean(validation.versionExplanation)} value={versionForm.explanation} onChange={(event) => setVersionForm((current) => ({ ...current, explanation: event.target.value }))} />{validation.versionExplanation ? <FieldError>{validation.versionExplanation}</FieldError> : null}</div>
@@ -273,9 +276,9 @@ function updateOption(index: number, field: "content" | "explanation", value: st
   setter((current) => ({ ...current, options: current.options.map((option, itemIndex) => itemIndex === index ? { ...option, [field]: value } : option) }));
 }
 function questionTransitions(status: ContentStatus): Exclude<ContentStatus, "PUBLISHED">[] {
-  if (status === "DRAFT") return ["REVIEW"];
+  if (status === "DRAFT") return [];
   if (status === "REVIEW" || status === "ARCHIVED") return ["DRAFT"];
-  return ["ARCHIVED"];
+  return ["DRAFT", "ARCHIVED"];
 }
 function Status({ status }: { status: ContentStatus }) { const { t } = useI18n(); return <Badge variant={status === "PUBLISHED" ? "success" : status === "REVIEW" ? "warning" : status === "DRAFT" ? "info" : "neutral"}>{t(status)}</Badge>; }
 function FilterSelect({ label, value, onChange, options, includeAll = true }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[]; includeAll?: boolean }) {

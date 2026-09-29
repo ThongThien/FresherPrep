@@ -12,6 +12,7 @@ import com.fesherprep.fesherprep_api.question.dto.BatchQuestionItemRequest;
 import com.fesherprep.fesherprep_api.question.dto.QuestionOptionRequest;
 import com.fesherprep.fesherprep_api.question.repository.QuestionRepository;
 import com.fesherprep.fesherprep_api.question.repository.QuestionVersionRepository;
+import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import com.fesherprep.fesherprep_api.shared.util.ContentIdentityGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -33,6 +34,18 @@ public class QuestionBatchCreator {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public List<CreatedQuestion> create(BatchCreateQuestionsRequest request) {
+        return create(request, false);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public List<CreatedQuestion> createPublished(BatchCreateQuestionsRequest request) {
+        return create(request, true);
+    }
+
+    private List<CreatedQuestion> create(
+            BatchCreateQuestionsRequest request,
+            boolean publishWhenEligible
+    ) {
         KnowledgeNode subtopic = knowledgeNodeRepository.findById(request.subtopicId())
                 .orElseThrow(() -> new IllegalArgumentException("Subtopic does not exist"));
         if (subtopic.getType() != NodeType.SUBTOPIC) {
@@ -50,7 +63,11 @@ public class QuestionBatchCreator {
                     subtopic, code, item.difficulty(), language, category), code);
             QuestionVersion version = new QuestionVersion(
                     question, 1, item.content(), item.explanation(), optionDefinitions(item.options()));
-            created.add(new CreatedQuestion(question, saveVersion(version)));
+            QuestionVersion savedVersion = saveVersion(version);
+            if (publishWhenEligible && subtopic.getStatus() == ContentStatus.PUBLISHED) {
+                question.publishByAdministrator(savedVersion);
+            }
+            created.add(new CreatedQuestion(question, savedVersion));
         }
         return List.copyOf(created);
     }

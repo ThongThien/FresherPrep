@@ -93,7 +93,7 @@ public class QuestionService {
     public List<BatchCreatedQuestionResponse> createBatch(
             @Valid BatchCreateQuestionsRequest request
     ) {
-        return batchCreator.create(request).stream()
+        return batchCreator.createPublished(request).stream()
                 .map(created -> BatchCreatedQuestionResponse.from(
                         created.question(), created.version()))
                 .toList();
@@ -129,6 +129,11 @@ public class QuestionService {
         if (request.status() == ContentStatus.PUBLISHED) {
             throw new IllegalArgumentException("Publish a specific question version instead");
         }
+        if (request.status() == ContentStatus.DRAFT
+                && question.getStatus() == ContentStatus.PUBLISHED) {
+            question.moveToDraftByAdministrator();
+            return QuestionResponse.from(question);
+        }
         question.changeStatus(request.status());
         return QuestionResponse.from(question);
     }
@@ -151,7 +156,9 @@ public class QuestionService {
                 request.explanation(),
                 request.options()
         );
-        return QuestionVersionResponse.from(saveVersion(version));
+        QuestionVersion savedVersion = saveVersion(version);
+        publishAdminVersionWhenEligible(question, savedVersion);
+        return QuestionVersionResponse.from(savedVersion);
     }
 
     /**
@@ -175,7 +182,9 @@ public class QuestionService {
                 request.explanation(),
                 request.options()
         );
-        return QuestionVersionResponse.from(saveVersion(replacement));
+        QuestionVersion savedVersion = saveVersion(replacement);
+        publishAdminVersionWhenEligible(question, savedVersion);
+        return QuestionVersionResponse.from(savedVersion);
     }
 
     @Transactional
@@ -185,7 +194,7 @@ public class QuestionService {
             throw new IllegalStateException("Publish the question subtopic first");
         }
         QuestionVersion version = requireVersion(questionId, versionId);
-        question.publish(version);
+        question.publishByAdministrator(version);
         return QuestionResponse.from(question);
     }
 
@@ -294,6 +303,15 @@ public class QuestionService {
             return versionRepository.saveAndFlush(version);
         } catch (DataIntegrityViolationException exception) {
             throw new IllegalArgumentException("Question version number already exists", exception);
+        }
+    }
+
+    private static void publishAdminVersionWhenEligible(
+            Question question,
+            QuestionVersion version
+    ) {
+        if (question.getSubtopic().getStatus() == ContentStatus.PUBLISHED) {
+            question.publishByAdministrator(version);
         }
     }
 

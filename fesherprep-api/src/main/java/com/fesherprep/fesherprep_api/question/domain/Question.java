@@ -120,6 +120,28 @@ public class Question extends BaseEntity {
         if (status != ContentStatus.REVIEW && status != ContentStatus.PUBLISHED) {
             throw new IllegalStateException("Question must be reviewed before publication");
         }
+        applyPublishedVersion(version);
+    }
+
+    public void publishByAdministrator(QuestionVersion version) {
+        Objects.requireNonNull(version);
+        if (!hasSameIdentityAs(version.getQuestion())) {
+            throw new IllegalArgumentException("Version belongs to another question");
+        }
+        if (status == ContentStatus.ARCHIVED) {
+            throw new IllegalStateException("Move the archived question to draft before publication");
+        }
+        applyPublishedVersion(version);
+    }
+
+    public void moveToDraftByAdministrator() {
+        if (status != ContentStatus.PUBLISHED) {
+            throw new IllegalStateException("Only a published question can be moved directly to draft");
+        }
+        status = ContentStatus.DRAFT;
+    }
+
+    private void applyPublishedVersion(QuestionVersion version) {
         version.validateOptions();
         publishedVersion = version;
         status = ContentStatus.PUBLISHED;
