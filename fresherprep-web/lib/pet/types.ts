@@ -47,6 +47,7 @@ export interface PetCollection {
 export interface PetConfiguration {
   lessonCompletionPoints: number;
   quizPassPoints: number;
+  sqlPracticeCompletionPoints: number;
   pointsPerFood: number;
   energyPerFood: number;
 }

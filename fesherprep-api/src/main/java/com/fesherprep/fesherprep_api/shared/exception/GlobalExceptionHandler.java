@@ -16,6 +16,7 @@ import com.fesherprep.fesherprep_api.quiz.service.DuplicateQuizCodeException;
 import com.fesherprep.fesherprep_api.quiz.service.InsufficientQuizQuestionsException;
 import com.fesherprep.fesherprep_api.quiz.service.QuizAttemptNotFoundException;
 import com.fesherprep.fesherprep_api.quiz.service.QuizNotFoundException;
+import com.fesherprep.fesherprep_api.practice.service.PracticeExerciseNotFoundException;
 import com.fesherprep.fesherprep_api.shared.dto.ApiErrorResponse;
 import com.fesherprep.fesherprep_api.user.service.EmailAlreadyUsedException;
 import com.fesherprep.fesherprep_api.user.service.LoginChallengeRequiredException;
@@ -55,7 +56,8 @@ public class GlobalExceptionHandler {
             UserNotFoundException.class,
             ContributionNotFoundException.class,
             CommentNotFoundException.class,
-            NotificationNotFoundException.class
+            NotificationNotFoundException.class,
+            PracticeExerciseNotFoundException.class
     })
     public ResponseEntity<ApiErrorResponse> handleNotFound(RuntimeException exception) {
         return response(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", exception.getMessage());

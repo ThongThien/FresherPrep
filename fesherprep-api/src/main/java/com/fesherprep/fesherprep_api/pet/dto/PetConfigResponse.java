@@ -5,12 +5,14 @@ import com.fesherprep.fesherprep_api.pet.domain.PetSettings;
 public record PetConfigResponse(
         int lessonCompletionPoints,
         int quizPassPoints,
+        int sqlPracticeCompletionPoints,
         int pointsPerFood,
         int energyPerFood
 ) {
     public static PetConfigResponse from(PetSettings settings) {
         return new PetConfigResponse(
                 settings.getLessonCompletionPoints(), settings.getQuizPassPoints(),
+                settings.getSqlPracticeCompletionPoints(),
                 settings.getPointsPerFood(), settings.getEnergyPerFood()
         );
     }

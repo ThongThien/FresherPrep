@@ -99,7 +99,14 @@ Lesson hỗ trợ nội dung HTML giàu định dạng đã sanitize, ảnh từ
 - Admin quản lý cấu hình thưởng, tỷ lệ quy đổi, pet, level và trạng thái pet của user.
 - Ảnh Pet dùng Supabase Storage; đường dẫn asset được lưu tập trung, không lưu binary trong database.
 
-### 3.9. Giao diện
+### 3.9. SQL Practice
+
+- User học SQL qua danh sách bài mở khóa tuần tự từ dễ đến khó.
+- Mỗi bài có đề, schema 4 bảng, gợi ý, trình nhập SQL, kết quả và giải thích sau khi đúng.
+- SQL user chỉ chạy trong H2 in-memory cô lập, bằng tài khoản read-only, allowlist table, timeout và giới hạn dòng; không chạy trên PostgreSQL production.
+- Hoàn thành lần đầu tạo Pet reward idempotent; domain đã có loại ngôn ngữ `JAVA` làm nền, nhưng chưa chạy/chấm code Java.
+
+### 3.10. Giao diện
 
 - Next.js App Router, responsive và accessible cơ bản.
 - UI hỗ trợ tiếng Việt/tiếng Anh; nội dung học từ backend không tự động dịch.

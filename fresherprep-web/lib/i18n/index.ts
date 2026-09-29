@@ -1198,6 +1198,46 @@ Object.assign(vi, {
   "Unable to upload Pet image.": "Kh\u00f4ng th\u1ec3 t\u1ea3i \u1ea3nh Pet l\u00ean.",
 });
 
++
+Object.assign(vi, {
+  "SQL Practice": "Luyện tập SQL",
+  "Practice": "Thực hành",
+  "Learn SQL step by step on an isolated dataset. Complete each exercise to unlock the next one.": "Học SQL từng bước trên bộ dữ liệu cô lập. Hoàn thành mỗi bài để mở khóa bài tiếp theo.",
+  "Loading SQL exercises...": "Đang tải bài tập SQL...",
+  "Unable to load SQL exercises.": "Không thể tải bài tập SQL.",
+  "SQL Practice unavailable": "Luyện tập SQL không khả dụng",
+  "Locked": "Đã khóa",
+  "Complete the previous exercise": "Hãy hoàn thành bài trước",
+  "Practice again": "Làm lại",
+  "Start exercise": "Bắt đầu",
+  "All SQL exercises": "Tất cả bài SQL",
+  "Loading SQL exercise...": "Đang tải bài SQL...",
+  "Preparing the isolated dataset.": "Đang chuẩn bị bộ dữ liệu cô lập.",
+  "Unable to load this SQL exercise.": "Không thể tải bài SQL này.",
+  "Exercise unavailable": "Bài tập không khả dụng",
+  "Practice dataset schema": "Schema dữ liệu thực hành",
+  "Hint": "Gợi ý",
+  "Show hint": "Xem gợi ý",
+  "Hide hint": "Ẩn gợi ý",
+  "Your SQL query": "Câu SQL của bạn",
+  "Only one read-only SELECT statement is allowed. Timeout: 2 seconds.": "Chỉ cho phép một câu SELECT chỉ đọc. Thời gian tối đa: 2 giây.",
+  "Run and submit": "Chạy và nộp",
+  "Submission failed": "Nộp bài thất bại",
+  "Correct answer": "Kết quả đúng",
+  "Not correct yet": "Chưa chính xác",
+  "Correct result": "Kết quả chính xác",
+  "The result does not match the expected columns, rows, or order": "Kết quả chưa khớp cột, dòng hoặc thứ tự mong đợi",
+  "+{{points}} Learning Points": "+{{points}} Điểm học tập",
+  "Explanation": "Giải thích",
+  "Query result": "Kết quả truy vấn",
+  "The query returned no rows.": "Truy vấn không trả về dòng nào.",
+  "Unable to submit your query.": "Không thể nộp câu SQL.",
+  "Points per completed SQL exercise": "Điểm cho mỗi bài SQL hoàn thành",
+  "EASY": "Dễ",
+  "MEDIUM": "Trung bình",
+  "HARD": "Khó",
+});
+
 export function useI18n() {
   const locale = useSyncExternalStore<Locale>(subscribe, readLocale, readServerLocale);
 

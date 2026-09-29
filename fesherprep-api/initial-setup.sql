@@ -130,13 +130,14 @@ INSERT INTO pet_settings (
     id,
     lesson_completion_points,
     quiz_pass_points,
+    sql_practice_completion_points,
     points_per_food,
     energy_per_food,
     updated_at,
     version
 )
 VALUES (
-    1, 10, 20, 10, 20, CURRENT_TIMESTAMP, 0
+    1, 10, 20, 10, 10, 20, CURRENT_TIMESTAMP, 0
 )
 ON CONFLICT (id) DO NOTHING;
 

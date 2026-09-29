@@ -27,6 +27,10 @@ public class PetSettings {
     @Column(name = "quiz_pass_points", nullable = false)
     private int quizPassPoints;
 
+    @PositiveOrZero
+    @Column(name = "sql_practice_completion_points", nullable = false)
+    private int sqlPracticeCompletionPoints = 10;
+
     @Positive
     @Column(name = "points_per_food", nullable = false)
     private int pointsPerFood;
@@ -46,10 +50,11 @@ public class PetSettings {
     public void update(
             int lessonCompletionPoints,
             int quizPassPoints,
+            int sqlPracticeCompletionPoints,
             int pointsPerFood,
             int energyPerFood
     ) {
-        if (lessonCompletionPoints < 0 || quizPassPoints < 0) {
+        if (lessonCompletionPoints < 0 || quizPassPoints < 0 || sqlPracticeCompletionPoints < 0) {
             throw new IllegalArgumentException("Activity points cannot be negative");
         }
         if (pointsPerFood < 1 || energyPerFood < 1) {
@@ -57,6 +62,7 @@ public class PetSettings {
         }
         this.lessonCompletionPoints = lessonCompletionPoints;
         this.quizPassPoints = quizPassPoints;
+        this.sqlPracticeCompletionPoints = sqlPracticeCompletionPoints;
         this.pointsPerFood = pointsPerFood;
         this.energyPerFood = energyPerFood;
     }

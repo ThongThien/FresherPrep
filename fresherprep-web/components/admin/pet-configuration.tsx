@@ -77,6 +77,7 @@ export function PetConfigurationPage() {
           <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <NumberField id="pet-lesson-points" label={t("Points per completed lesson")} min={0} value={config.lessonCompletionPoints} onChange={(value) => numberField("lessonCompletionPoints", value)} />
             <NumberField id="pet-quiz-points" label={t("Points per first Quiz pass")} min={0} value={config.quizPassPoints} onChange={(value) => numberField("quizPassPoints", value)} />
+            <NumberField id="pet-sql-points" label={t("Points per completed SQL exercise")} min={0} value={config.sqlPracticeCompletionPoints} onChange={(value) => numberField("sqlPracticeCompletionPoints", value)} />
             <NumberField id="pet-points-food" label={t("Points required per Food")} min={1} value={config.pointsPerFood} onChange={(value) => numberField("pointsPerFood", value)} />
             <NumberField id="pet-energy-food" label={t("Energy gained per Food")} min={1} value={config.energyPerFood} onChange={(value) => numberField("energyPerFood", value)} />
           </div>

@@ -17,6 +17,7 @@
 - PostgreSQL trên Supabase, schema `fresherprep`.
 - JWT access token + refresh token.
 - Redis là cache tùy chọn/fallback được; không phải nguồn sự thật.
+- H2 in-memory chỉ dùng làm SQL Practice sandbox; không dùng làm database nghiệp vụ.
 - Supabase Storage dùng cho Pet/Lesson assets.
 
 ### Frontend
@@ -63,6 +64,7 @@ Các transition phải tuân theo domain hiện tại cho `DRAFT`, `REVIEW`, `PU
 - Không trả Entity trực tiếp nếu DTO kiểm soát dữ liệu tốt hơn.
 - Dashboard, achievement và path completion được derive; chưa có bảng aggregate riêng.
 - Runtime data (refresh token, progress, join, attempts, answers, user pet) phải sinh qua nghiệp vụ/API, không qua seed.
+- SQL Practice submissions/progress lưu PostgreSQL; query user chỉ chạy trên H2 dataset cô lập.
 - Script setup phải idempotent và chỉ cleanup đúng bộ seed legacy đã định danh; không xóa dữ liệu production khác.
 
 ## 5. Question và Quiz
@@ -83,6 +85,13 @@ Start → lưu snapshot → answers cục bộ → submit một lần
 
 - Không thêm answer autosave, request theo từng answer hoặc selected-answer persistence trước submit.
 - Client timeout không được dùng để tự quyết điểm; enforcement cuối cùng phải dựa vào contract backend hiện có.
+
+### SQL Practice
+
+- Chỉ một `SELECT` tối đa 2.000 ký tự; cấm DML/DDL, comment và multi-statement.
+- Chỉ truy vấn bốn table dataset được allowlist, timeout 2 giây và tối đa 100 dòng.
+- H2 reader không có quyền ghi; không dùng Spring production DataSource để execute query user.
+- Java/LeetCode execution chưa triển khai; khi làm phải dùng process/container sandbox riêng, không chạy code user trong Spring Boot.
 
 ## 6. Lesson và nội dung
 

@@ -174,6 +174,14 @@ API dùng error response thống nhất gồm status, code, message, timestamp/f
 
 `initial-setup.sql` phải idempotent và chỉ tạo cấu trúc placeholder Java + Pet setup. Không seed user, Lesson, Question, option, Quiz, attempt hoặc progress. Node placeholder mặc định `DRAFT`.
 
+### FR-37 — SQL Practice
+
+User xem bài SQL publish theo thứ tự, chỉ mở bài đầu hoặc bài có bài trước đã hoàn thành. Mỗi bài hiển thị đề, schema, concepts, difficulty và gợi ý. User submit một câu `SELECT`, nhận result table, đúng/sai và explanation khi đúng.
+
+### FR-38 — SQL sandbox và reward
+
+Query chạy trên H2 dataset riêng gồm 4 bảng, qua user read-only, table allowlist, timeout 2 giây, tối đa 100 dòng và cấm mutation/DDL. Lưu submission/progress trong PostgreSQL. Lần hoàn thành đầu tiên thưởng Learning Points theo Pet config; retry không cộng trùng.
+
 ## 12. Bảng dữ liệu hiện có
 
 | Nhóm | Bảng |
@@ -185,5 +193,6 @@ API dùng error response thống nhất gồm status, code, message, timestamp/f
 | Review | `content_submissions`, `content_review_events` |
 | Tương tác | `content_comments`, `admin_notifications` |
 | Pet | `pet_settings`, `pets`, `pet_level_configs`, `user_pets`, `pet_reward_events` |
+| Practice | `practice_exercises`, `practice_submissions`, `user_practice_progress` |
 
-Không có bảng coding, AI interview, bookmark, achievement, game progress hoặc dashboard aggregate trong phạm vi đã triển khai.
+Chưa có Java execution/submission judge, AI interview, bookmark, achievement, game progress hoặc dashboard aggregate.

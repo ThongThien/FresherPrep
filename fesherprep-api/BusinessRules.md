@@ -186,3 +186,17 @@ Redis có thể cache dữ liệu đọc; PostgreSQL và service validation vẫ
 ### BR-39 — Khởi tạo không phải học liệu
 
 Node do `initial-setup.sql` tạo là placeholder `DRAFT`. Admin đổi tên cây; Admin/Contributor biên soạn Lesson/Question/Quiz và publish theo workflow; script không giả làm nội dung thật.
+
+## 10. SQL Practice
+
+### BR-40 — Mở khóa tuần tự
+
+Bài SQL đầu tiên được mở sẵn; bài tiếp theo chỉ mở khi bài ngay trước đã hoàn thành. Thứ tự hiện tại là dễ → trung bình → khó.
+
+### BR-41 — Thực thi cô lập
+
+Không bao giờ chạy SQL user trên PostgreSQL/Supabase production. Chỉ nhận một `SELECT`, chạy bằng H2 user read-only trên dataset allowlist với timeout và result limit.
+
+### BR-42 — Chấm và thưởng
+
+Backend so sánh columns, rows và order với reference result. Chỉ lần đúng đầu tiên đánh dấu completion và tạo reward event `SQL_PRACTICE_COMPLETED`; submit/retry lặp không cộng điểm trùng.

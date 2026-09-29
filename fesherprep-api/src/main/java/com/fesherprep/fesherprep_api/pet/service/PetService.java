@@ -114,7 +114,7 @@ public class PetService {
     public PetConfigResponse updateConfiguration(@Valid UpdatePetConfigRequest request) {
         PetSettings settings = requireSettings();
         settings.update(request.lessonCompletionPoints(), request.quizPassPoints(),
-                request.pointsPerFood(), request.energyPerFood());
+                request.sqlPracticeCompletionPoints(), request.pointsPerFood(), request.energyPerFood());
         return PetConfigResponse.from(settings);
     }
 
@@ -179,13 +179,21 @@ public class PetService {
         award(user, PetActivityType.QUIZ_PASSED, quiz.getId());
     }
 
-    private void award(User user, PetActivityType activityType, UUID sourceId) {
+    @Transactional
+    public int awardSqlPracticeCompletion(User user, UUID exerciseId) {
+        return award(user, PetActivityType.SQL_PRACTICE_COMPLETED, exerciseId);
+    }
+
+    private int award(User user, PetActivityType activityType, UUID sourceId) {
         User locked = userRepository.findByIdForUpdate(user.getId())
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("User is unavailable"));
-        if (rewardRepository.existsByUserIdAndActivityTypeAndSourceId(locked.getId(), activityType, sourceId)) return;
+        if (rewardRepository.existsByUserIdAndActivityTypeAndSourceId(locked.getId(), activityType, sourceId)) return 0;
         PetSettings settings = requireSettings();
-        int points = activityType == PetActivityType.LESSON_COMPLETED
-                ? settings.getLessonCompletionPoints() : settings.getQuizPassPoints();
+        int points = switch (activityType) {
+            case LESSON_COMPLETED -> settings.getLessonCompletionPoints();
+            case QUIZ_PASSED -> settings.getQuizPassPoints();
+            case SQL_PRACTICE_COMPLETED -> settings.getSqlPracticeCompletionPoints();
+        };
         Optional<UserPet> active = userPetRepository.findActiveByUserIdForUpdate(locked.getId());
         if (active.isEmpty() && userPetRepository.findAllByUserIdOrderByCreatedAtAsc(locked.getId()).isEmpty()) {
             active = Optional.of(initialPet(locked));
@@ -195,6 +203,7 @@ public class PetService {
             progress.addLearningPoints(points, settings.getPointsPerFood());
             event.markApplied();
         });
+        return points;
     }
 
     private UserPet requireOrCreateInitialPet(User user) {
