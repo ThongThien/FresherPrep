@@ -1218,6 +1218,21 @@ Object.assign(vi, {
   "HARD": "Khó",
 });
 
+Object.assign(vi, {
+  "Add technology": "Thêm công nghệ",
+  "Add {{type}} under {{name}}": "Thêm {{type}} trong {{name}}",
+  "Add lesson to {{name}}": "Thêm bài học vào {{name}}",
+  "Create {{type}}": "Tạo {{type}}",
+  "Create a root technology node.": "Tạo nút công nghệ gốc.",
+  "The parent and node type were selected from the tree.": "Nút cha và loại nút đã được chọn tự động từ cây.",
+  "Parent": "Nút cha",
+  "Knowledge Tree": "Cây kiến thức",
+  "Lesson management views": "Các chế độ quản lý bài học",
+  "Lessons can only be attached to subtopics. Use the plus action on a subtopic to start creating one.": "Bài học chỉ có thể gắn vào chủ đề con. Dùng nút cộng tại chủ đề con để bắt đầu tạo.",
+  "Lesson location": "Vị trí bài học",
+  "Selected automatically from the Knowledge Tree.": "Được chọn tự động từ Cây kiến thức.",
+});
+
 export function useI18n() {
   const locale = useSyncExternalStore<Locale>(subscribe, readLocale, readServerLocale);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   Badge,
@@ -16,8 +16,8 @@ import {
 import { adminRequest, jsonBody } from "@/lib/admin/client";
 import type { ContentStatus, KnowledgeNode, KnowledgeNodeType } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
+import { KnowledgeTree } from "./knowledge-tree";
 
-const nodeTypes: KnowledgeNodeType[] = ["TECHNOLOGY", "CATEGORY", "TOPIC", "SUBTOPIC"];
 const expectedParent: Record<KnowledgeNodeType, KnowledgeNodeType | null> = {
   TECHNOLOGY: null,
   CATEGORY: "TECHNOLOGY",
@@ -38,6 +38,8 @@ export function KnowledgeManagement() {
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [validation, setValidation] = useState<Record<string, string>>({});
+  const [creatingParentId, setCreatingParentId] = useState<string>();
+  const [returnSelectedId, setReturnSelectedId] = useState<string>();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -56,29 +58,41 @@ export function KnowledgeManagement() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  const flattened = useMemo(() => flattenTree(nodes), [nodes]);
-  const visible = flattened.filter(({ node }) =>
-    `${node.name} ${node.slug} ${node.type}`.toLowerCase().includes(query.toLowerCase()),
-  );
   const parentType = expectedParent[form.type];
   const parentOptions = parentType ? nodes.filter((node) => node.type === parentType && node.id !== selectedId) : [];
   const selectedNode = selectedId ? nodes.find((node) => node.id === selectedId) : undefined;
   const selectedDescendantCount = selectedId ? countDescendants(nodes, selectedId) : 0;
 
-  function startCreate() {
+  function startCreate(parent?: KnowledgeNode, type: KnowledgeNodeType = "TECHNOLOGY") {
+    setReturnSelectedId(selectedId);
     setSelectedId(undefined);
-    setForm(emptyForm);
+    setCreatingParentId(parent?.id);
+    setForm({ ...emptyForm, type, parentId: parent?.id ?? "" });
     clearMessages();
+    window.requestAnimationFrame(() => document.getElementById("node-name")?.focus());
   }
 
   function selectNode(node: KnowledgeNode) {
     setSelectedId(node.id);
+    setCreatingParentId(undefined);
+    setReturnSelectedId(undefined);
     setForm({
       type: node.type,
       parentId: node.parentId ?? "",
       name: node.name,
       displayOrder: node.displayOrder,
     });
+    clearMessages();
+  }
+
+  function cancelCreate() {
+    const previous = returnSelectedId ? nodes.find((node) => node.id === returnSelectedId) : undefined;
+    if (previous) {
+      selectNode(previous);
+      return;
+    }
+    setCreatingParentId(undefined);
+    setForm(emptyForm);
     clearMessages();
   }
 
@@ -169,7 +183,7 @@ export function KnowledgeManagement() {
       <AdminHeader
         title={t("Knowledge hierarchy")}
         description={t("Manage the Technology → Category → Topic → Subtopic curriculum structure.")}
-        action={<Button onClick={startCreate}>{t("New node")}</Button>}
+        action={<Button onClick={() => startCreate()}>{t("Add technology")}</Button>}
       />
       {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
       {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
@@ -180,26 +194,17 @@ export function KnowledgeManagement() {
             <Label htmlFor="knowledge-search">{t("Search hierarchy")}</Label>
             <Input id="knowledge-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Search by name, slug, or type")} />
             <div className="mt-5">
-              {loading ? <Loading label={t("Loading knowledge nodes")} /> : visible.length ? (
-                <ul className="max-h-[50vh] space-y-1 overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]" aria-label={t("Knowledge hierarchy")}>
-                  {visible.map(({ node, depth }) => (
-                    <li key={node.id}>
-                      <button
-                        type="button"
-                        onClick={() => selectNode(node)}
-                        className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left transition-colors hover:border-primary/30 hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${selectedId === node.id ? "border-primary/40 bg-primary-subtle" : "border-transparent"}`}
-                        style={{ paddingLeft: `${12 + depth * 18}px` }}
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold text-text">{node.name}</span>
-                          <span className="block truncate text-xs text-text-muted">{node.type} · {node.slug} · {t("order {{order}}", { order: node.displayOrder })}</span>
-                        </span>
-                        <StatusBadge status={node.status} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : <p className="py-8 text-center text-sm text-text-muted">{t("No matching knowledge nodes.")}</p>}
+              {loading ? <Loading label={t("Loading knowledge nodes")} /> : (
+                <KnowledgeTree
+                  nodes={nodes}
+                  query={query}
+                  mode="manage"
+                  selectedId={selectedId}
+                  creatingUnderId={creatingParentId}
+                  onSelect={selectNode}
+                  onAddChild={(parent, type) => startCreate(parent, type)}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -208,19 +213,23 @@ export function KnowledgeManagement() {
           <CardContent>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-text">{selectedId ? t("Edit node") : t("Create node")}</h2>
-                <p className="mt-1 text-sm text-text-muted">{t("Parent choices follow the four-level hierarchy.")}</p>
+                <h2 className="text-lg font-semibold text-text">{selectedId ? t("Edit node") : t("Create {{type}}", { type: t(form.type).toLowerCase() })}</h2>
+                <p className="mt-1 text-sm text-text-muted">{selectedId ? t("Parent choices follow the four-level hierarchy.") : creatingParentId ? t("The parent and node type were selected from the tree.") : t("Create a root technology node.")}</p>
               </div>
               {selectedId ? <StatusBadge status={nodes.find((node) => node.id === selectedId)?.status ?? "DRAFT"} /> : null}
             </div>
             <form className="mt-6 space-y-5" onSubmit={submit} noValidate>
-              <div>
+              {selectedId ? <div>
                 <Label htmlFor="node-type">{t("Node type")}</Label>
                 <Select id="node-type" value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as KnowledgeNodeType, parentId: "" }))}>
-                  {nodeTypes.map((type) => <option key={type} value={type}>{t(type)}</option>)}
+                  {(["TECHNOLOGY", "CATEGORY", "TOPIC", "SUBTOPIC"] as KnowledgeNodeType[]).map((type) => <option key={type} value={type}>{t(type)}</option>)}
                 </Select>
-              </div>
-              {parentType ? <div>
+              </div> : <div className="rounded-md border border-border bg-surface-muted px-3 py-3 text-sm">
+                <span className="text-text-muted">{t("Node type")}: </span>
+                <span className="font-semibold text-text">{t(form.type)}</span>
+                {creatingParentId ? <span className="mt-1 block text-xs text-text-muted">{t("Parent")}: {nodes.find((node) => node.id === creatingParentId)?.name}</span> : null}
+              </div>}
+              {selectedId && parentType ? <div>
                 <Label htmlFor="node-parent">{t("Parent {{type}}", { type: parentType.toLowerCase() })}</Label>
                 <Select id="node-parent" aria-invalid={Boolean(validation.parentId)} value={form.parentId} onChange={(event) => setForm((current) => ({ ...current, parentId: event.target.value }))}>
                   <option value="">{t("Select parent")}</option>
@@ -239,7 +248,10 @@ export function KnowledgeManagement() {
                 <Input id="node-order" type="number" min={0} aria-invalid={Boolean(validation.displayOrder)} value={form.displayOrder} onChange={(event) => setForm((current) => ({ ...current, displayOrder: Number(event.target.value) }))} />
                 {validation.displayOrder ? <FieldError>{validation.displayOrder}</FieldError> : null}
               </div>
-              <Button type="submit" loading={pending}>{selectedId ? t("Save changes") : t("Create node")}</Button>
+              <div className="flex flex-wrap gap-3">
+                <Button type="submit" loading={pending}>{selectedId ? t("Save changes") : t("Create {{type}}", { type: t(form.type).toLowerCase() })}</Button>
+                {!selectedId && returnSelectedId ? <Button type="button" variant="secondary" disabled={pending} onClick={cancelCreate}>{t("Cancel")}</Button> : null}
+              </div>
             </form>
 
             {selectedId ? <div className="mt-7 border-t border-border pt-6">
@@ -274,29 +286,6 @@ function countDescendants(nodes: KnowledgeNode[], rootId: string) {
     pending.push(...(childrenByParent.get(currentId) ?? []));
   }
   return count;
-}
-
-function flattenTree(nodes: KnowledgeNode[]) {
-  const byParent = new Map<string | null, KnowledgeNode[]>();
-  nodes.forEach((node) => {
-    const list = byParent.get(node.parentId) ?? [];
-    list.push(node);
-    byParent.set(node.parentId, list);
-  });
-  byParent.forEach((list) => list.sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name)));
-  const result: { node: KnowledgeNode; depth: number }[] = [];
-  const seen = new Set<string>();
-  function visit(parentId: string | null, depth: number) {
-    for (const node of byParent.get(parentId) ?? []) {
-      if (seen.has(node.id)) continue;
-      seen.add(node.id);
-      result.push({ node, depth });
-      visit(node.id, depth + 1);
-    }
-  }
-  visit(null, 0);
-  nodes.filter((node) => !seen.has(node.id)).forEach((node) => result.push({ node, depth: 0 }));
-  return result;
 }
 
 function AdminHeader({ title, description, action }: { title: string; description: string; action: React.ReactNode }) {

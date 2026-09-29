@@ -19,6 +19,7 @@ import { LessonContent } from "@/components/lessons/lesson-content";
 import { hasMeaningfulLessonContent } from "@/lib/lessons/content";
 import { AdminPagination } from "./admin-ui";
 import { LessonRichTextEditor } from "./lesson-rich-text-editor";
+import { KnowledgeTree } from "./knowledge-tree";
 
 const statuses: ContentStatus[] = ["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"];
 const emptyForm = {
@@ -48,6 +49,10 @@ export function LessonManagement() {
   const [selectedSubtopicId, setSelectedSubtopicId] = useState("");
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [leftTab, setLeftTab] = useState<"lessons" | "knowledge">("lessons");
+  const [treeQuery, setTreeQuery] = useState("");
+  const [creatingSubtopicId, setCreatingSubtopicId] = useState<string>();
+  const [returnLessonId, setReturnLessonId] = useState<string>();
 
   const loadReferences = useCallback(async () => {
     setLoading(true);
@@ -103,6 +108,9 @@ export function LessonManagement() {
         adminRequest<AdminPage<LessonSummary>>("lessons?page=0&size=200&sort=title,asc"),
       ]);
       setDetail(selected);
+      setSelectedSubtopicId(selected.subtopicId);
+      setCreatingSubtopicId(undefined);
+      setReturnLessonId(undefined);
       setAssessment(selectedAssessment);
       setRelationLessons(relationPage.content);
       setForm({
@@ -120,12 +128,43 @@ export function LessonManagement() {
   }
 
   function startCreate() {
+    setReturnLessonId(detail?.id);
     setDetail(undefined);
+    setCreatingSubtopicId(undefined);
     setAssessment(undefined);
     setForm({ ...emptyForm, subtopicId: selectedSubtopicId });
     setError(undefined);
     setSuccess(undefined);
     setValidation({});
+    window.requestAnimationFrame(() => document.getElementById("lesson-title")?.focus());
+  }
+
+  function startCreateForSubtopic(subtopic: KnowledgeNode) {
+    setReturnLessonId(detail?.id);
+    setSelectedSubtopicId(subtopic.id);
+    setPage(0);
+    setDetail(undefined);
+    setAssessment(undefined);
+    setCreatingSubtopicId(subtopic.id);
+    setForm({ ...emptyForm, subtopicId: subtopic.id });
+    setError(undefined);
+    setSuccess(undefined);
+    setValidation({});
+    window.requestAnimationFrame(() => document.getElementById("lesson-title")?.focus());
+  }
+
+  function cancelCreate() {
+    const previousId = returnLessonId;
+    setCreatingSubtopicId(undefined);
+    setReturnLessonId(undefined);
+    setValidation({});
+    setError(undefined);
+    setSuccess(undefined);
+    if (previousId) {
+      void selectLesson(previousId);
+      return;
+    }
+    setForm({ ...emptyForm, subtopicId: selectedSubtopicId });
   }
 
   async function submit(event: React.FormEvent) {
@@ -211,25 +250,89 @@ export function LessonManagement() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)]">
         <Card><CardContent>
-          <KnowledgePathSelect nodes={subtopics} value={selectedSubtopicId} onChange={(value) => { setSelectedSubtopicId(value); setPage(0); setQuery(""); setDetail(undefined); setAssessment(undefined); }} idPrefix="lesson-filter" />
-          <Label htmlFor="lesson-search">{t("Search lessons")}</Label>
-          <Input id="lesson-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Title or slug")} />
-          {loading ? <p className="py-10 text-center text-sm text-text-muted">{t("Loading lessons...")}</p> : visibleLessons.length ? <ul className="mt-5 max-h-[50vh] space-y-2 overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]">{visibleLessons.map((lesson) => <li key={lesson.id}><button type="button" onClick={() => void selectLesson(lesson.id)} className={`w-full rounded-md border p-3 text-left transition-colors hover:border-primary/30 hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${detail?.id === lesson.id ? "border-primary/40 bg-primary-subtle" : "border-border"}`}><span className="flex items-start justify-between gap-2"><span className="font-semibold text-text">{lesson.title}</span><LessonStatus status={lesson.status} /></span><span className="mt-1 block text-xs text-text-muted">{lesson.slug} · {t("order {{order}}", { order: lesson.displayOrder })}</span></button></li>)}</ul> : <p className="py-10 text-center text-sm text-text-muted">{t("No matching lessons.")}</p>}
-          <AdminPagination page={page} totalPages={totalPages} disabled={loading} onPageChange={setPage} />
+          <div className="mb-5 flex border-b border-border" role="tablist" aria-label={t("Lesson management views")}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={leftTab === "lessons"}
+              aria-controls="lesson-list-panel"
+              onClick={() => setLeftTab("lessons")}
+              className={`min-h-11 border-b-2 px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${leftTab === "lessons" ? "border-primary text-primary-strong" : "border-transparent text-text-muted hover:text-text"}`}
+            >
+              {t("Lessons")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={leftTab === "knowledge"}
+              aria-controls="lesson-tree-panel"
+              onClick={() => setLeftTab("knowledge")}
+              className={`min-h-11 border-b-2 px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${leftTab === "knowledge" ? "border-primary text-primary-strong" : "border-transparent text-text-muted hover:text-text"}`}
+            >
+              {t("Knowledge Tree")}
+            </button>
+          </div>
+
+          {leftTab === "lessons" ? (
+            <div id="lesson-list-panel" role="tabpanel">
+              <KnowledgePathSelect nodes={subtopics} value={selectedSubtopicId} onChange={(value) => { setSelectedSubtopicId(value); setPage(0); setQuery(""); setDetail(undefined); setAssessment(undefined); setCreatingSubtopicId(undefined); }} idPrefix="lesson-filter" />
+              <Label htmlFor="lesson-search">{t("Search lessons")}</Label>
+              <Input id="lesson-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Title or slug")} />
+              {loading ? <p className="py-10 text-center text-sm text-text-muted">{t("Loading lessons...")}</p> : visibleLessons.length ? <ul className="mt-5 max-h-[50vh] space-y-2 overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]">{visibleLessons.map((lesson) => <li key={lesson.id}><button type="button" onClick={() => void selectLesson(lesson.id)} className={`w-full rounded-md border p-3 text-left transition-colors hover:border-primary/30 hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${detail?.id === lesson.id ? "border-primary/40 bg-primary-subtle" : "border-border"}`}><span className="flex items-start justify-between gap-2"><span className="font-semibold text-text">{lesson.title}</span><LessonStatus status={lesson.status} /></span><span className="mt-1 block text-xs text-text-muted">{lesson.slug} · {t("order {{order}}", { order: lesson.displayOrder })}</span></button></li>)}</ul> : <p className="py-10 text-center text-sm text-text-muted">{t("No matching lessons.")}</p>}
+              <AdminPagination page={page} totalPages={totalPages} disabled={loading} onPageChange={setPage} />
+            </div>
+          ) : (
+            <div id="lesson-tree-panel" role="tabpanel">
+              <Label htmlFor="lesson-tree-search">{t("Search hierarchy")}</Label>
+              <Input id="lesson-tree-search" value={treeQuery} onChange={(event) => setTreeQuery(event.target.value)} placeholder={t("Search by name, slug, or type")} />
+              <p className="mt-2 text-xs leading-5 text-text-muted">{t("Lessons can only be attached to subtopics. Use the plus action on a subtopic to start creating one.")}</p>
+              <div className="mt-4">
+                {loading ? <p className="py-10 text-center text-sm text-text-muted">{t("Loading knowledge nodes")}</p> : (
+                  <KnowledgeTree
+                    nodes={subtopics}
+                    query={treeQuery}
+                    mode="lesson"
+                    selectedId={creatingSubtopicId ?? selectedSubtopicId}
+                    onSelect={(node) => {
+                      if (node.type !== "SUBTOPIC") return;
+                      setSelectedSubtopicId(node.id);
+                      setPage(0);
+                    }}
+                    onAddLesson={startCreateForSubtopic}
+                  />
+                )}
+              </div>
+            </div>
+          )}
         </CardContent></Card>
 
         <div className="space-y-6">
           <Card><CardContent>
             <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-text">{detail ? t("Edit lesson") : t("Create lesson")}</h2><p className="mt-1 text-sm text-text-muted">{t("Content is stored as the backend lesson content string.")}</p></div>{detail ? <LessonStatus status={detail.status} /> : null}</div>
             <form className="mt-6 grid gap-5 sm:grid-cols-2" onSubmit={submit} noValidate>
-              <div className="sm:col-span-2"><KnowledgePathSelect nodes={subtopics} value={form.subtopicId} onChange={(subtopicId) => setForm((current) => ({ ...current, subtopicId }))} idPrefix="lesson-form" />{form.subtopicId ? <p className="mt-2 text-xs text-text-muted">{knowledgePathLabel(subtopics, form.subtopicId)}</p> : null}</div>
+              <div className="sm:col-span-2">
+                {!detail && creatingSubtopicId ? (
+                  <div className="rounded-md border border-primary/20 bg-primary-subtle px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary">{t("Lesson location")}</p>
+                    <p className="mt-1 text-sm font-semibold text-text">{knowledgePathLabel(subtopics, creatingSubtopicId)}</p>
+                    <p className="mt-1 text-xs text-text-muted">{t("Selected automatically from the Knowledge Tree.")}</p>
+                  </div>
+                ) : (
+                  <KnowledgePathSelect nodes={subtopics} value={form.subtopicId} onChange={(subtopicId) => setForm((current) => ({ ...current, subtopicId }))} idPrefix="lesson-form" />
+                )}
+                {form.subtopicId && !creatingSubtopicId ? <p className="mt-2 text-xs text-text-muted">{knowledgePathLabel(subtopics, form.subtopicId)}</p> : null}
+                {validation.subtopicId ? <FieldError>{validation.subtopicId}</FieldError> : null}
+              </div>
               <Field label={t("Title")} htmlFor="lesson-title" error={validation.title}><Input id="lesson-title" maxLength={200} aria-invalid={Boolean(validation.title)} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} /></Field>
               <div><Label>{t("System slug")}</Label><p className="mt-2 font-mono text-xs text-text-muted">{detail?.slug ?? t("Generated automatically after creation")}</p></div>
               <Field label={t("Display order")} htmlFor="lesson-order" error={validation.displayOrder}><Input id="lesson-order" type="number" min={0} aria-invalid={Boolean(validation.displayOrder)} value={form.displayOrder} onChange={(event) => setForm((current) => ({ ...current, displayOrder: Number(event.target.value) }))} /></Field>
               <Field label={t("Minimum read seconds")} htmlFor="lesson-read-time" error={validation.minimumReadSeconds}><Input id="lesson-read-time" type="number" min={1} aria-invalid={Boolean(validation.minimumReadSeconds)} value={form.minimumReadSeconds} onChange={(event) => setForm((current) => ({ ...current, minimumReadSeconds: Number(event.target.value) }))} /></Field>
               <Field label={t("Required scroll percent")} htmlFor="lesson-scroll" error={validation.requiredScrollPercent}><Input id="lesson-scroll" type="number" min={1} max={100} aria-invalid={Boolean(validation.requiredScrollPercent)} value={form.requiredScrollPercent} onChange={(event) => setForm((current) => ({ ...current, requiredScrollPercent: Number(event.target.value) }))} /></Field>
               <div className="sm:col-span-2"><Label>{t("Content")}</Label><p className="mb-2 text-xs text-text-muted">{t("Format lesson content, insert code or tables, and upload images without leaving the editor.")}</p><LessonRichTextEditor invalid={Boolean(validation.content)} value={form.content} onChange={(content) => setForm((current) => ({ ...current, content }))} />{validation.content ? <FieldError>{validation.content}</FieldError> : null}{hasMeaningfulLessonContent(form.content) ? <details className="mt-3 rounded-md border border-border p-4"><summary className="cursor-pointer text-sm font-semibold text-text">{t("Content preview")}</summary><div className="mt-5"><LessonContent content={form.content} /></div></details> : null}</div>
-              <div className="sm:col-span-2"><Button type="submit" loading={pending}>{detail ? t("Save lesson") : t("Create lesson")}</Button></div>
+              <div className="flex flex-wrap gap-3 sm:col-span-2">
+                <Button type="submit" loading={pending}>{detail ? t("Save lesson") : t("Create lesson")}</Button>
+                {!detail && (creatingSubtopicId || returnLessonId) ? <Button type="button" variant="secondary" disabled={pending} onClick={cancelCreate}>{t("Cancel")}</Button> : null}
+              </div>
             </form>
             {detail ? <div className="mt-7 border-t border-border pt-6"><h3 className="text-sm font-semibold text-text">{t("Publishing status")}</h3><div className="mt-3 flex flex-wrap gap-2">{statuses.map((status) => <Button key={status} size="sm" variant="secondary" disabled={pending || detail.status === status} onClick={() => void changeStatus(status)}>{t(status)}</Button>)}</div><Button className="mt-6" size="sm" variant="danger" loading={pending} onClick={() => void deleteLesson()}>{t("Delete lesson")}</Button></div> : null}
           </CardContent></Card>
