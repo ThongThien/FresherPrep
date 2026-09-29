@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Badge, Button, Feedback, LoadingState } from "@/components/ui";
+import { Badge, Button, Feedback, LoadingState, NavigationConfirm } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
 import type { LessonDetailData, LessonProgress } from "@/lib/lessons/types";
@@ -263,6 +263,13 @@ export function LessonPage({
     (pathContext ? "?pathId=" + encodeURIComponent(pathContext.id) : "");
   return (
     <div className="mx-auto w-full max-w-6xl">
+      <NavigationConfirm
+        enabled={Boolean(progress && !progress.completed)}
+        title={t("Leave this lesson?")}
+        description={t("Your reading progress is saved periodically. Any activity still waiting to sync may need a moment before you leave.")}
+        confirmLabel={t("Leave lesson")}
+        cancelLabel={t("Stay and continue")}
+      />
       <nav
         aria-label={t("Breadcrumb")}
         className="flex min-h-10 flex-wrap items-center gap-2 text-sm"

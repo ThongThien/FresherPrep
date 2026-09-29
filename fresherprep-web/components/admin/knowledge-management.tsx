@@ -181,7 +181,7 @@ export function KnowledgeManagement() {
             <Input id="knowledge-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Search by name, slug, or type")} />
             <div className="mt-5">
               {loading ? <Loading label={t("Loading knowledge nodes")} /> : visible.length ? (
-                <ul className="space-y-1" aria-label={t("Knowledge hierarchy")}>
+                <ul className="max-h-[50vh] space-y-1 overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]" aria-label={t("Knowledge hierarchy")}>
                   {visible.map(({ node, depth }) => (
                     <li key={node.id}>
                       <button

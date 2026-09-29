@@ -13,6 +13,7 @@ import {
   Card,
   CardContent,
   CardHeader,
+  ConfirmDialog,
   Feedback,
   FieldError,
   FieldHint,
@@ -36,6 +37,7 @@ export function ProfilePage() {
   const [displayName, setDisplayName] = useState(user.displayName);
   const [saving, setSaving] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [preferenceNotice, setPreferenceNotice] = useState<string | null>(null);
@@ -271,7 +273,7 @@ export function ProfilePage() {
               <Button
                 variant="secondary"
                 loading={loggingOut}
-                onClick={logout}
+                onClick={() => setConfirmingLogout(true)}
                 className="w-full sm:w-auto"
               >
                 {loggingOut ? t("Signing out...") : t("Sign out")}
@@ -280,6 +282,16 @@ export function ProfilePage() {
           </Card>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmingLogout}
+        title={t("Sign out of FresherPrep?")}
+        description={t("You will need to sign in again to continue learning.")}
+        confirmLabel={t("Confirm sign out")}
+        cancelLabel={t("Cancel")}
+        pending={loggingOut}
+        onConfirm={() => void logout()}
+        onClose={() => setConfirmingLogout(false)}
+      />
     </main>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Badge, Button, Feedback, LoadingState, Progress } from "@/components/ui";
+import { Badge, Button, ConfirmDialog, Feedback, LoadingState, NavigationConfirm, Progress } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { QuizAttempt } from "@/lib/quizzes/types";
 import { useI18n } from "@/lib/i18n";
@@ -20,7 +20,6 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [error, setError] = useState<string>();
   const [reload, setReload] = useState(0);
-  const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const submitInFlightRef = useRef(false);
 
   useEffect(() => {
@@ -80,23 +79,6 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
     setCurrent(index);
   }
 
-  useEffect(() => {
-    if (!confirming) return;
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    cancelButtonRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !submitting) setConfirming(false);
-    };
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", closeOnEscape);
-      previousFocus?.focus();
-    };
-  }, [confirming, submitting]);
-
   async function submitAttempt() {
     if (!attempt || submitInFlightRef.current || attempt.status !== "IN_PROGRESS") return;
     submitInFlightRef.current = true;
@@ -135,6 +117,13 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
 
   const expired = remainingSeconds === 0;
   return <div className="mx-auto max-w-5xl">
+    <NavigationConfirm
+      enabled={attempt.status === "IN_PROGRESS" && !submitting}
+      title={t("Leave this quiz?")}
+      description={t("Your selected answers are kept only in this browser until you submit the quiz.")}
+      confirmLabel={t("Leave quiz")}
+      cancelLabel={t("Continue quiz")}
+    />
     <header className="border-b border-border pb-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Assessment in progress")}</p><h1 className="mt-2 text-2xl font-semibold text-text">{attempt.quizTitle}</h1></div><div className="flex items-center gap-2">{remainingSeconds !== null ? <Badge variant={remainingSeconds <= 60 ? "warning" : "neutral"}>{t("Time remaining: {{time}}", { time: formatCountdown(remainingSeconds) })}</Badge> : null}<Badge>{t("{{answered}} of {{total}} answered", { answered, total: attempt.questions.length })}</Badge></div></div><Progress className="mt-5" value={answered / attempt.questions.length * 100} label={t("Answer progress")} showValue /></header>
     <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start">
       <main className="rounded-lg border border-border bg-surface p-5 shadow-card sm:p-7" aria-labelledby="question-title">
@@ -155,7 +144,16 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
       </main>
       <aside className="space-y-5 lg:sticky lg:top-24"><section className="rounded-lg border border-border bg-surface p-4"><h2 className="text-sm font-semibold text-text">{t("Questions")}</h2><div className="mt-4 grid grid-cols-5 gap-2 lg:grid-cols-4">{attempt.questions.map((item, index) => { const itemAnswered = Boolean(answers[item.id]); return <button key={item.id} type="button" disabled={submitting} aria-label={t(itemAnswered ? "Question {{number}}, answered" : "Question {{number}}, unanswered", { number: index + 1 })} aria-current={index === current ? "step" : undefined} className={"min-h-10 rounded-md border text-sm font-semibold " + (index === current ? "border-primary-solid bg-primary-solid text-white" : itemAnswered ? "border-success/30 bg-success-subtle text-success-strong" : "border-border text-text-muted")} onClick={() => goToQuestion(index)}>{index + 1}<span className="sr-only">{t(itemAnswered ? "answered" : "unanswered")}</span></button>; })}</div><div className="mt-4 space-y-1 text-xs text-text-muted"><p>{t("Answered: {{count}}", { count: answered })}</p><p>{t("Unanswered: {{count}}", { count: attempt.questions.length - answered })}</p></div></section><Button className="w-full" variant="secondary" disabled={submitting} onClick={() => setConfirming(true)}>{t("Submit quiz")}</Button></aside>
     </div>
-    {confirming ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !submitting) setConfirming(false); }}><div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="submit-title" aria-describedby="submit-description"><h2 id="submit-title" className="text-xl font-semibold text-text">{t("Submit this quiz?")}</h2><p id="submit-description" className="mt-3 text-sm leading-6 text-text-muted">{t("{{answered}} answered and {{unanswered}} unanswered. After submitting, answers can no longer be changed.", { answered, unanswered: attempt.questions.length - answered })}</p><div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button ref={cancelButtonRef} variant="secondary" disabled={submitting} onClick={() => setConfirming(false)}>{t("Cancel")}</Button><Button loading={submitting} onClick={() => void submitAttempt()}>{submitting ? t("Submitting...") : t("Confirm submit")}</Button></div></div></div> : null}
+    <ConfirmDialog
+      open={confirming}
+      title={t("Submit this quiz?")}
+      description={t("{{answered}} answered and {{unanswered}} unanswered. After submitting, answers can no longer be changed.", { answered, unanswered: attempt.questions.length - answered })}
+      confirmLabel={submitting ? t("Submitting...") : t("Confirm submit")}
+      cancelLabel={t("Cancel")}
+      pending={submitting}
+      onConfirm={() => void submitAttempt()}
+      onClose={() => setConfirming(false)}
+    />
   </div>;
 }
 
