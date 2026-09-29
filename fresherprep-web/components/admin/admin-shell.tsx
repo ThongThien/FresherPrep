@@ -62,7 +62,7 @@ export function AdminShell({
             aria-label={t("FresherPrep admin dashboard")}
           >
             <Image
-              src="/static/logo.png"
+              src="/static/logo1.png"
               alt=""
               width={500}
               height={500}

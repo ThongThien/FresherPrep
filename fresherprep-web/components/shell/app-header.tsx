@@ -49,7 +49,7 @@ export function AppHeader({
           aria-label={t("FresherPrep dashboard")}
         >
           <Image
-            src="/static/logo.png"
+            src="/static/logo1.png"
             alt=""
             width={500}
             height={500}

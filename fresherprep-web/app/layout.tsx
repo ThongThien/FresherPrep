@@ -51,9 +51,9 @@ export const metadata: Metadata = {
   description:
     "A focused Java Backend learning and interview preparation platform.",
   icons: {
-    icon: "/static/logo.png",
-    shortcut: "/static/logo.png",
-    apple: "/static/logo.png",
+    icon: "/static/logo1.png",
+    shortcut: "/static/logo1.png",
+    apple: "/static/logo1.png",
   },
 };
 
