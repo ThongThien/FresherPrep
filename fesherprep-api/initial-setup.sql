@@ -1,44 +1,107 @@
 -- FresherPrep initial setup.
+--
 -- Chạy sau khi Hibernate đã tạo schema fresherprep.
 --
 -- Script chỉ tạo:
---   1 TECHNOLOGY Java (PUBLISHED)
---   8 CATEGORY placeholder (DRAFT)
---   10 TOPIC cho mỗi CATEGORY (80 TOPIC, DRAFT)
---   20 SUBTOPIC cho mỗi TOPIC (1.600 SUBTOPIC, DRAFT)
+--   1 TECHNOLOGY: Java (PUBLISHED)
+--   20 CATEGORY placeholder (DRAFT)
+--   5 TOPIC cho mỗi CATEGORY (100 TOPIC, DRAFT)
 --   Pet settings + 1 Pet/3 level ban đầu
 --
--- Script KHÔNG tạo user, lesson, learning path, question/version/option,
--- quiz/rule, attempt, progress hay dữ liệu runtime.
--- Dùng ON CONFLICT DO NOTHING để chạy lại không ghi đè nội dung Admin đã sửa.
+-- KHÔNG tạo SUBTOPIC.
+-- SUBTOPIC sẽ do Admin tự tạo bên trong từng TOPIC.
+--
+-- Script KHÔNG tạo:
+--   user
+--   lesson
+--   learning path
+--   question/version/option
+--   quiz/rule
+--   attempt
+--   progress
+--   runtime data
+--
+-- Dùng ON CONFLICT DO NOTHING để chạy lại không ghi đè
+-- nội dung Admin đã chỉnh sửa.
+--
+-- Hierarchy:
+--
+--   TECHNOLOGY
+--      └── CATEGORY
+--            └── TOPIC
+--                  └── SUBTOPIC (Admin tự tạo)
+--
+-- Ví dụ:
+--
+--   Java
+--     ├── Core Java
+--     │     ├── OOP
+--     │     ├── Collections
+--     │     ├── Exception Handling
+--     │     └── ...
+--     │
+--     ├── Spring
+--     ├── Database
+--     └── ...
 --
 -- Lưu ý:
 --   SUBTOPIC không phải LESSON.
---   Một SUBTOPIC có thể chứa nhiều LESSON; mỗi LESSON thuộc đúng một SUBTOPIC.
+--   Một SUBTOPIC có thể chứa nhiều LESSON.
+--   Mỗi LESSON thuộc đúng một SUBTOPIC.
 
 BEGIN;
 
 SET LOCAL search_path TO fresherprep, public;
 
--- Root công nghệ duy nhất trong setup hiện tại.
+-- =========================================================
+-- 1. TECHNOLOGY
+-- =========================================================
+
 INSERT INTO knowledge_nodes (
-    id, created_at, updated_at, node_type, parent_id,
-    name, slug, display_order, status
+    id,
+    created_at,
+    updated_at,
+    node_type,
+    parent_id,
+    name,
+    slug,
+    display_order,
+    status
 )
 VALUES (
-    gen_random_uuid(), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
-    'TECHNOLOGY', NULL, 'Java', 'java', 0, 'PUBLISHED'
+    gen_random_uuid(),
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP,
+    'TECHNOLOGY',
+    NULL,
+    'Java',
+    'java',
+    0,
+    'PUBLISHED'
 )
 ON CONFLICT (slug) DO NOTHING;
 
--- 8 Category placeholder. Admin đổi name sau; slug được giữ ổn định.
+
+-- =========================================================
+-- 2. CATEGORY
+--    20 Category placeholder
+-- =========================================================
+
 WITH category_seed AS (
     SELECT number
-    FROM generate_series(1, 8) AS number
+    FROM generate_series(1, 20) AS number
 )
+
 INSERT INTO knowledge_nodes (
-    id, created_at, updated_at, node_type, parent_id,
-    name, slug, display_order, status
+    id,
+    created_at,
+    updated_at,
+    node_type,
+    parent_id,
+    name,
+    slug,
+    display_order,
+    status
 )
 SELECT
     gen_random_uuid(),
@@ -47,7 +110,10 @@ SELECT
     'CATEGORY',
     java.id,
     format('CATEGORY %s', seed.number),
-    format('java-category-%s', lpad(seed.number::text, 2, '0')),
+    format(
+        'java-category-%s',
+        lpad(seed.number::text, 2, '0')
+    ),
     seed.number - 1,
     'DRAFT'
 FROM category_seed seed
@@ -56,15 +122,31 @@ JOIN knowledge_nodes java
    AND java.node_type = 'TECHNOLOGY'
 ON CONFLICT (slug) DO NOTHING;
 
--- Mỗi Category có 10 Topic placeholder.
+
+-- =========================================================
+-- 3. TOPIC
+--    5 Topic cho mỗi Category
+--    20 Category x 5 Topic = 100 Topic
+-- =========================================================
+
 WITH topic_seed AS (
-    SELECT category_number, topic_number
-    FROM generate_series(1, 8) AS category_number
-    CROSS JOIN generate_series(1, 10) AS topic_number
+    SELECT
+        category_number,
+        topic_number
+    FROM generate_series(1, 20) AS category_number
+    CROSS JOIN generate_series(1, 5) AS topic_number
 )
+
 INSERT INTO knowledge_nodes (
-    id, created_at, updated_at, node_type, parent_id,
-    name, slug, display_order, status
+    id,
+    created_at,
+    updated_at,
+    node_type,
+    parent_id,
+    name,
+    slug,
+    display_order,
+    status
 )
 SELECT
     gen_random_uuid(),
@@ -89,43 +171,11 @@ JOIN knowledge_nodes category
    AND category.node_type = 'CATEGORY'
 ON CONFLICT (slug) DO NOTHING;
 
--- Mỗi Topic có 20 Subtopic placeholder.
-WITH subtopic_seed AS (
-    SELECT category_number, topic_number, subtopic_number
-    FROM generate_series(1, 8) AS category_number
-    CROSS JOIN generate_series(1, 10) AS topic_number
-    CROSS JOIN generate_series(1, 20) AS subtopic_number
-)
-INSERT INTO knowledge_nodes (
-    id, created_at, updated_at, node_type, parent_id,
-    name, slug, display_order, status
-)
-SELECT
-    gen_random_uuid(),
-    CURRENT_TIMESTAMP,
-    CURRENT_TIMESTAMP,
-    'SUBTOPIC',
-    topic.id,
-    format('SUBTOPIC %s', seed.subtopic_number),
-    format(
-        'java-category-%s-topic-%s-subtopic-%s',
-        lpad(seed.category_number::text, 2, '0'),
-        lpad(seed.topic_number::text, 2, '0'),
-        lpad(seed.subtopic_number::text, 2, '0')
-    ),
-    seed.subtopic_number - 1,
-    'DRAFT'
-FROM subtopic_seed seed
-JOIN knowledge_nodes topic
-    ON topic.slug = format(
-        'java-category-%s-topic-%s',
-        lpad(seed.category_number::text, 2, '0'),
-        lpad(seed.topic_number::text, 2, '0')
-    )
-   AND topic.node_type = 'TOPIC'
-ON CONFLICT (slug) DO NOTHING;
 
--- Cấu hình Pet mặc định. Chạy lại không ghi đè cấu hình Admin đã thay đổi.
+-- =========================================================
+-- 4. PET SETTINGS
+-- =========================================================
+
 INSERT INTO pet_settings (
     id,
     lesson_completion_points,
@@ -137,9 +187,21 @@ INSERT INTO pet_settings (
     version
 )
 VALUES (
-    1, 10, 20, 10, 10, 20, CURRENT_TIMESTAMP, 0
+    1,
+    10,
+    20,
+    10,
+    10,
+    20,
+    CURRENT_TIMESTAMP,
+    0
 )
 ON CONFLICT (id) DO NOTHING;
+
+
+-- =========================================================
+-- 5. INITIAL PET
+-- =========================================================
 
 INSERT INTO pets (
     id,
@@ -170,6 +232,11 @@ VALUES (
     0
 )
 ON CONFLICT (code) DO NOTHING;
+
+
+-- =========================================================
+-- 6. INITIAL PET LEVELS
+-- =========================================================
 
 INSERT INTO pet_level_configs (
     id,
@@ -236,12 +303,31 @@ CROSS JOIN (
 WHERE pet.code = 'JAVA_SEEDLING'
 ON CONFLICT (pet_id, level_order) DO NOTHING;
 
--- Question/Quiz không cần dòng setup giả:
--- - Question code unique, thuộc SUBTOPIC, có version bất biến.
--- - Một version hợp lệ có đúng 4 option (position 1..4), đúng 1 correct.
--- - Quiz FIXED/RULE_BASED chỉ publish khi cấu hình hợp lệ.
--- - RULE_BASED phải đủ số Question PUBLISHED theo từng rule.
--- - Assessment Lesson dùng Quiz type LESSON và pass percentage 80.
--- Các yêu cầu này được enforce bởi schema + Service khi Admin/Contributor tạo nội dung thật.
+
+-- =========================================================
+-- QUESTION / QUIZ
+-- =========================================================
+--
+-- Không tạo dữ liệu giả.
+--
+-- Question:
+--   - Question code unique.
+--   - Question thuộc SUBTOPIC.
+--   - Version bất biến.
+--   - Một version hợp lệ có đúng 4 option.
+--   - Position 1..4.
+--   - Đúng 1 correct option.
+--
+-- Quiz:
+--   - FIXED / RULE_BASED.
+--   - Chỉ publish khi configuration hợp lệ.
+--   - RULE_BASED phải đủ số Question PUBLISHED
+--     theo từng rule.
+--   - Assessment Lesson dùng Quiz type LESSON.
+--   - Pass percentage = 80.
+--
+-- Các yêu cầu này được enforce bởi schema + Service
+-- khi Admin/Contributor tạo nội dung thật.
+
 
 COMMIT;

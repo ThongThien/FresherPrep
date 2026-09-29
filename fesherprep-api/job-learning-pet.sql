@@ -1,7 +1,0 @@
--- LEGACY NOTICE
--- Pet System v1 used one fixed Pet with exactly three levels.
--- Do not run this file for new deployments.
---
--- Existing databases: run job-pet-v2.sql once before deploying the v2 backend.
--- Fresh development databases: Hibernate creates the v2 tables and initial-setup.sql
--- inserts the initial economy and Java Seedling definition.

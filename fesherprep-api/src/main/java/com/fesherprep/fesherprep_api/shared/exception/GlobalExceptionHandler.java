@@ -1,7 +1,5 @@
 package com.fesherprep.fesherprep_api.shared.exception;
 
-import com.fesherprep.fesherprep_api.comment.service.CommentNotFoundException;
-import com.fesherprep.fesherprep_api.comment.service.NotificationNotFoundException;
 import com.fesherprep.fesherprep_api.contribution.service.ContributionNotFoundException;
 import com.fesherprep.fesherprep_api.knowledge.service.DuplicateKnowledgeSlugException;
 import com.fesherprep.fesherprep_api.knowledge.service.KnowledgeNodeNotFoundException;
@@ -55,8 +53,6 @@ public class GlobalExceptionHandler {
             QuizAttemptNotFoundException.class,
             UserNotFoundException.class,
             ContributionNotFoundException.class,
-            CommentNotFoundException.class,
-            NotificationNotFoundException.class,
             PracticeExerciseNotFoundException.class
     })
     public ResponseEntity<ApiErrorResponse> handleNotFound(RuntimeException exception) {

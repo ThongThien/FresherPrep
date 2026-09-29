@@ -12,7 +12,6 @@ import { useI18n } from "@/lib/i18n";
 
 import { AdminNavigation } from "./admin-navigation";
 import { adminNavigation } from "./navigation-items";
-import { AdminNotificationBell } from "./admin-notification-bell";
 
 interface AdminShellProps {
   children: ReactNode;
@@ -80,7 +79,6 @@ export function AdminShell({
             </span>
           ) : null}
           <div className="ml-auto flex items-center gap-2">
-            <AdminNotificationBell />
             <LanguageSwitcher />
             <ThemeToggle />
             <div className="hidden items-center gap-4 sm:flex">

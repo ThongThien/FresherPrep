@@ -1079,36 +1079,6 @@ Object.assign(vi, {
 });
 
 Object.assign(vi, {
-  "Discussion": "Th\u1ea3o lu\u1eadn",
-  "Ask a question or share an insight about this content.": "\u0110\u1eb7t c\u00e2u h\u1ecfi ho\u1eb7c chia s\u1ebb g\u00f3c nh\u00ecn v\u1ec1 n\u1ed9i dung n\u00e0y.",
-  "Your comment": "B\u00ecnh lu\u1eadn c\u1ee7a b\u1ea1n",
-  "Write a comment...": "Vi\u1ebft b\u00ecnh lu\u1eadn...",
-  "Post comment": "\u0110\u0103ng b\u00ecnh lu\u1eadn",
-  "Unable to load comments.": "Kh\u00f4ng th\u1ec3 t\u1ea3i b\u00ecnh lu\u1eadn.",
-  "Unable to post comment.": "Kh\u00f4ng th\u1ec3 \u0111\u0103ng b\u00ecnh lu\u1eadn.",
-  "Unable to update comment.": "Kh\u00f4ng th\u1ec3 c\u1eadp nh\u1eadt b\u00ecnh lu\u1eadn.",
-  "Unable to delete comment.": "Kh\u00f4ng th\u1ec3 x\u00f3a b\u00ecnh lu\u1eadn.",
-  "Delete this comment?": "X\u00f3a b\u00ecnh lu\u1eadn n\u00e0y?",
-  "Comment action failed": "Thao t\u00e1c b\u00ecnh lu\u1eadn th\u1ea5t b\u1ea1i",
-  "Loading comments...": "\u0110ang t\u1ea3i b\u00ecnh lu\u1eadn...",
-  "No comments yet. Start the discussion.": "Ch\u01b0a c\u00f3 b\u00ecnh lu\u1eadn. H\u00e3y b\u1eaft \u0111\u1ea7u th\u1ea3o lu\u1eadn.",
-  "You": "B\u1ea1n",
-  "Edited": "\u0110\u00e3 ch\u1ec9nh s\u1eeda",
-  "Delete": "X\u00f3a",
-  "Edit comment": "Ch\u1ec9nh s\u1eeda b\u00ecnh lu\u1eadn",
-  "Save changes": "L\u01b0u thay \u0111\u1ed5i",
-  "Cancel": "H\u1ee7y",
-  "Load more comments": "T\u1ea3i th\u00eam b\u00ecnh lu\u1eadn",
-  "Notifications": "Th\u00f4ng b\u00e1o",
-  "Admin notifications, {{count}} unread": "Th\u00f4ng b\u00e1o qu\u1ea3n tr\u1ecb, {{count}} ch\u01b0a \u0111\u1ecdc",
-  "New lesson and quiz comments": "B\u00ecnh lu\u1eadn m\u1edbi trong b\u00e0i h\u1ecdc v\u00e0 quiz",
-  "Loading notifications...": "\u0110ang t\u1ea3i th\u00f4ng b\u00e1o...",
-  "Unable to load notifications.": "Kh\u00f4ng th\u1ec3 t\u1ea3i th\u00f4ng b\u00e1o.",
-  "No comment notifications yet.": "Ch\u01b0a c\u00f3 th\u00f4ng b\u00e1o b\u00ecnh lu\u1eadn.",
-  "{{author}} commented on {{title}}": "{{author}} \u0111\u00e3 b\u00ecnh lu\u1eadn v\u1ec1 {{title}}",
-});
-
-Object.assign(vi, {
   "Complete the Java check to continue.": "Ho\u00e0n th\u00e0nh c\u00e2u h\u1ecfi Java \u0111\u1ec3 ti\u1ebfp t\u1ee5c.",
   "Java knowledge check": "Ki\u1ec3m tra ki\u1ebfn th\u1ee9c Java",
   "Show answer hint": "Hi\u1ec7n g\u1ee3i \u00fd tr\u1ea3 l\u1eddi",
@@ -1198,7 +1168,6 @@ Object.assign(vi, {
   "Unable to upload Pet image.": "Kh\u00f4ng th\u1ec3 t\u1ea3i \u1ea3nh Pet l\u00ean.",
 });
 
-+
 Object.assign(vi, {
   "SQL Practice": "Luyện tập SQL",
   "Practice": "Thực hành",
