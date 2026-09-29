@@ -151,6 +151,8 @@ public class KnowledgeService {
 
         if (target == ContentStatus.PUBLISHED) {
             validatePublish(node);
+            publish(node);
+            return KnowledgeNodeResponse.from(node);
         }
         if (target == ContentStatus.ARCHIVED
                 && knowledgeNodeRepository.existsByParentIdAndStatus(id, ContentStatus.PUBLISHED)) {
@@ -240,6 +242,25 @@ public class KnowledgeService {
         if (node.getParent() != null && node.getParent().getStatus() != ContentStatus.PUBLISHED) {
             throw new IllegalStateException("Publish the parent node first");
         }
+    }
+
+    /**
+     * Knowledge publishing is an ADMIN operation. The UI exposes Publish as one
+     * action, while the shared content lifecycle deliberately requires review
+     * before publication. Advance through those valid states internally instead
+     * of weakening the lifecycle rules used by lessons, questions, and quizzes.
+     */
+    private static void publish(KnowledgeNode node) {
+        if (node.getStatus() == ContentStatus.PUBLISHED) {
+            return;
+        }
+        if (node.getStatus() == ContentStatus.ARCHIVED) {
+            node.changeStatus(ContentStatus.DRAFT);
+        }
+        if (node.getStatus() == ContentStatus.DRAFT) {
+            node.changeStatus(ContentStatus.REVIEW);
+        }
+        node.changeStatus(ContentStatus.PUBLISHED);
     }
 
     private String generateUniqueSlug(String name) {
