@@ -184,13 +184,24 @@ export function LessonManagement() {
     setSuccess(undefined);
     try {
       const payload = { ...form, title: form.title.trim(), content: form.content.trim() };
+      const editing = Boolean(detail);
       const saved = await adminRequest<LessonDetail>(
         detail ? `lessons/${detail.id}` : "lessons",
         { method: detail ? "PUT" : "POST", ...jsonBody(payload) },
       );
       await loadLessons();
-      await selectLesson(saved.id);
-      setSuccess(detail ? "Lesson updated." : "Lesson created.");
+      if (editing) {
+        await selectLesson(saved.id);
+        setSuccess("Lesson updated.");
+      } else {
+        setDetail(undefined);
+        setAssessment(undefined);
+        setReturnLessonId(undefined);
+        setForm({ ...emptyForm, subtopicId: payload.subtopicId });
+        setValidation({});
+        setSuccess("Lesson created.");
+        window.requestAnimationFrame(() => document.getElementById("lesson-title")?.focus());
+      }
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
@@ -350,23 +361,24 @@ function LessonRelations({ lesson, allLessons, quizzes, assessment, pending, set
   const [quizId, setQuizId] = useState("");
   const availablePrerequisites = allLessons.filter((candidate) => candidate.id !== lesson.id && !lesson.prerequisites.some((item) => item.id === candidate.id));
 
-  async function mutate(path: string, method: "POST" | "DELETE", message: string, body?: unknown) {
+  async function mutate(path: string, method: "POST" | "DELETE", message: string, body?: unknown, onSuccess?: () => void) {
     setPending(true);
     onError("");
     try {
       await adminRequest(path, { method, ...(body ? jsonBody(body) : {}) });
       await onChanged(message);
+      onSuccess?.();
     } catch (reason) { onError(messageOf(reason)); } finally { setPending(false); }
   }
 
   return <div className="grid gap-6 xl:grid-cols-2">
     <Card><CardContent><h2 className="text-lg font-semibold text-text">{t("Prerequisites")}</h2><p className="mt-1 text-sm text-text-muted">{t("The backend prevents self-reference, duplicates, and cycles.")}</p>
       {lesson.prerequisites.length ? <ul className="mt-5 space-y-2">{lesson.prerequisites.map((item) => <li key={item.id} className="flex items-center justify-between gap-3 rounded-md border border-border p-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-text">{item.title}</p><p className="text-xs text-text-muted">{t(item.status)}</p></div><Button size="sm" variant="ghost" disabled={pending} onClick={() => { if (window.confirm(t("Remove prerequisite {{title}}?", { title: item.title }))) void mutate(`lessons/${lesson.id}/prerequisites/${item.id}`, "DELETE", t("Prerequisite removed.")); }}>{t("Remove")}</Button></li>)}</ul> : <p className="mt-5 text-sm text-text-muted">{t("No prerequisites.")}</p>}
-      <div className="mt-5 border-t border-border pt-5"><Label htmlFor="prerequisite">{t("Add prerequisite")}</Label><Select id="prerequisite" value={prerequisiteId} onChange={(event) => setPrerequisiteId(event.target.value)}><option value="">{t("Select lesson")}</option>{availablePrerequisites.map((item) => <option key={item.id} value={item.id}>{item.title} ({item.status})</option>)}</Select><Button className="mt-3" size="sm" disabled={!prerequisiteId} loading={pending} onClick={() => void mutate(`lessons/${lesson.id}/prerequisites/${prerequisiteId}`, "POST", t("Prerequisite added."))}>{t("Add prerequisite")}</Button></div>
+      <div className="mt-5 border-t border-border pt-5"><Label htmlFor="prerequisite">{t("Add prerequisite")}</Label><Select id="prerequisite" value={prerequisiteId} onChange={(event) => setPrerequisiteId(event.target.value)}><option value="">{t("Select lesson")}</option>{availablePrerequisites.map((item) => <option key={item.id} value={item.id}>{item.title} ({item.status})</option>)}</Select><Button className="mt-3" size="sm" disabled={!prerequisiteId} loading={pending} onClick={() => void mutate(`lessons/${lesson.id}/prerequisites/${prerequisiteId}`, "POST", t("Prerequisite added."), undefined, () => setPrerequisiteId(""))}>{t("Add prerequisite")}</Button></div>
     </CardContent></Card>
 
     <Card><CardContent><h2 className="text-lg font-semibold text-text">{t("Assessment quiz")}</h2><p className="mt-1 text-sm text-text-muted">{t("A published lesson can only reference a published quiz.")}</p>
-      {assessment ? <div className="mt-5 rounded-md border border-border p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-text">{assessment.quizTitle}</p><p className="mt-1 text-xs text-text-muted">{assessment.quizCode} · {t("pass {{percent}}%", { percent: assessment.passPercentage })}</p></div><LessonStatus status={assessment.quizStatus} /></div><Button className="mt-4" size="sm" variant="ghost" disabled={pending} onClick={() => { if (window.confirm(t("Remove this assessment from the lesson?"))) void mutate(`lessons/${lesson.id}/assessment`, "DELETE", t("Assessment removed.")); }}>{t("Remove assessment")}</Button></div> : <div className="mt-5"><Label htmlFor="assessment-quiz">{t("Assign quiz")}</Label><Select id="assessment-quiz" value={quizId} onChange={(event) => setQuizId(event.target.value)}><option value="">{t("Select quiz")}</option>{quizzes.map((quiz) => <option key={quiz.id} value={quiz.id}>{quiz.title} ({quiz.status})</option>)}</Select><Button className="mt-3" size="sm" disabled={!quizId} loading={pending} onClick={() => void mutate(`lessons/${lesson.id}/assessment`, "POST", t("Assessment assigned."), { quizId })}>{t("Assign assessment")}</Button></div>}
+      {assessment ? <div className="mt-5 rounded-md border border-border p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-text">{assessment.quizTitle}</p><p className="mt-1 text-xs text-text-muted">{assessment.quizCode} · {t("pass {{percent}}%", { percent: assessment.passPercentage })}</p></div><LessonStatus status={assessment.quizStatus} /></div><Button className="mt-4" size="sm" variant="ghost" disabled={pending} onClick={() => { if (window.confirm(t("Remove this assessment from the lesson?"))) void mutate(`lessons/${lesson.id}/assessment`, "DELETE", t("Assessment removed.")); }}>{t("Remove assessment")}</Button></div> : <div className="mt-5"><Label htmlFor="assessment-quiz">{t("Assign quiz")}</Label><Select id="assessment-quiz" value={quizId} onChange={(event) => setQuizId(event.target.value)}><option value="">{t("Select quiz")}</option>{quizzes.map((quiz) => <option key={quiz.id} value={quiz.id}>{quiz.title} ({quiz.status})</option>)}</Select><Button className="mt-3" size="sm" disabled={!quizId} loading={pending} onClick={() => void mutate(`lessons/${lesson.id}/assessment`, "POST", t("Assessment assigned."), { quizId }, () => setQuizId(""))}>{t("Assign assessment")}</Button></div>}
     </CardContent></Card>
   </div>;
 }

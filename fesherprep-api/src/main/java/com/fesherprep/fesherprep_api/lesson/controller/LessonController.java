@@ -32,15 +32,19 @@ public class LessonController {
 
     @GetMapping
     public Page<LessonSummaryResponse> getPublishedLessons(
-            @RequestParam UUID subtopicId,
+            @RequestParam(required = false) UUID subtopicId,
+            @RequestParam(required = false, defaultValue = "") String q,
             @PageableDefault(size = 20, sort = { "displayOrder", "title" }) Pageable pageable
     ) {
-        return lessonService.getPublishedLessons(subtopicId, pageable);
+        return lessonService.getPublishedLessons(subtopicId, q, pageable);
     }
 
     @GetMapping("/{lessonId}")
-    public LessonDetailResponse getPublishedLesson(@PathVariable UUID lessonId) {
-        return lessonService.getPublishedLesson(lessonId);
+    public LessonDetailResponse getPublishedLesson(
+            @PathVariable UUID lessonId,
+            @RequestParam(required = false) UUID learningPathId
+    ) {
+        return lessonService.getPublishedLesson(lessonId, learningPathId);
     }
 
     @GetMapping("/by-slug/{slug}")
@@ -54,16 +58,20 @@ public class LessonController {
     }
 
     @PostMapping("/{lessonId}/progress/start")
-    public LessonProgressResponse startProgress(@PathVariable UUID lessonId) {
-        return lessonService.startProgress(lessonId);
+    public LessonProgressResponse startProgress(
+            @PathVariable UUID lessonId,
+            @RequestParam(required = false) UUID learningPathId
+    ) {
+        return lessonService.startProgress(lessonId, learningPathId);
     }
 
     @PatchMapping("/{lessonId}/progress")
     public LessonProgressResponse recordProgress(
             @PathVariable UUID lessonId,
+            @RequestParam(required = false) UUID learningPathId,
             @Valid @RequestBody RecordLessonProgressRequest request
     ) {
-        return lessonService.recordProgress(lessonId, request);
+        return lessonService.recordProgress(lessonId, learningPathId, request);
     }
 
     @GetMapping("/{lessonId}/progress")

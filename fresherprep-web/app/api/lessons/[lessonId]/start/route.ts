@@ -7,8 +7,11 @@ import { setAuthCookies } from "@/lib/auth/session";
 export async function POST(request: NextRequest, context: { params: Promise<{ lessonId: string }> }) {
   if (!hasTrustedOrigin(request)) return apiError(403, "UNTRUSTED_ORIGIN", "The request origin is not allowed.");
   const { lessonId } = await context.params;
+  const pathId = request.nextUrl.searchParams.get("pathId");
+  const path = "/api/lessons/" + encodeURIComponent(lessonId) + "/progress/start"
+    + (pathId ? "?learningPathId=" + encodeURIComponent(pathId) : "");
   try {
-    const result = await authenticatedBackendRequest(request, "/api/lessons/" + encodeURIComponent(lessonId) + "/progress/start", { method: "POST" });
+    const result = await authenticatedBackendRequest(request, path, { method: "POST" });
     if (!result.authenticated) return result.response;
     if (!result.ok) return backendErrorResponse(result.status, result.payload);
     const response = NextResponse.json(result.payload);

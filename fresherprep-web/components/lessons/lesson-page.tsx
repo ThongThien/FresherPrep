@@ -32,10 +32,15 @@ export function LessonPage({
   const viewedAt = useRef<number | undefined>(undefined);
   const syncing = useRef(false);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [lessonId]);
+
   const startProgress = useCallback(async () => {
     try {
+      const contextQuery = pathId ? "?pathId=" + encodeURIComponent(pathId) : "";
       const response = await fetch(
-        "/api/lessons/" + encodeURIComponent(lessonId) + "/start",
+        "/api/lessons/" + encodeURIComponent(lessonId) + "/start" + contextQuery,
         { method: "POST" },
       );
       if (response.status === 401) {
@@ -59,7 +64,7 @@ export function LessonPage({
         t("Reading progress could not be started. Try again while reading."),
       );
     }
-  }, [lessonId, t]);
+  }, [lessonId, pathId, t]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -118,8 +123,9 @@ export function LessonPage({
     pendingSeconds.current = 0;
     syncing.current = true;
     try {
+      const contextQuery = pathId ? "?pathId=" + encodeURIComponent(pathId) : "";
       const response = await fetch(
-        "/api/lessons/" + encodeURIComponent(lessonId) + "/progress",
+        "/api/lessons/" + encodeURIComponent(lessonId) + "/progress" + contextQuery,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -153,7 +159,7 @@ export function LessonPage({
     } finally {
       syncing.current = false;
     }
-  }, [lessonId, recordElapsed, t]);
+  }, [lessonId, pathId, recordElapsed, t]);
 
   useEffect(() => {
     if (!progress) return;
@@ -355,9 +361,13 @@ export function LessonPage({
                 tone="success"
                 title={t("Lesson completed")}
               >
-                {t(
-                  "Your completion has been recorded. The next lesson is now available.",
-                )}
+                {pathContext && !pathContext.next
+                  ? t(
+                      "You have completed every lesson in this learning path. Continue learning or reinforce your knowledge with a quiz.",
+                    )
+                  : t(
+                      "Your completion has been recorded. The next lesson is now available.",
+                    )}
               </Feedback>
             ) : progress?.assessmentRequired ? (
               <Feedback
@@ -402,6 +412,24 @@ export function LessonPage({
                     title: pathContext.next.title,
                   })}
                 </Link>
+              ) : null}
+              {progress?.completed && pathContext && !pathContext.next ? (
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Link
+                    className="inline-flex min-h-10 items-center justify-center rounded-md border border-border-strong bg-surface px-4 py-2 text-sm font-semibold text-text shadow-button transition-colors hover:border-primary/40 hover:bg-primary-subtle hover:text-primary"
+                    href={
+                      "/learning-paths/" + encodeURIComponent(pathContext.id)
+                    }
+                  >
+                    {t("Return to learning path")}
+                  </Link>
+                  <Link
+                    className="inline-flex min-h-10 items-center justify-center rounded-md border border-primary-solid bg-primary-solid px-4 py-2 text-sm font-semibold text-white shadow-button transition-colors hover:border-primary-solid-hover hover:bg-primary-solid-hover"
+                    href="/quizzes"
+                  >
+                    {t("Practice with quizzes")}
+                  </Link>
+                </div>
               ) : null}
             </div>
           </footer>

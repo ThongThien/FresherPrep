@@ -4,8 +4,10 @@ import com.fesherprep.fesherprep_api.lesson.domain.Lesson;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +23,25 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
     Page<Lesson> findAllBySubtopicIdAndStatus(
             UUID subtopicId,
             ContentStatus status,
+            Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = "subtopic")
+    @Query("""
+            select lesson
+            from Lesson lesson
+            where lesson.status = :lessonStatus
+              and lesson.subtopic.status = :subtopicStatus
+              and (
+                :query = ''
+                or lower(lesson.title) like lower(concat('%', :query, '%'))
+                or lower(lesson.slug) like lower(concat('%', :query, '%'))
+              )
+            """)
+    Page<Lesson> findPublishedLessons(
+            @Param("lessonStatus") ContentStatus lessonStatus,
+            @Param("subtopicStatus") ContentStatus subtopicStatus,
+            @Param("query") String query,
             Pageable pageable
     );
 

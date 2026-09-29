@@ -358,7 +358,9 @@ export function LessonRichTextEditor({
           />
         </div>
 
-        <EditorContent editor={editor} />
+        <div className="max-h-[60vh] overflow-y-auto overscroll-contain sm:max-h-[36rem]">
+          <EditorContent editor={editor} />
+        </div>
       </div>
 
       <input

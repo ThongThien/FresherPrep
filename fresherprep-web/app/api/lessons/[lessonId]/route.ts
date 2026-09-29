@@ -9,14 +9,17 @@ import type { LessonDetail, LessonDetailData, LessonPathContext, LessonSummary }
 
 export async function GET(request: NextRequest, context: { params: Promise<{ lessonId: string }> }) {
   const { lessonId } = await context.params;
+  const pathId = request.nextUrl.searchParams.get("pathId");
+  const lessonPath = "/api/lessons/" + encodeURIComponent(lessonId)
+    + (pathId ? "?learningPathId=" + encodeURIComponent(pathId) : "");
   try {
-    const lessonResult = await authenticatedBackendRequest(request, "/api/lessons/" + encodeURIComponent(lessonId));
+    const lessonResult = await authenticatedBackendRequest(request, lessonPath);
     if (!lessonResult.authenticated) return lessonResult.response;
     if (!lessonResult.ok) return backendErrorResponse(lessonResult.status, lessonResult.payload);
     if (!isLessonDetail(lessonResult.payload)) return apiError(502, "INVALID_BACKEND_RESPONSE", "The lesson could not be read.");
     const data: LessonDetailData = {
       lesson: lessonResult.payload,
-      pathContext: await getPathContext(request.nextUrl.searchParams.get("pathId"), lessonId),
+      pathContext: await getPathContext(pathId, lessonId),
     };
     const response = NextResponse.json(data);
     if (lessonResult.refreshedTokens) setAuthCookies(response, lessonResult.refreshedTokens);

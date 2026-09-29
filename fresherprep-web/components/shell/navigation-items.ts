@@ -6,6 +6,7 @@ export interface NavigationItem {
 export const learningNavigation: readonly NavigationItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Learning paths", href: "/learning-paths" },
+  { label: "Lessons", href: "/lessons" },
   { label: "Quizzes", href: "/quizzes" },
   // { label: "SQL Practice", href: "/practice" },
   // { label: "Learning Games", href: "/games" },

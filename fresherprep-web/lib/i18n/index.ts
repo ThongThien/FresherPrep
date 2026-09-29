@@ -8,6 +8,9 @@ const storageKey = "fresherprep-language";
 const changeEvent = "fresherprep-language-change";
 
 const vi: Record<string, string> = {
+  "Return to learning path": "Quay l\u1ea1i l\u1ed9 tr\u00ecnh",
+  "Practice with quizzes": "L\u00e0m quiz c\u1ee7ng c\u1ed1 ki\u1ebfn th\u1ee9c",
+  "You have completed every lesson in this learning path. Continue learning or reinforce your knowledge with a quiz.": "B\u1ea1n \u0111\u00e3 ho\u00e0n th\u00e0nh t\u1ea5t c\u1ea3 b\u00e0i h\u1ecdc trong l\u1ed9 tr\u00ecnh. H\u00e3y ch\u1ecdn ti\u1ebfp t\u1ee5c h\u1ecdc ho\u1eb7c l\u00e0m quiz \u0111\u1ec3 c\u1ee7ng c\u1ed1 ki\u1ebfn th\u1ee9c.",
   "Dashboard": "Tổng quan",
   "Learning paths": "Lộ trình học",
   "Quizzes": "Bài kiểm tra",
@@ -1231,6 +1234,27 @@ Object.assign(vi, {
   "Lessons can only be attached to subtopics. Use the plus action on a subtopic to start creating one.": "Bài học chỉ có thể gắn vào chủ đề con. Dùng nút cộng tại chủ đề con để bắt đầu tạo.",
   "Lesson location": "Vị trí bài học",
   "Selected automatically from the Knowledge Tree.": "Được chọn tự động từ Cây kiến thức.",
+  "Lesson library": "Thư viện bài học",
+  "Published lessons": "Bài học đã xuất bản",
+  "Choose any published lesson to study independently. Reading progress and completion requirements work the same as lessons in a learning path.": "Chọn bất kỳ bài học đã xuất bản để học chủ động. Tiến độ đọc và điều kiện hoàn thành hoạt động giống bài học trong lộ trình.",
+  "Find a lesson": "Tìm bài học",
+  "Search by title or slug": "Tìm theo tiêu đề hoặc slug",
+  "Search": "Tìm kiếm",
+  "Clear": "Xóa",
+  "Unable to load published lessons.": "Không thể tải các bài học đã xuất bản.",
+  "Lessons unavailable": "Bài học không khả dụng",
+  "Loading published lessons...": "Đang tải bài học đã xuất bản...",
+  "Published": "Đã xuất bản",
+  "Minimum reading": "Đọc tối thiểu",
+  "{{seconds}} seconds": "{{seconds}} giây",
+  "Required scroll": "Mức cuộn yêu cầu",
+  "Read lesson": "Đọc bài",
+  "No lessons match your search": "Không có bài học phù hợp",
+  "No published lessons": "Chưa có bài học đã xuất bản",
+  "Try a different title or clear the search.": "Hãy thử tiêu đề khác hoặc xóa tìm kiếm.",
+  "Published lessons will appear here when they are available.": "Bài học đã xuất bản sẽ xuất hiện tại đây.",
+  "Clear search": "Xóa tìm kiếm",
+  "Lesson pages": "Các trang bài học",
 });
 
 export function useI18n() {

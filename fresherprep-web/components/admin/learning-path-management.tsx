@@ -116,10 +116,26 @@ export function LearningPathManagement() {
     setPending(true);
     setError(undefined);
     try {
-      const saved = await adminRequest<LearningPathDetail>(`learning-paths/${detail.id}/status`, {
-        method: "PATCH",
-        ...jsonBody({ status }),
-      });
+      let saved: LearningPathDetail;
+      if (status === "PUBLISHED") {
+        saved = await adminRequest<LearningPathDetail>(
+          `learning-paths/${detail.id}/publish`,
+          { method: "POST" },
+        );
+      } else if (status === "ARCHIVED") {
+        saved = await adminRequest<LearningPathDetail>(
+          `learning-paths/${detail.id}/archive`,
+          { method: "POST" },
+        );
+      } else {
+        saved = await adminRequest<LearningPathDetail>(
+          `learning-paths/${detail.id}/status`,
+          {
+            method: "PATCH",
+            ...jsonBody({ status }),
+          },
+        );
+      }
       setDetail(saved);
       await loadLists();
       setSuccess(`Status changed to ${status.toLowerCase()}.`);

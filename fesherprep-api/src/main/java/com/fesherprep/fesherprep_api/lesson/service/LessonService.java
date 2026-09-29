@@ -57,12 +57,19 @@ public class LessonService {
 
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
-    public Page<LessonSummaryResponse> getPublishedLessons(UUID subtopicId, Pageable pageable) {
-        requirePublishedSubtopic(subtopicId);
+    public Page<LessonSummaryResponse> getPublishedLessons(UUID subtopicId, String query, Pageable pageable) {
+        if (subtopicId != null) {
+            requirePublishedSubtopic(subtopicId);
+            return lessonRepository
+                    .findAllBySubtopicIdAndStatus(subtopicId, ContentStatus.PUBLISHED, pageable)
+                    .map(LessonSummaryResponse::from);
+        }
+        String normalizedQuery = query == null ? "" : query.strip();
         return lessonRepository
-                .findAllBySubtopicIdAndStatus(
-                        subtopicId,
+                .findPublishedLessons(
                         ContentStatus.PUBLISHED,
+                        ContentStatus.PUBLISHED,
+                        normalizedQuery,
                         pageable
                 )
                 .map(LessonSummaryResponse::from);
@@ -70,9 +77,9 @@ public class LessonService {
 
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
-    public LessonDetailResponse getPublishedLesson(UUID lessonId) {
+    public LessonDetailResponse getPublishedLesson(UUID lessonId, UUID learningPathId) {
         User user = requireCurrentUser();
-        requireSequentialAccess(user.getId(), lessonId, null);
+        requireSequentialAccess(user.getId(), lessonId, null, learningPathId);
         return publishedLessonCacheService.get(lessonId);
     }
 
@@ -83,23 +90,23 @@ public class LessonService {
                 .findBySlugAndStatus(normalizeSlug(slug), ContentStatus.PUBLISHED)
                 .orElseThrow(() -> new LessonNotFoundException(slug));
         requirePublishedSubtopic(lesson.getSubtopic().getId());
-        requireSequentialAccess(requireCurrentUser().getId(), lesson.getId(), lesson);
+        requireCurrentUser();
         return publishedLessonCacheService.get(lesson.getId());
     }
 
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public List<LessonSummaryResponse> getPublishedPrerequisites(UUID lessonId) {
-        requireSequentialAccess(requireCurrentUser().getId(), lessonId, null);
+        requireCurrentUser();
         return publishedLessonCacheService.get(lessonId).prerequisites();
     }
 
     @PreAuthorize("isAuthenticated()")
     @Transactional
-    public LessonProgressResponse startProgress(UUID lessonId) {
+    public LessonProgressResponse startProgress(UUID lessonId, UUID learningPathId) {
         User user = requireCurrentUser();
         Lesson lesson = requirePublishedLesson(lessonId);
-        requireSequentialAccess(user.getId(), lessonId, lesson);
+        requireSequentialAccess(user.getId(), lessonId, lesson, learningPathId);
         Instant now = clock.instant();
 
         LessonProgress progress = progressRepository
@@ -116,11 +123,12 @@ public class LessonService {
     @Transactional
     public LessonProgressResponse recordProgress(
             UUID lessonId,
+            UUID learningPathId,
             @Valid RecordLessonProgressRequest request
     ) {
         User user = requireCurrentUser();
         Lesson lesson = requirePublishedLesson(lessonId);
-        requireSequentialAccess(user.getId(), lessonId, lesson);
+        requireSequentialAccess(user.getId(), lessonId, lesson, learningPathId);
 
         LessonProgress progress = progressRepository
                 .findByUserIdAndLessonId(user.getId(), lessonId)
@@ -410,9 +418,20 @@ public class LessonService {
         );
     }
 
-    private void requireSequentialAccess(UUID userId, UUID lessonId, Lesson knownLesson) {
+    private void requireSequentialAccess(
+            UUID userId,
+            UUID lessonId,
+            Lesson knownLesson,
+            UUID learningPathId
+    ) {
+        if (learningPathId == null) {
+            return;
+        }
         List<LearningPathItem> placements = learningPathItemRepository
-                .findJoinedPublishedPlacements(userId, lessonId, ContentStatus.PUBLISHED);
+                .findJoinedPublishedPlacements(userId, lessonId, ContentStatus.PUBLISHED)
+                .stream()
+                .filter(placement -> placement.getLearningPath().getId().equals(learningPathId))
+                .toList();
         if (placements.isEmpty()) {
             return;
         }
@@ -424,45 +443,39 @@ public class LessonService {
             return;
         }
 
-        String blockerTitle = null;
-        for (LearningPathItem placement : placements) {
-            List<LearningPathItem> orderedItems = learningPathItemRepository
-                    .findAllByLearningPathIdOrderByDisplayOrderAsc(placement.getLearningPath().getId());
-            int currentIndex = -1;
-            for (int index = 0; index < orderedItems.size(); index++) {
-                if (orderedItems.get(index).getLesson().hasSameIdentityAs(lesson)) {
-                    currentIndex = index;
-                    break;
-                }
-            }
-            if (currentIndex <= 0) {
-                return;
-            }
-
-            List<Lesson> earlierLessons = orderedItems.subList(0, currentIndex).stream()
-                    .map(LearningPathItem::getLesson)
-                    .toList();
-            List<UUID> earlierLessonIds = earlierLessons.stream().map(Lesson::getId).toList();
-            Map<UUID, LessonProgress> progressByLessonId = progressRepository
-                    .findAllByUserIdAndLessonIdIn(userId, earlierLessonIds)
-                    .stream()
-                    .collect(java.util.stream.Collectors.toMap(
-                            progress -> progress.getLesson().getId(),
-                            progress -> progress
-                    ));
-            Map<UUID, LessonCompletionService.LessonCompletionResult> completions =
-                    completionService.evaluateAll(userId, earlierLessons, progressByLessonId);
-            Optional<Lesson> blocker = earlierLessons.stream()
-                    .filter(candidate -> !completions.get(candidate.getId()).completed())
-                    .findFirst();
-            if (blocker.isEmpty()) {
-                return;
-            }
-            if (blockerTitle == null) {
-                blockerTitle = blocker.get().getTitle();
+        List<LearningPathItem> orderedItems = learningPathItemRepository
+                .findAllByLearningPathIdOrderByDisplayOrderAsc(learningPathId);
+        int currentIndex = -1;
+        for (int index = 0; index < orderedItems.size(); index++) {
+            if (orderedItems.get(index).getLesson().hasSameIdentityAs(lesson)) {
+                currentIndex = index;
+                break;
             }
         }
-        throw new IllegalStateException("Complete \"" + blockerTitle + "\" before opening this lesson");
+        if (currentIndex <= 0) {
+            return;
+        }
+
+        List<Lesson> earlierLessons = orderedItems.subList(0, currentIndex).stream()
+                .map(LearningPathItem::getLesson)
+                .toList();
+        List<UUID> earlierLessonIds = earlierLessons.stream().map(Lesson::getId).toList();
+        Map<UUID, LessonProgress> progressByLessonId = progressRepository
+                .findAllByUserIdAndLessonIdIn(userId, earlierLessonIds)
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        progress -> progress.getLesson().getId(),
+                        progress -> progress
+                ));
+        Map<UUID, LessonCompletionService.LessonCompletionResult> completions =
+                completionService.evaluateAll(userId, earlierLessons, progressByLessonId);
+        Lesson blocker = earlierLessons.stream()
+                .filter(candidate -> !completions.get(candidate.getId()).completed())
+                .findFirst()
+                .orElse(null);
+        if (blocker != null) {
+            throw new IllegalStateException("Complete \"" + blocker.getTitle() + "\" before opening this lesson");
+        }
     }
 
     private void validateArchive(UUID lessonId) {

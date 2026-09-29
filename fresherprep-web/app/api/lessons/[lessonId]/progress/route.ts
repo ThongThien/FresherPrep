@@ -9,8 +9,11 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ l
   const body = await request.json().catch(() => null);
   if (!valid(body)) return apiError(400, "INVALID_PROGRESS_UPDATE", "Reading time and scroll progress are invalid.");
   const { lessonId } = await context.params;
+  const pathId = request.nextUrl.searchParams.get("pathId");
+  const path = "/api/lessons/" + encodeURIComponent(lessonId) + "/progress"
+    + (pathId ? "?learningPathId=" + encodeURIComponent(pathId) : "");
   try {
-    const result = await authenticatedBackendRequest(request, "/api/lessons/" + encodeURIComponent(lessonId) + "/progress", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const result = await authenticatedBackendRequest(request, path, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!result.authenticated) return result.response;
     if (!result.ok) return backendErrorResponse(result.status, result.payload);
     const response = NextResponse.json(result.payload);
