@@ -284,7 +284,14 @@ export function LearningPathManagement() {
                       : t("Choose the technology this path belongs to.")}
                   </p>
                 </div>
-                {detail ? <PathStatus status={detail.status} /> : null}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {detail ? <PathStatus status={detail.status} /> : null}
+                  {detail ? (
+                    <Button size="sm" variant="secondary" onClick={startCreate}>
+                      {t("Back to create")}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
               <form
                 className="mt-6 grid gap-5 sm:grid-cols-2"
@@ -418,7 +425,7 @@ function PathItems({
   onError: (value: string) => void;
 }) {
   const { t } = useI18n();
-  const [lessonId, setLessonId] = useState("");
+  const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([]);
   const [required, setRequired] = useState(true);
   const [weight, setWeight] = useState(1);
   const [pending, setPending] = useState(false);
@@ -461,19 +468,44 @@ function PathItems({
       allowedSubtopics.has(lesson.subtopicId) &&
       !path.items.some((item) => item.lessonId === lesson.id),
   );
+  const availableIds = available.map((lesson) => lesson.id);
+  const allVisibleSelected =
+    availableIds.length > 0 &&
+    availableIds.every((lessonId) => selectedLessonIds.includes(lessonId));
+
+  function toggleLesson(lessonId: string) {
+    setSelectedLessonIds((current) =>
+      current.includes(lessonId)
+        ? current.filter((id) => id !== lessonId)
+        : [...current, lessonId],
+    );
+  }
+
+  function toggleAllVisible() {
+    setSelectedLessonIds((current) => {
+      if (allVisibleSelected) {
+        return current.filter((id) => !availableIds.includes(id));
+      }
+      return [...new Set([...current, ...availableIds])];
+    });
+  }
 
   async function addItem(event: React.FormEvent) {
     event.preventDefault();
-    if (!lessonId) return onError("Select a lesson to add.");
+    if (!selectedLessonIds.length)
+      return onError("Select at least one lesson to add.");
     setPending(true);
     onError("");
     try {
-      await adminRequest(`learning-paths/${path.id}/items`, {
+      await adminRequest(`learning-paths/${path.id}/items/batch`, {
         method: "POST",
-        ...jsonBody({ lessonId, required, weight }),
+        ...jsonBody({ lessonIds: selectedLessonIds, required, weight }),
       });
-      setLessonId("");
-      await onChanged("Lesson added to the learning path.");
+      const addedCount = selectedLessonIds.length;
+      setSelectedLessonIds([]);
+      await onChanged(
+        `${addedCount} lesson${addedCount === 1 ? "" : "s"} added to the learning path.`,
+      );
     } catch (reason) {
       onError(messageOf(reason));
     } finally {
@@ -495,7 +527,7 @@ function PathItems({
           </p>
         </div>
         {path.items.length ? (
-          <div className="mt-5 max-h-[36rem] space-y-3 overflow-y-auto overscroll-contain pr-1">
+          <div className="mt-5 max-h-[28rem] space-y-3 overflow-y-auto overscroll-contain rounded-md border border-border p-2">
             {[...path.items]
               .sort((a, b) => a.displayOrder - b.displayOrder)
               .map((item) => (
@@ -528,7 +560,6 @@ function PathItems({
                 setCategoryId(event.target.value);
                 setTopicId("");
                 setSubtopicId("");
-                setLessonId("");
               }}
             >
               <option value="">{t("All categories")}</option>
@@ -548,7 +579,6 @@ function PathItems({
               onChange={(event) => {
                 setTopicId(event.target.value);
                 setSubtopicId("");
-                setLessonId("");
               }}
             >
               <option value="">{t("All topics")}</option>
@@ -565,10 +595,7 @@ function PathItems({
               id="item-subtopic"
               value={subtopicId}
               disabled={!topicId}
-              onChange={(event) => {
-                setSubtopicId(event.target.value);
-                setLessonId("");
-              }}
+              onChange={(event) => setSubtopicId(event.target.value)}
             >
               <option value="">{t("All subtopics")}</option>
               {subtopics.map((node) => (
@@ -579,21 +606,53 @@ function PathItems({
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <Label htmlFor="item-lesson">{t("Add lesson")}</Label>
-            <Select
-              id="item-lesson"
-              value={lessonId}
-              onChange={(event) => setLessonId(event.target.value)}
-            >
-              <option value="">{t("Select lesson")}</option>
-              {available.map((lesson) => (
-                <option key={lesson.id} value={lesson.id}>
-                  {lesson.title} ({lesson.status})
-                </option>
-              ))}
-            </Select>
+            <Label>{t("Select lessons to add")}</Label>
+            <div className="mt-2 overflow-hidden rounded-md border border-border bg-surface">
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 border-b border-border px-3 text-sm font-medium text-text">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  disabled={!available.length}
+                  onChange={toggleAllVisible}
+                  className="size-4 accent-primary"
+                />
+                {t("Select all visible ({{count}})", {
+                  count: available.length,
+                })}
+              </label>
+              <div className="max-h-72 overflow-y-auto overscroll-contain p-1">
+                {available.length ? (
+                  available.map((lesson) => (
+                    <label
+                      key={lesson.id}
+                      className="flex min-h-11 cursor-pointer items-start gap-3 rounded px-2 py-2 text-sm hover:bg-surface-muted"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedLessonIds.includes(lesson.id)}
+                        onChange={() => toggleLesson(lesson.id)}
+                        className="mt-0.5 size-4 shrink-0 accent-primary"
+                      />
+                      <span className="min-w-0">
+                        <span className="block font-medium text-text">
+                          {lesson.title}
+                        </span>
+                        <span className="block text-xs text-text-muted">
+                          {t(lesson.status)}
+                        </span>
+                      </span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="p-4 text-sm text-text-muted">
+                    {t("No lessons are available in this knowledge scope.")}
+                  </p>
+                )}
+              </div>
+            </div>
             <p className="mt-2 text-xs text-text-muted">
-              {t("Showing {{count}} lessons in the selected knowledge scope.", {
+              {t("{{selected}} selected · {{count}} available", {
+                selected: selectedLessonIds.length,
                 count: available.length,
               })}
             </p>
@@ -631,7 +690,9 @@ function PathItems({
           </label>
           <div className="sm:text-right">
             <Button type="submit" loading={pending}>
-              {t("Add lesson")}
+              {t("Add selected lessons ({{count}})", {
+                count: selectedLessonIds.length,
+              })}
             </Button>
           </div>
         </form>

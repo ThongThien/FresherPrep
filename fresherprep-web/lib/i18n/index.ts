@@ -8,6 +8,12 @@ const storageKey = "fresherprep-language";
 const changeEvent = "fresherprep-language-change";
 
 const vi: Record<string, string> = {
+  "Back to create": "Quay lại form tạo mới",
+  "Select lessons to add": "Chọn các bài học cần thêm",
+  "Select at least one lesson to add.": "Chọn ít nhất một bài học để thêm.",
+  "No lessons are available in this knowledge scope.": "Không có bài học khả dụng trong phạm vi kiến thức này.",
+  "{{selected}} selected · {{count}} available": "Đã chọn {{selected}} · có sẵn {{count}}",
+  "Add selected lessons ({{count}})": "Thêm các bài đã chọn ({{count}})",
   "Knowledge type colors": "M\u00e0u ph\u00e2n lo\u1ea1i ki\u1ebfn th\u1ee9c",
   "Other topic": "Ch\u1ee7 \u0111\u1ec1 kh\u00e1c",
   "Publish new lesson?": "Xu\u1ea5t b\u1ea3n b\u00e0i h\u1ecdc m\u1edbi?",

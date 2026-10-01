@@ -196,6 +196,23 @@ export function LessonManagement() {
     );
   }
 
+  function startBlankCreate() {
+    setReturnLessonId(undefined);
+    setDetail(undefined);
+    setCreatingSubtopicId(undefined);
+    setSelectedSubtopicId("");
+    setAssessment(undefined);
+    setForm(emptyForm);
+    setError(undefined);
+    setSuccess(undefined);
+    setValidation({});
+    setLeftTab("knowledge");
+    setView("editor");
+    window.requestAnimationFrame(() =>
+      document.getElementById("lesson-title")?.focus(),
+    );
+  }
+
   function startCreateForSubtopic(subtopic: KnowledgeNode) {
     setReturnLessonId(detail?.id);
     setSelectedSubtopicId(subtopic.id);
@@ -657,7 +674,18 @@ export function LessonManagement() {
                     )}
                   </p>
                 </div>
-                {detail ? <LessonStatus status={detail.status} /> : null}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {detail ? <LessonStatus status={detail.status} /> : null}
+                  {detail ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={startBlankCreate}
+                    >
+                      {t("Back to create")}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
               <form
                 className="mt-6 grid gap-5 sm:grid-cols-2"

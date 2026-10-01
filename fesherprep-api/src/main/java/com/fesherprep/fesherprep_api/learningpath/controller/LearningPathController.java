@@ -108,6 +108,14 @@ public class LearningPathController {
         return ResponseEntity.status(HttpStatus.CREATED).body(learningPathService.addItem(pathId, request));
     }
 
+    @PostMapping("/admin/{pathId}/items/batch")
+    public ResponseEntity<LearningPathDetailResponse> addItems(
+            @PathVariable UUID pathId,
+            @Valid @RequestBody AddLearningPathItemsRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(learningPathService.addItems(pathId, request));
+    }
+
     @PutMapping("/admin/{pathId}/items/{itemId}")
     public LearningPathDetailResponse updateItem(
             @PathVariable UUID pathId,

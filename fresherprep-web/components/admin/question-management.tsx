@@ -202,6 +202,18 @@ export function QuestionManagement() {
     setView("editor");
   }
 
+  function startBlankCreate() {
+    setKnowledgeFilter("");
+    setSelected(undefined);
+    setVersions([]);
+    setSelectedVersionId(undefined);
+    setForm(emptyQuestion);
+    resetVersionEditor();
+    clearMessages();
+    setShowBatch(false);
+    setView("editor");
+  }
+
   async function submitQuestion(event: React.FormEvent) {
     event.preventDefault();
     const errors: Record<string, string> = {};
@@ -722,7 +734,18 @@ export function QuestionManagement() {
                     )}
                   </p>
                 </div>
-                {selected ? <Status status={selected.status} /> : null}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {selected ? <Status status={selected.status} /> : null}
+                  {selected ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={startBlankCreate}
+                    >
+                      {t("Back to create")}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
               <form
                 className="mt-6 grid gap-5 sm:grid-cols-2"

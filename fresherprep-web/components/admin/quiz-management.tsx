@@ -440,7 +440,14 @@ export function QuizManagement() {
                     )}
                   </p>
                 </div>
-                {selected ? <Status status={selected.status} /> : null}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {selected ? <Status status={selected.status} /> : null}
+                  {selected ? (
+                    <Button size="sm" variant="secondary" onClick={startCreate}>
+                      {t("Back to create")}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
               <form
                 className="mt-6 grid gap-5 sm:grid-cols-2"

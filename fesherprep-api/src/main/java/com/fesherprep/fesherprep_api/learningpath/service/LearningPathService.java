@@ -39,6 +39,8 @@ import org.springframework.validation.annotation.Validated;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -299,6 +301,53 @@ public class LearningPathService {
             itemRepository.saveAndFlush(item);
         } catch (DataIntegrityViolationException exception) {
             throw new IllegalStateException("Learning path item conflicts with existing data", exception);
+        }
+        return toDetail(path, false);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
+    public LearningPathDetailResponse addItems(
+            UUID pathId,
+            @Valid AddLearningPathItemsRequest request
+    ) {
+        LearningPath path = requirePath(pathId);
+        if (new HashSet<>(request.lessonIds()).size() != request.lessonIds().size()) {
+            throw new IllegalArgumentException("Lesson selection must not contain duplicates");
+        }
+
+        Map<UUID, Lesson> lessonsById = new HashMap<>();
+        lessonRepository.findAllById(request.lessonIds())
+                .forEach(lesson -> lessonsById.put(lesson.getId(), lesson));
+
+        List<LearningPathItem> items = new ArrayList<>();
+        int displayOrder = nextDisplayOrder(pathId);
+        for (UUID lessonId : request.lessonIds()) {
+            Lesson lesson = lessonsById.get(lessonId);
+            if (lesson == null) {
+                throw new LessonNotFoundException(lessonId);
+            }
+            if (itemRepository.existsByLearningPathIdAndLessonId(pathId, lessonId)) {
+                throw new IllegalStateException("Lesson already exists in this learning path");
+            }
+            if (path.getStatus() == ContentStatus.PUBLISHED
+                    && lesson.getStatus() != ContentStatus.PUBLISHED) {
+                throw new IllegalStateException("A published learning path can only contain published lessons");
+            }
+            items.add(new LearningPathItem(
+                    path,
+                    lesson,
+                    displayOrder++,
+                    request.required(),
+                    request.weight()
+            ));
+        }
+
+        try {
+            itemRepository.saveAllAndFlush(items);
+        } catch (DataIntegrityViolationException exception) {
+            throw new IllegalStateException("Learning path items conflict with existing data", exception);
         }
         return toDetail(path, false);
     }
