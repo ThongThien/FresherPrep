@@ -122,7 +122,7 @@ export function AdminShell({
         <main
           id="admin-main"
           tabIndex={-1}
-          className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10"
+          className="min-w-0 flex-1 px-4 pb-6 pt-2 sm:px-6 sm:pb-8 sm:pt-3 lg:px-8 lg:pb-10 lg:pt-4"
         >
           {children}
         </main>
