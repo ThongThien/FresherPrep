@@ -11,7 +11,7 @@ const targets: Record<string, string> = {
   quizzes: "/api/quizzes/admin",
   questions: "/api/questions",
   users: "/api/admin/users",
-  reviews: "/api/admin/reviews",
+  // reviews: "/api/admin/reviews",
   "pet-config": "/api/admin/pet-config",
 };
 
@@ -25,12 +25,20 @@ export const DELETE = forward;
 
 async function forward(request: NextRequest, context: Context) {
   if (request.method !== "GET" && !hasTrustedOrigin(request)) {
-    return apiError(403, "UNTRUSTED_ORIGIN", "The request origin is not allowed.");
+    return apiError(
+      403,
+      "UNTRUSTED_ORIGIN",
+      "The request origin is not allowed.",
+    );
   }
   try {
     return await forwardRequest(request, context);
   } catch {
-    return apiError(503, "ADMIN_SERVICE_UNAVAILABLE", "The admin service is temporarily unavailable.");
+    return apiError(
+      503,
+      "ADMIN_SERVICE_UNAVAILABLE",
+      "The admin service is temporarily unavailable.",
+    );
   }
 }
 
@@ -39,21 +47,34 @@ async function forwardRequest(request: NextRequest, context: Context) {
   const [area, ...segments] = resource;
   const base = targets[area];
   if (!base) {
-    return apiError(404, "ADMIN_RESOURCE_NOT_FOUND", "The requested admin resource is unavailable.");
+    return apiError(
+      404,
+      "ADMIN_RESOURCE_NOT_FOUND",
+      "The requested admin resource is unavailable.",
+    );
   }
 
-  const suffix = segments.length ? `/${segments.map(encodeURIComponent).join("/")}` : "";
+  const suffix = segments.length
+    ? `/${segments.map(encodeURIComponent).join("/")}`
+    : "";
   const contentType = request.headers.get("content-type") ?? "";
-  const body = request.method === "GET" || request.method === "DELETE"
-    ? undefined
-    : contentType.startsWith("multipart/form-data")
-      ? await request.arrayBuffer()
-      : await request.text();
-  const result = await authenticatedBackendRequest(request, `${base}${suffix}${request.nextUrl.search}`, {
-    method: request.method,
-    body: body || undefined,
-    headers: body ? { "Content-Type": contentType || "application/json" } : undefined,
-  });
+  const body =
+    request.method === "GET" || request.method === "DELETE"
+      ? undefined
+      : contentType.startsWith("multipart/form-data")
+        ? await request.arrayBuffer()
+        : await request.text();
+  const result = await authenticatedBackendRequest(
+    request,
+    `${base}${suffix}${request.nextUrl.search}`,
+    {
+      method: request.method,
+      body: body || undefined,
+      headers: body
+        ? { "Content-Type": contentType || "application/json" }
+        : undefined,
+    },
+  );
   if (!result.authenticated) return result.response;
 
   const response = result.ok

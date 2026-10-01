@@ -14,7 +14,11 @@ import {
   Select,
 } from "@/components/ui";
 import { adminRequest, jsonBody } from "@/lib/admin/client";
-import type { ContentStatus, KnowledgeNode, KnowledgeNodeType } from "@/lib/admin/types";
+import type {
+  ContentStatus,
+  KnowledgeNode,
+  KnowledgeNodeType,
+} from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
 import { KnowledgeTree } from "./knowledge-tree";
 import { AdminConfirmDialog } from "./admin-ui";
@@ -26,7 +30,12 @@ const expectedParent: Record<KnowledgeNodeType, KnowledgeNodeType | null> = {
   SUBTOPIC: "TOPIC",
 };
 const statuses: ContentStatus[] = ["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"];
-const emptyForm = { type: "TECHNOLOGY" as KnowledgeNodeType, parentId: "", name: "", displayOrder: 0 };
+const emptyForm = {
+  type: "TECHNOLOGY" as KnowledgeNodeType,
+  parentId: "",
+  name: "",
+  displayOrder: 0,
+};
 
 export function KnowledgeManagement() {
   const { t } = useI18n();
@@ -61,17 +70,28 @@ export function KnowledgeManagement() {
   }, [load]);
 
   const parentType = expectedParent[form.type];
-  const parentOptions = parentType ? nodes.filter((node) => node.type === parentType && node.id !== selectedId) : [];
-  const selectedNode = selectedId ? nodes.find((node) => node.id === selectedId) : undefined;
-  const selectedDescendantCount = selectedId ? countDescendants(nodes, selectedId) : 0;
+  const parentOptions = parentType
+    ? nodes.filter((node) => node.type === parentType && node.id !== selectedId)
+    : [];
+  const selectedNode = selectedId
+    ? nodes.find((node) => node.id === selectedId)
+    : undefined;
+  const selectedDescendantCount = selectedId
+    ? countDescendants(nodes, selectedId)
+    : 0;
 
-  function startCreate(parent?: KnowledgeNode, type: KnowledgeNodeType = "TECHNOLOGY") {
+  function startCreate(
+    parent?: KnowledgeNode,
+    type: KnowledgeNodeType = "TECHNOLOGY",
+  ) {
     setReturnSelectedId(selectedId);
     setSelectedId(undefined);
     setCreatingParentId(parent?.id);
     setForm({ ...emptyForm, type, parentId: parent?.id ?? "" });
     clearMessages();
-    window.requestAnimationFrame(() => document.getElementById("node-name")?.focus());
+    window.requestAnimationFrame(() =>
+      document.getElementById("node-name")?.focus(),
+    );
   }
 
   function selectNode(node: KnowledgeNode) {
@@ -88,7 +108,9 @@ export function KnowledgeManagement() {
   }
 
   function cancelCreate() {
-    const previous = returnSelectedId ? nodes.find((node) => node.id === returnSelectedId) : undefined;
+    const previous = returnSelectedId
+      ? nodes.find((node) => node.id === returnSelectedId)
+      : undefined;
     if (previous) {
       selectNode(previous);
       return;
@@ -102,8 +124,12 @@ export function KnowledgeManagement() {
     event.preventDefault();
     const errors: Record<string, string> = {};
     if (!form.name.trim()) errors.name = t("Name is required.");
-    if (form.displayOrder < 0) errors.displayOrder = t("Display order cannot be negative.");
-    if (parentType && !form.parentId) errors.parentId = t("Select a {{type}} parent.", { type: parentType.toLowerCase() });
+    if (form.displayOrder < 0)
+      errors.displayOrder = t("Display order cannot be negative.");
+    if (parentType && !form.parentId)
+      errors.parentId = t("Select a {{type}} parent.", {
+        type: parentType.toLowerCase(),
+      });
     setValidation(errors);
     if (Object.keys(errors).length) return;
 
@@ -133,7 +159,11 @@ export function KnowledgeManagement() {
       );
       await load();
       selectNode(saved);
-      setSuccess(selectedId ? t("Knowledge node updated.") : t("Knowledge node created."));
+      setSuccess(
+        selectedId
+          ? t("Knowledge node updated.")
+          : t("Knowledge node created."),
+      );
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
@@ -147,13 +177,18 @@ export function KnowledgeManagement() {
     setError(undefined);
     setSuccess(undefined);
     try {
-      const updated = await adminRequest<KnowledgeNode>(`knowledge/nodes/${selectedId}/status`, {
-        method: "PATCH",
-        ...jsonBody({ status }),
-      });
+      const updated = await adminRequest<KnowledgeNode>(
+        `knowledge/nodes/${selectedId}/status`,
+        {
+          method: "PATCH",
+          ...jsonBody({ status }),
+        },
+      );
       await load();
       selectNode(updated);
-      setSuccess(t("Status changed to {{status}}.", { status: status.toLowerCase() }));
+      setSuccess(
+        t("Status changed to {{status}}.", { status: status.toLowerCase() }),
+      );
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
@@ -163,20 +198,34 @@ export function KnowledgeManagement() {
 
   async function deleteNode() {
     if (!selectedId || !selectedNode) return;
-    const confirmation = selectedDescendantCount > 0
-      ? t('Delete "{{name}}" and {{count}} descendant knowledge nodes? This cannot be undone.', {
-          name: selectedNode.name,
-          count: selectedDescendantCount,
-        })
-      : t('Delete "{{name}}"? This cannot be undone.', { name: selectedNode.name });
+    const confirmation =
+      selectedDescendantCount > 0
+        ? t(
+            'Delete "{{name}}" and {{count}} descendant knowledge nodes? This cannot be undone.',
+            {
+              name: selectedNode.name,
+              count: selectedDescendantCount,
+            },
+          )
+        : t('Delete "{{name}}"? This cannot be undone.', {
+            name: selectedNode.name,
+          });
     if (!window.confirm(confirmation)) return;
     setPending(true);
     setError(undefined);
     try {
-      await adminRequest<void>(`knowledge/nodes/${selectedId}`, { method: "DELETE" });
+      await adminRequest<void>(`knowledge/nodes/${selectedId}`, {
+        method: "DELETE",
+      });
       startCreate();
       await load();
-      setSuccess(t(selectedDescendantCount > 0 ? "Knowledge subtree deleted." : "Knowledge node deleted."));
+      setSuccess(
+        t(
+          selectedDescendantCount > 0
+            ? "Knowledge subtree deleted."
+            : "Knowledge node deleted.",
+        ),
+      );
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
@@ -192,22 +241,43 @@ export function KnowledgeManagement() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      <AdminConfirmDialog open={createDecisionOpen} title={t("Publish new subtopic?")} description={t("Choose whether this subtopic is published immediately or kept as a draft.")} confirmLabel={t("Yes, publish")} secondaryLabel={t("No, keep draft")} cancelLabel={t("Cancel")} pending={pending} onConfirm={() => void saveNode(true)} onSecondary={() => void saveNode(false)} onClose={() => setCreateDecisionOpen(false)} />
-      <AdminHeader
-        title={t("Knowledge hierarchy")}
-        description={t("Manage the Technology → Category → Topic → Subtopic curriculum structure.")}
-        action={<Button onClick={() => startCreate()}>{t("Add technology")}</Button>}
+      <AdminConfirmDialog
+        open={createDecisionOpen}
+        title={t("Publish new subtopic?")}
+        description={t(
+          "Choose whether this subtopic is published immediately or kept as a draft.",
+        )}
+        confirmLabel={t("Yes, publish")}
+        secondaryLabel={t("No, keep draft")}
+        cancelLabel={t("Cancel")}
+        pending={pending}
+        onConfirm={() => void saveNode(true)}
+        onSecondary={() => void saveNode(false)}
+        onClose={() => setCreateDecisionOpen(false)}
       />
-      {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
-      {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
+      {error ? (
+        <Feedback className="mt-6" tone="error" title={t("Action failed")}>
+          {error}
+        </Feedback>
+      ) : null}
+      {success ? (
+        <Feedback className="mt-6" tone="success" title={success} />
+      ) : null}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
         <Card>
           <CardContent>
             <Label htmlFor="knowledge-search">{t("Search hierarchy")}</Label>
-            <Input id="knowledge-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Search by name, slug, or type")} />
+            <Input
+              id="knowledge-search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t("Search by name, slug, or type")}
+            />
             <div className="mt-5">
-              {loading ? <Loading label={t("Loading knowledge nodes")} /> : (
+              {loading ? (
+                <Loading label={t("Loading knowledge nodes")} />
+              ) : (
                 <KnowledgeTree
                   nodes={nodes}
                   query={query}
@@ -228,54 +298,206 @@ export function KnowledgeManagement() {
           <CardContent>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-text">{selectedId ? t("Edit node") : t("Create {{type}}", { type: t(form.type).toLowerCase() })}</h2>
-                <p className="mt-1 text-sm text-text-muted">{selectedId ? t("Parent choices follow the four-level hierarchy.") : creatingParentId ? t("The parent and node type were selected from the tree.") : t("Create a root technology node.")}</p>
+                <h2 className="text-lg font-semibold text-text">
+                  {selectedId
+                    ? t("Edit node")
+                    : t("Create {{type}}", {
+                        type: t(form.type).toLowerCase(),
+                      })}
+                </h2>
+                <p className="mt-1 text-sm text-text-muted">
+                  {selectedId
+                    ? t("Parent choices follow the four-level hierarchy.")
+                    : creatingParentId
+                      ? t(
+                          "The parent and node type were selected from the tree.",
+                        )
+                      : t("Create a root technology node.")}
+                </p>
               </div>
-              {selectedId ? <StatusBadge status={nodes.find((node) => node.id === selectedId)?.status ?? "DRAFT"} /> : null}
+              {selectedId ? (
+                <StatusBadge
+                  status={
+                    nodes.find((node) => node.id === selectedId)?.status ??
+                    "DRAFT"
+                  }
+                />
+              ) : null}
             </div>
             <form className="mt-6 space-y-5" onSubmit={submit} noValidate>
-              {selectedId ? <div>
-                <Label htmlFor="node-type">{t("Node type")}</Label>
-                <Select id="node-type" value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as KnowledgeNodeType, parentId: "" }))}>
-                  {(["TECHNOLOGY", "CATEGORY", "TOPIC", "SUBTOPIC"] as KnowledgeNodeType[]).map((type) => <option key={type} value={type}>{t(type)}</option>)}
-                </Select>
-              </div> : <div className="rounded-md border border-border bg-surface-muted px-3 py-3 text-sm">
-                <span className="text-text-muted">{t("Node type")}: </span>
-                <span className="font-semibold text-text">{t(form.type)}</span>
-                {creatingParentId ? <span className="mt-1 block text-xs text-text-muted">{t("Parent")}: {nodes.find((node) => node.id === creatingParentId)?.name}</span> : null}
-              </div>}
-              {selectedId && parentType ? <div>
-                <Label htmlFor="node-parent">{t("Parent {{type}}", { type: parentType.toLowerCase() })}</Label>
-                <Select id="node-parent" aria-invalid={Boolean(validation.parentId)} value={form.parentId} onChange={(event) => setForm((current) => ({ ...current, parentId: event.target.value }))}>
-                  <option value="">{t("Select parent")}</option>
-                  {parentOptions.map((node) => <option key={node.id} value={node.id}>{node.name} ({node.status})</option>)}
-                </Select>
-                {validation.parentId ? <FieldError>{validation.parentId}</FieldError> : null}
-              </div> : null}
+              {selectedId ? (
+                <div>
+                  <Label htmlFor="node-type">{t("Node type")}</Label>
+                  <Select
+                    id="node-type"
+                    value={form.type}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        type: event.target.value as KnowledgeNodeType,
+                        parentId: "",
+                      }))
+                    }
+                  >
+                    {(
+                      [
+                        "TECHNOLOGY",
+                        "CATEGORY",
+                        "TOPIC",
+                        "SUBTOPIC",
+                      ] as KnowledgeNodeType[]
+                    ).map((type) => (
+                      <option key={type} value={type}>
+                        {t(type)}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              ) : (
+                <div className="rounded-md border border-border bg-surface-muted px-3 py-3 text-sm">
+                  <span className="text-text-muted">{t("Node type")}: </span>
+                  <span className="font-semibold text-text">
+                    {t(form.type)}
+                  </span>
+                  {creatingParentId ? (
+                    <span className="mt-1 block text-xs text-text-muted">
+                      {t("Parent")}:{" "}
+                      {nodes.find((node) => node.id === creatingParentId)?.name}
+                    </span>
+                  ) : null}
+                </div>
+              )}
+              {selectedId && parentType ? (
+                <div>
+                  <Label htmlFor="node-parent">
+                    {t("Parent {{type}}", { type: parentType.toLowerCase() })}
+                  </Label>
+                  <Select
+                    id="node-parent"
+                    aria-invalid={Boolean(validation.parentId)}
+                    value={form.parentId}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        parentId: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">{t("Select parent")}</option>
+                    {parentOptions.map((node) => (
+                      <option key={node.id} value={node.id}>
+                        {node.name} ({node.status})
+                      </option>
+                    ))}
+                  </Select>
+                  {validation.parentId ? (
+                    <FieldError>{validation.parentId}</FieldError>
+                  ) : null}
+                </div>
+              ) : null}
               <div>
                 <Label htmlFor="node-name">{t("Name")}</Label>
-                <Input id="node-name" maxLength={150} aria-invalid={Boolean(validation.name)} value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
-                {validation.name ? <FieldError>{validation.name}</FieldError> : null}
+                <Input
+                  id="node-name"
+                  maxLength={150}
+                  aria-invalid={Boolean(validation.name)}
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                />
+                {validation.name ? (
+                  <FieldError>{validation.name}</FieldError>
+                ) : null}
               </div>
-              {selectedId ? <p className="rounded-md bg-surface-muted px-3 py-2 text-xs text-text-muted">{t("System slug")}: <span className="font-mono text-text">{nodes.find((node) => node.id === selectedId)?.slug}</span></p> : <p className="text-xs text-text-muted">{t("Slug is generated automatically after creation.")}</p>}
+              {selectedId ? (
+                <p className="rounded-md bg-surface-muted px-3 py-2 text-xs text-text-muted">
+                  {t("System slug")}:{" "}
+                  <span className="font-mono text-text">
+                    {nodes.find((node) => node.id === selectedId)?.slug}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-xs text-text-muted">
+                  {t("Slug is generated automatically after creation.")}
+                </p>
+              )}
               <div>
                 <Label htmlFor="node-order">{t("Display order")}</Label>
-                <Input id="node-order" type="number" min={0} aria-invalid={Boolean(validation.displayOrder)} value={form.displayOrder} onChange={(event) => setForm((current) => ({ ...current, displayOrder: Number(event.target.value) }))} />
-                {validation.displayOrder ? <FieldError>{validation.displayOrder}</FieldError> : null}
+                <Input
+                  id="node-order"
+                  type="number"
+                  min={0}
+                  aria-invalid={Boolean(validation.displayOrder)}
+                  value={form.displayOrder}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      displayOrder: Number(event.target.value),
+                    }))
+                  }
+                />
+                {validation.displayOrder ? (
+                  <FieldError>{validation.displayOrder}</FieldError>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-3">
-                <Button type="submit" loading={pending}>{selectedId ? t("Save changes") : t("Create {{type}}", { type: t(form.type).toLowerCase() })}</Button>
-                {!selectedId && returnSelectedId ? <Button type="button" variant="secondary" disabled={pending} onClick={cancelCreate}>{t("Cancel")}</Button> : null}
+                <Button type="submit" loading={pending}>
+                  {selectedId
+                    ? t("Save changes")
+                    : t("Create {{type}}", {
+                        type: t(form.type).toLowerCase(),
+                      })}
+                </Button>
+                {!selectedId && returnSelectedId ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={pending}
+                    onClick={cancelCreate}
+                  >
+                    {t("Cancel")}
+                  </Button>
+                ) : null}
               </div>
             </form>
 
-            {selectedId ? <div className="mt-7 border-t border-border pt-6">
-              <h3 className="text-sm font-semibold text-text">{t("Publishing status")}</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {statuses.map((status) => <Button key={status} size="sm" variant="secondary" disabled={pending || nodes.find((node) => node.id === selectedId)?.status === status} onClick={() => void changeStatus(status)}>{t(status)}</Button>)}
+            {selectedId ? (
+              <div className="mt-7 border-t border-border pt-6">
+                <h3 className="text-sm font-semibold text-text">
+                  {t("Publishing status")}
+                </h3>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {statuses.map((status) => (
+                    <Button
+                      key={status}
+                      size="sm"
+                      variant="secondary"
+                      disabled={
+                        pending ||
+                        nodes.find((node) => node.id === selectedId)?.status ===
+                          status
+                      }
+                      onClick={() => void changeStatus(status)}
+                    >
+                      {t(status)}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  className="mt-6"
+                  size="sm"
+                  variant="danger"
+                  loading={pending}
+                  onClick={() => void deleteNode()}
+                >
+                  {t("Delete node")}
+                </Button>
               </div>
-              <Button className="mt-6" size="sm" variant="danger" loading={pending} onClick={() => void deleteNode()}>{t("Delete node")}</Button>
-            </div> : null}
+            ) : null}
           </CardContent>
         </Card>
       </div>
@@ -303,19 +525,52 @@ function countDescendants(nodes: KnowledgeNode[], rootId: string) {
   return count;
 }
 
-function AdminHeader({ title, action }: { title: string; description: string; action: React.ReactNode }) {
-  return <><h1 className="sr-only">{title}</h1><div className="flex justify-end">{action}</div></>;
+function AdminHeader({
+  title,
+  action,
+}: {
+  title: string;
+  description: string;
+  action: React.ReactNode;
+}) {
+  return (
+    <>
+      <h1 className="sr-only">{title}</h1>
+      <div className="flex justify-end">{action}</div>
+    </>
+  );
 }
 
 function StatusBadge({ status }: { status: ContentStatus }) {
   const { t } = useI18n();
-  return <Badge variant={status === "PUBLISHED" ? "success" : status === "REVIEW" ? "warning" : status === "ARCHIVED" ? "neutral" : "info"}>{t(status)}</Badge>;
+  return (
+    <Badge
+      variant={
+        status === "PUBLISHED"
+          ? "success"
+          : status === "REVIEW"
+            ? "warning"
+            : status === "ARCHIVED"
+              ? "neutral"
+              : "info"
+      }
+    >
+      {t(status)}
+    </Badge>
+  );
 }
 
 function Loading({ label }: { label: string }) {
-  return <div className="py-10 text-center text-sm text-text-muted" role="status"><span className="mx-auto mb-3 block size-5 animate-spin rounded-full border-2 border-primary border-r-transparent motion-reduce:animate-none" />{label}</div>;
+  return (
+    <div className="py-10 text-center text-sm text-text-muted" role="status">
+      <span className="mx-auto mb-3 block size-5 animate-spin rounded-full border-2 border-primary border-r-transparent motion-reduce:animate-none" />
+      {label}
+    </div>
+  );
 }
 
 function messageOf(reason: unknown) {
-  return reason instanceof Error ? reason.message : "The request could not be completed.";
+  return reason instanceof Error
+    ? reason.message
+    : "The request could not be completed.";
 }
