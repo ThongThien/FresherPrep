@@ -8,7 +8,7 @@ import type { AdminPage, ContentStatus, Difficulty, KnowledgeNode, Question, Que
 import { useI18n } from "@/lib/i18n";
 import { KnowledgePathSelect, knowledgePathLabel } from "@/components/content/knowledge-path-select";
 import { QuestionBatchEditor, type BatchQuestionPayload } from "@/components/content/question-batch-editor";
-import { AdminPagination } from "./admin-ui";
+import { AdminDataTable, AdminPagination, AdminViewTabs } from "./admin-ui";
 
 type OptionDraft = { position: number; content: string; correct: boolean; explanation: string };
 const difficulties: Difficulty[] = ["EASY", "MEDIUM", "HARD"];
@@ -39,27 +39,28 @@ export function QuestionManagement() {
   const [validation, setValidation] = useState<Record<string, string>>({});
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [view, setView] = useState<"list" | "editor">("list");
 
   const loadNodes = useCallback(async () => {
     try {
       const nodes = await adminRequest<KnowledgeNode[]>("knowledge/nodes");
-      const available = nodes.filter((node) => node.type === "SUBTOPIC");
       setSubtopics(nodes);
-      setKnowledgeFilter((current) => current || available[0]?.id || "");
     } catch (reason) { setError(messageOf(reason)); }
   }, []);
 
   const loadQuestions = useCallback(async () => {
-    if (!knowledgeFilter) { setQuestions([]); setTotalPages(0); return; }
     setLoading(true);
     setError(undefined);
     try {
-      const params = new URLSearchParams({ page: String(page), size: "20", sort: "code,asc", knowledgeNodeId: knowledgeFilter });
+      const params = new URLSearchParams({ page: String(page), size: "20", sort: "code,asc" });
+      if (knowledgeFilter) params.set("knowledgeNodeId", knowledgeFilter);
       if (difficultyFilter) params.set("difficulty", difficultyFilter);
       if (statusFilter) params.set("status", statusFilter);
       const result = await adminRequest<AdminPage<Question>>(`questions?${params.toString()}`);
       setQuestions(result.content);
       setTotalPages(result.totalPages);
+      setTotalElements(result.totalElements);
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
@@ -78,7 +79,7 @@ export function QuestionManagement() {
   }, [loadQuestions]);
 
   const visible = useMemo(() => questions.filter((question) =>
-    `${question.code} ${question.language} ${question.category} ${question.difficulty} ${question.status}`.toLowerCase().includes(query.toLowerCase()),
+    `${question.code} ${question.publishedContent ?? ""} ${question.language} ${question.category} ${question.difficulty} ${question.status}`.toLowerCase().includes(query.toLowerCase()),
   ), [questions, query]);
 
   async function selectQuestion(questionId: string) {
@@ -95,6 +96,8 @@ export function QuestionManagement() {
       setForm({ subtopicId: question.subtopicId, difficulty: question.difficulty, language: question.language, category: question.category });
       resetVersionEditor();
       setValidation({});
+      setShowBatch(false);
+      setView("editor");
     } catch (reason) {
       setError(messageOf(reason));
     }
@@ -107,6 +110,8 @@ export function QuestionManagement() {
     setForm({ ...emptyQuestion, subtopicId: knowledgeFilter });
     resetVersionEditor();
     clearMessages();
+    setShowBatch(false);
+    setView("editor");
   }
 
   async function submitQuestion(event: React.FormEvent) {
@@ -234,12 +239,28 @@ export function QuestionManagement() {
   function clearMessages() { setError(undefined); setSuccess(undefined); setValidation({}); }
 
   return <div className="mx-auto max-w-7xl">
-    <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Questions")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Manage question metadata and immutable content versions.")}</p></div><div className="flex gap-2"><Button variant="secondary" onClick={() => setShowBatch((value) => !value)}>{showBatch ? t("Close batch editor") : t("Create in batch")}</Button><Button disabled={!knowledgeFilter} onClick={startCreate}>{t("New question")}</Button></div></header>
+    <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Questions")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Manage question metadata and immutable content versions.")}</p></div><div className="flex gap-2"><Button variant="secondary" onClick={() => { setView("editor"); setShowBatch(true); setSelected(undefined); }}>{t("Create in batch")}</Button><Button onClick={startCreate}>{t("New question")}</Button></div></header>
     {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
     {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
-    {showBatch ? <div className="mt-6"><QuestionBatchEditor nodes={subtopics} pending={pending} onSubmit={createBatch} /></div> : null}
-    <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)]">
-      <Card><CardContent><Label htmlFor="question-search">{t("Search questions")}</Label><Input id="question-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Code, language, category, difficulty, or status")} />
+    <AdminViewTabs value={view} label={t("Question management views")} onChange={setView} items={[{ value: "list", label: t("Question list") }, { value: "editor", label: t("Create / edit question") }]} />
+    {view === "list" ? <section className="mt-7" aria-label={t("Question list")}>
+      <div className="grid gap-3 rounded-lg border border-border bg-surface p-4 lg:grid-cols-[minmax(14rem,1fr)_minmax(18rem,1.4fr)_12rem_auto] lg:items-end">
+        <div><Label htmlFor="question-list-search">{t("Search questions")}</Label><Input id="question-list-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Code or question content")} /></div>
+        <div><Label htmlFor="question-list-subtopic">{t("Subtopic")}</Label><Select id="question-list-subtopic" value={knowledgeFilter} onChange={(event) => { setKnowledgeFilter(event.target.value); setPage(0); }}><option value="">{t("All subtopics")}</option>{subtopics.filter((node) => node.type === "SUBTOPIC").map((node) => <option key={node.id} value={node.id}>{knowledgePathLabel(subtopics, node.id)}</option>)}</Select></div>
+        <FilterSelect label={t("Status")} value={statusFilter} onChange={(value) => { setStatusFilter(value); setPage(0); }} options={["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"].map((value) => ({ value, label: t(value) }))} />
+        <p className="pb-2 text-sm font-medium text-text-muted">{t("{{count}} questions", { count: totalElements })}</p>
+      </div>
+      <div className="mt-5">{loading ? <p className="py-12 text-center text-sm text-text-muted">{t("Loading questions...")}</p> : visible.length ? <><AdminDataTable caption={t("Question list")} rows={visible} rowKey={(question) => question.id} columns={[
+        { key: "question", header: t("Question"), cell: (question) => <div className="max-w-xl"><p className="font-mono text-xs font-semibold text-primary">{question.code}</p><p className="mt-1 line-clamp-2 font-medium text-text">{question.publishedContent ?? t("No published content")}</p></div> },
+        { key: "location", header: t("Knowledge path"), cell: (question) => knowledgePathLabel(subtopics, question.subtopicId) },
+        { key: "difficulty", header: t("Difficulty"), cell: (question) => t(question.difficulty) },
+        { key: "status", header: t("Status"), cell: (question) => <Status status={question.status} /> },
+        { key: "action", header: t("Action"), className: "text-right", cell: (question) => <Button size="sm" variant="secondary" onClick={() => void selectQuestion(question.id)}>{t("Edit")}</Button> },
+      ]} /><AdminPagination page={page} totalPages={totalPages} disabled={loading} onPageChange={setPage} /></> : <p className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-text-muted">{t("No matching questions.")}</p>}</div>
+    </section> : null}
+    {view === "editor" && showBatch ? <div className="mt-6"><QuestionBatchEditor nodes={subtopics} pending={pending} onSubmit={createBatch} /></div> : null}
+    <div className={view === "editor" && !showBatch ? "mt-8" : "hidden"}>
+      <Card className="hidden"><CardContent><Label htmlFor="question-search">{t("Search questions")}</Label><Input id="question-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Code, language, category, difficulty, or status")} />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2"><KnowledgePathSelect nodes={subtopics} value={knowledgeFilter} onChange={(value) => { setKnowledgeFilter(value); setPage(0); setQuery(""); setSelected(undefined); }} idPrefix="question-filter" /></div>
           <FilterSelect label={t("Difficulty")} value={difficultyFilter} onChange={(value) => { setDifficultyFilter(value); setPage(0); }} options={difficulties.map((value) => ({ value, label: t(value) }))} />

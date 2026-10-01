@@ -17,7 +17,7 @@ import { useI18n } from "@/lib/i18n";
 import { KnowledgePathSelect, knowledgePathLabel } from "@/components/content/knowledge-path-select";
 import { LessonContent } from "@/components/lessons/lesson-content";
 import { hasMeaningfulLessonContent } from "@/lib/lessons/content";
-import { AdminPagination } from "./admin-ui";
+import { AdminDataTable, AdminPagination, AdminViewTabs } from "./admin-ui";
 import { LessonRichTextEditor } from "./lesson-rich-text-editor";
 import { KnowledgeTree } from "./knowledge-tree";
 
@@ -49,7 +49,9 @@ export function LessonManagement() {
   const [selectedSubtopicId, setSelectedSubtopicId] = useState("");
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [leftTab, setLeftTab] = useState<"lessons" | "knowledge">("lessons");
+  const [totalElements, setTotalElements] = useState(0);
+  const [view, setView] = useState<"list" | "editor">("list");
+  const [leftTab, setLeftTab] = useState<"lessons" | "knowledge">("knowledge");
   const [treeQuery, setTreeQuery] = useState("");
   const [creatingSubtopicId, setCreatingSubtopicId] = useState<string>();
   const [returnLessonId, setReturnLessonId] = useState<string>();
@@ -62,9 +64,7 @@ export function LessonManagement() {
         adminRequest<KnowledgeNode[]>("knowledge/nodes"),
         adminRequest<AdminPage<QuizSummary>>("quizzes?page=0&size=200&sort=title,asc"),
       ]);
-      const available = nodes.filter((node) => node.type === "SUBTOPIC");
       setSubtopics(nodes);
-      setSelectedSubtopicId((current) => current || available[0]?.id || "");
       setQuizzes(quizPage.content);
     } catch (reason) {
       setError(messageOf(reason));
@@ -74,12 +74,14 @@ export function LessonManagement() {
   }, []);
 
   const loadLessons = useCallback(async () => {
-    if (!selectedSubtopicId) { setLessons([]); setTotalPages(0); return; }
     setLoading(true);
     try {
-      const result = await adminRequest<AdminPage<LessonSummary>>(`lessons?subtopicId=${encodeURIComponent(selectedSubtopicId)}&page=${page}&size=20&sort=displayOrder,asc`);
+      const params = new URLSearchParams({ page: String(page), size: "20", sort: "title,asc" });
+      if (selectedSubtopicId) params.set("subtopicId", selectedSubtopicId);
+      const result = await adminRequest<AdminPage<LessonSummary>>(`lessons?${params.toString()}`);
       setLessons(result.content);
       setTotalPages(result.totalPages);
+      setTotalElements(result.totalElements);
     } catch (reason) { setError(messageOf(reason)); }
     finally { setLoading(false); }
   }, [page, selectedSubtopicId]);
@@ -122,6 +124,7 @@ export function LessonManagement() {
         requiredScrollPercent: selected.requiredScrollPercent,
       });
       setValidation({});
+      setView("editor");
     } catch (reason) {
       setError(messageOf(reason));
     }
@@ -136,6 +139,8 @@ export function LessonManagement() {
     setError(undefined);
     setSuccess(undefined);
     setValidation({});
+    setLeftTab("knowledge");
+    setView("editor");
     window.requestAnimationFrame(() => document.getElementById("lesson-title")?.focus());
   }
 
@@ -150,6 +155,7 @@ export function LessonManagement() {
     setError(undefined);
     setSuccess(undefined);
     setValidation({});
+    setView("editor");
     window.requestAnimationFrame(() => document.getElementById("lesson-title")?.focus());
   }
 
@@ -254,14 +260,53 @@ export function LessonManagement() {
     <div className="mx-auto max-w-7xl">
       <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Lessons")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Maintain content, reading requirements, prerequisites, and assessment links.")}</p></div>
-        <Button disabled={!selectedSubtopicId} onClick={startCreate}>{t("New lesson")}</Button>
+        <Button onClick={startCreate}>{t("New lesson")}</Button>
       </header>
       {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
       {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)]">
+      <AdminViewTabs
+        value={view}
+        label={t("Lesson management views")}
+        onChange={setView}
+        items={[
+          { value: "list", label: t("Lesson list") },
+          { value: "editor", label: t("Create / edit lesson") },
+        ]}
+      />
+
+      {view === "list" ? (
+        <section className="mt-7" aria-label={t("Lesson list")}>
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1"><Label htmlFor="lesson-list-search">{t("Search lessons")}</Label><Input id="lesson-list-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Title or slug")} /></div>
+            <div className="min-w-0 flex-1"><Label htmlFor="lesson-list-subtopic">{t("Subtopic")}</Label><Select id="lesson-list-subtopic" value={selectedSubtopicId} onChange={(event) => { setSelectedSubtopicId(event.target.value); setPage(0); }}><option value="">{t("All subtopics")}</option>{subtopics.filter((node) => node.type === "SUBTOPIC").map((node) => <option key={node.id} value={node.id}>{knowledgePathLabel(subtopics, node.id)}</option>)}</Select></div>
+            <p className="shrink-0 pb-2 text-sm font-medium text-text-muted">{t("{{count}} lessons", { count: totalElements })}</p>
+          </div>
+          <div className="mt-5">
+            {loading ? <p className="py-12 text-center text-sm text-text-muted">{t("Loading lessons...")}</p> : visibleLessons.length ? (
+              <>
+                <AdminDataTable
+                  caption={t("Lesson list")}
+                  rows={visibleLessons}
+                  rowKey={(lesson) => lesson.id}
+                  columns={[
+                    { key: "title", header: t("Lesson"), cell: (lesson) => <div><p className="font-semibold text-text">{lesson.title}</p><p className="mt-1 text-xs">{lesson.slug}</p></div> },
+                    { key: "location", header: t("Knowledge path"), cell: (lesson) => knowledgePathLabel(subtopics, lesson.subtopicId) },
+                    { key: "status", header: t("Status"), cell: (lesson) => <LessonStatus status={lesson.status} /> },
+                    { key: "requirements", header: t("Reading requirements"), cell: (lesson) => t("{{seconds}}s / {{percent}}% scroll", { seconds: lesson.minimumReadSeconds, percent: lesson.requiredScrollPercent }) },
+                    { key: "action", header: t("Action"), className: "text-right", cell: (lesson) => <Button size="sm" variant="secondary" onClick={() => void selectLesson(lesson.id)}>{t("Edit")}</Button> },
+                  ]}
+                />
+                <AdminPagination page={page} totalPages={totalPages} disabled={loading} onPageChange={setPage} />
+              </>
+            ) : <p className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-text-muted">{t("No matching lessons.")}</p>}
+          </div>
+        </section>
+      ) : null}
+
+      <div className={view === "editor" ? "mt-8 grid gap-6 lg:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)]" : "hidden"}>
         <Card><CardContent>
-          <div className="mb-5 flex border-b border-border" role="tablist" aria-label={t("Lesson management views")}>
+          <div className="hidden" role="tablist" aria-label={t("Lesson management views")}>
             <button
               type="button"
               role="tab"

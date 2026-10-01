@@ -17,6 +17,40 @@ export interface AdminBreadcrumb {
   href?: string;
 }
 
+export function AdminViewTabs<T extends string>({
+  value,
+  items,
+  onChange,
+  label,
+}: {
+  value: T;
+  items: readonly { value: T; label: string }[];
+  onChange: (value: T) => void;
+  label: string;
+}) {
+  return (
+    <div className="mt-7 flex gap-1 overflow-x-auto border-b border-border" role="tablist" aria-label={label}>
+      {items.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          role="tab"
+          aria-selected={value === item.value}
+          onClick={() => onChange(item.value)}
+          className={cn(
+            "min-h-11 shrink-0 border-b-2 px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20",
+            value === item.value
+              ? "border-primary text-primary-strong"
+              : "border-transparent text-text-muted hover:text-text",
+          )}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function AdminPageHeader({
   title,
   description,

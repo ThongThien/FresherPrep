@@ -22,6 +22,7 @@ export function LearningPathManagement() {
   const { t } = useI18n();
   const [paths, setPaths] = useState<LearningPathSummary[]>([]);
   const [technologies, setTechnologies] = useState<KnowledgeNode[]>([]);
+  const [knowledgeNodes, setKnowledgeNodes] = useState<KnowledgeNode[]>([]);
   const [lessons, setLessons] = useState<LessonSummary[]>([]);
   const [detail, setDetail] = useState<LearningPathDetail>();
   const [form, setForm] = useState(emptyForm);
@@ -39,10 +40,11 @@ export function LearningPathManagement() {
       const [pathPage, nodes, lessonPage] = await Promise.all([
         adminRequest<AdminPage<LearningPathSummary>>("learning-paths?page=0&size=200&sort=name,asc"),
         adminRequest<KnowledgeNode[]>("knowledge/nodes"),
-        adminRequest<AdminPage<LessonSummary>>("lessons?page=0&size=200&sort=title,asc"),
+        adminRequest<AdminPage<LessonSummary>>("lessons?page=0&size=500&sort=title,asc"),
       ]);
       setPaths(pathPage.content);
       setTechnologies(nodes.filter((node) => node.type === "TECHNOLOGY"));
+      setKnowledgeNodes(nodes);
       setLessons(lessonPage.content);
     } catch (reason) {
       setError(messageOf(reason));
@@ -197,20 +199,39 @@ export function LearningPathManagement() {
             {detail ? <div className="mt-7 border-t border-border pt-6"><h3 className="text-sm font-semibold text-text">{t("Publishing status")}</h3><div className="mt-3 flex flex-wrap gap-2">{statuses.map((status) => <Button key={status} size="sm" variant="secondary" disabled={pending || detail.status === status} onClick={() => void changeStatus(status)}>{t(status)}</Button>)}</div><Button className="mt-6" size="sm" variant="danger" loading={pending} onClick={() => void deletePath()}>{t("Delete path")}</Button></div> : null}
           </CardContent></Card>
 
-          {detail ? <PathItems key={detail.id} path={detail} lessons={lessons} onChanged={reloadDetail} onError={setError} /> : null}
+          {detail ? <PathItems key={detail.id} path={detail} lessons={lessons} nodes={knowledgeNodes} onChanged={reloadDetail} onError={setError} /> : null}
         </div>
       </div>
     </div>
   );
 }
 
-function PathItems({ path, lessons, onChanged, onError }: { path: LearningPathDetail; lessons: LessonSummary[]; onChanged: (message?: string) => Promise<void>; onError: (value: string) => void }) {
+function PathItems({ path, lessons, nodes, onChanged, onError }: { path: LearningPathDetail; lessons: LessonSummary[]; nodes: KnowledgeNode[]; onChanged: (message?: string) => Promise<void>; onError: (value: string) => void }) {
   const { t } = useI18n();
   const [lessonId, setLessonId] = useState("");
   const [required, setRequired] = useState(true);
   const [weight, setWeight] = useState(1);
   const [pending, setPending] = useState(false);
-  const available = lessons.filter((lesson) => !path.items.some((item) => item.lessonId === lesson.id));
+  const [categoryId, setCategoryId] = useState("");
+  const [topicId, setTopicId] = useState("");
+  const [subtopicId, setSubtopicId] = useState("");
+  const publishedNodes = nodes.filter((node) => node.status === "PUBLISHED");
+  const categories = publishedNodes.filter((node) => node.type === "CATEGORY" && node.parentId === path.technologyId);
+  const topics = publishedNodes.filter((node) => node.type === "TOPIC" && node.parentId === categoryId);
+  const subtopics = publishedNodes.filter((node) => node.type === "SUBTOPIC" && node.parentId === topicId);
+  const allowedSubtopics = new Set(
+    subtopicId
+      ? [subtopicId]
+      : topicId
+        ? subtopics.map((node) => node.id)
+        : categoryId
+          ? publishedNodes.filter((node) => node.type === "SUBTOPIC" && topics.some((topic) => topic.id === node.parentId)).map((node) => node.id)
+          : publishedNodes.filter((node) => node.type === "SUBTOPIC" && belongsToTechnology(node, path.technologyId, nodes)).map((node) => node.id),
+  );
+  const available = lessons.filter((lesson) =>
+    allowedSubtopics.has(lesson.subtopicId)
+      && !path.items.some((item) => item.lessonId === lesson.id),
+  );
 
   async function addItem(event: React.FormEvent) {
     event.preventDefault();
@@ -228,16 +249,29 @@ function PathItems({ path, lessons, onChanged, onError }: { path: LearningPathDe
     }
   }
 
-  return <Card><CardContent><div><h2 className="text-lg font-semibold text-text">{t("Path lessons")}</h2><p className="mt-1 text-sm text-text-muted">{t("Order is controlled by display order; required and weight drive backend progress.")}</p></div>
-    {path.items.length ? <div className="mt-5 space-y-3">{[...path.items].sort((a, b) => a.displayOrder - b.displayOrder).map((item) => <PathItemEditor key={item.id} pathId={path.id} item={item} pending={pending} setPending={setPending} onChanged={onChanged} onError={onError} />)}</div> : <p className="mt-5 rounded-md border border-dashed border-border p-5 text-sm text-text-muted">{t("No lessons have been added.")}</p>}
+  return <Card><CardContent><div><h2 className="text-lg font-semibold text-text">{t("Path lessons")}</h2><p className="mt-1 text-sm text-text-muted">{t("Order controls the learning sequence. Required lessons determine completion; weight controls how much each required lesson contributes to the progress percentage.")}</p></div>
+    {path.items.length ? <div className="mt-5 max-h-[36rem] space-y-3 overflow-y-auto overscroll-contain pr-1">{[...path.items].sort((a, b) => a.displayOrder - b.displayOrder).map((item) => <PathItemEditor key={item.id} pathId={path.id} item={item} pending={pending} setPending={setPending} onChanged={onChanged} onError={onError} />)}</div> : <p className="mt-5 rounded-md border border-dashed border-border p-5 text-sm text-text-muted">{t("No lessons have been added.")}</p>}
     <form className="mt-6 grid gap-4 border-t border-border pt-6 sm:grid-cols-2" onSubmit={addItem}>
-      <div className="sm:col-span-2"><Label htmlFor="item-lesson">{t("Add lesson")}</Label><Select id="item-lesson" value={lessonId} onChange={(event) => setLessonId(event.target.value)}><option value="">{t("Select lesson")}</option>{available.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title} ({lesson.status})</option>)}</Select></div>
+      <div><Label htmlFor="item-category">{t("Category")}</Label><Select id="item-category" value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setTopicId(""); setSubtopicId(""); setLessonId(""); }}><option value="">{t("All categories")}</option>{categories.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}</Select></div>
+      <div><Label htmlFor="item-topic">{t("Topic")}</Label><Select id="item-topic" value={topicId} disabled={!categoryId} onChange={(event) => { setTopicId(event.target.value); setSubtopicId(""); setLessonId(""); }}><option value="">{t("All topics")}</option>{topics.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}</Select></div>
+      <div className="sm:col-span-2"><Label htmlFor="item-subtopic">{t("Subtopic")}</Label><Select id="item-subtopic" value={subtopicId} disabled={!topicId} onChange={(event) => { setSubtopicId(event.target.value); setLessonId(""); }}><option value="">{t("All subtopics")}</option>{subtopics.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}</Select></div>
+      <div className="sm:col-span-2"><Label htmlFor="item-lesson">{t("Add lesson")}</Label><Select id="item-lesson" value={lessonId} onChange={(event) => setLessonId(event.target.value)}><option value="">{t("Select lesson")}</option>{available.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title} ({lesson.status})</option>)}</Select><p className="mt-2 text-xs text-text-muted">{t("Showing {{count}} lessons in the selected knowledge scope.", { count: available.length })}</p></div>
       <div className="sm:col-span-2"><p className="text-xs leading-5 text-text-muted">{t("New lessons are appended after the current last lesson. You can reorder them afterward.")}</p></div>
-      <div><Label htmlFor="item-weight">{t("Weight")}</Label><Input id="item-weight" type="number" min={1} value={weight} onChange={(event) => setWeight(Number(event.target.value))} /></div>
+      <div><Label htmlFor="item-weight">{t("Weight")}</Label><Input id="item-weight" type="number" min={1} value={weight} onChange={(event) => setWeight(Number(event.target.value))} /><p className="mt-2 text-xs leading-5 text-text-muted">{t("Use weight 1 for equal progress. A higher weight makes this required lesson contribute more to the displayed path percentage.")}</p></div>
       <label className="flex min-h-10 items-center gap-2 text-sm font-medium text-text"><input type="checkbox" checked={required} onChange={(event) => setRequired(event.target.checked)} className="size-4 accent-primary" />{t("Required lesson")}</label>
       <div className="sm:text-right"><Button type="submit" loading={pending}>{t("Add lesson")}</Button></div>
     </form>
   </CardContent></Card>;
+}
+
+function belongsToTechnology(node: KnowledgeNode, technologyId: string, nodes: KnowledgeNode[]) {
+  let current: KnowledgeNode | undefined = node;
+  const byId = new Map(nodes.map((item) => [item.id, item]));
+  while (current?.parentId) {
+    if (current.parentId === technologyId) return true;
+    current = byId.get(current.parentId);
+  }
+  return false;
 }
 
 function PathItemEditor({ pathId, item, pending, setPending, onChanged, onError }: { pathId: string; item: LearningPathItem; pending: boolean; setPending: (value: boolean) => void; onChanged: (message?: string) => Promise<void>; onError: (value: string) => void }) {

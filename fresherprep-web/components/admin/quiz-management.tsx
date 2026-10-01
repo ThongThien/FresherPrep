@@ -18,6 +18,7 @@ import type {
   QuizType,
 } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
+import { AdminDataTable, AdminViewTabs } from "./admin-ui";
 
 const quizTypes: QuizType[] = ["LESSON", "TOPIC", "MIXED", "READINESS"];
 const selectionModes: QuizSelectionMode[] = ["FIXED", "RULE_BASED"];
@@ -39,6 +40,8 @@ export function QuizManagement() {
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [validation, setValidation] = useState<Record<string, string>>({});
+  const [totalElements, setTotalElements] = useState(0);
+  const [view, setView] = useState<"list" | "editor">("list");
 
   const loadLists = useCallback(async () => {
     setLoading(true);
@@ -49,6 +52,7 @@ export function QuizManagement() {
         adminRequest<KnowledgeNode[]>("knowledge/nodes"),
       ]);
       setQuizzes(quizPage.content);
+      setTotalElements(quizPage.totalElements);
       setNodes(knowledge);
     } catch (reason) { setError(messageOf(reason)); } finally { setLoading(false); }
   }, []);
@@ -73,6 +77,7 @@ export function QuizManagement() {
       setSelected(quiz);
       setForm({ code: quiz.code, title: quiz.title, type: quiz.type, selectionMode: quiz.selectionMode, passPercentage: quiz.passPercentage, language: quiz.language, category: quiz.category, maximumScore: quiz.maximumScore, durationSeconds: quiz.durationSeconds });
       setValidation({});
+      setView("editor");
     } catch (reason) { setError(messageOf(reason)); }
   }
 
@@ -82,6 +87,7 @@ export function QuizManagement() {
     setError(undefined);
     setSuccess(undefined);
     setValidation({});
+    setView("editor");
   }
 
   async function submitQuiz(event: React.FormEvent) {
@@ -135,8 +141,24 @@ export function QuizManagement() {
     <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Quizzes")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Configure fixed or rule-based quizzes. The backend remains authoritative for question selection.")}</p></div><Button onClick={startCreate}>{t("New quiz")}</Button></header>
     {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
     {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
-    <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)]">
-      <Card><CardContent><Label htmlFor="quiz-search">{t("Search quizzes")}</Label><Input id="quiz-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Code, title, type, or mode")} /><div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3"><FilterSelect label={t("Language")} value={languageFilter} onChange={setLanguageFilter} options={["VI", "EN"]} /><FilterSelect label={t("Category")} value={categoryFilter} onChange={setCategoryFilter} options={quizCategories} /><FilterSelect label={t("Status")} value={statusFilter} onChange={setStatusFilter} options={["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"]} /></div>{loading ? <p className="py-10 text-center text-sm text-text-muted">{t("Loading quizzes...")}</p> : visible.length ? <ul className="mt-5 max-h-[50vh] space-y-2 overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]">{visible.map((quiz) => <li key={quiz.id}><button type="button" onClick={() => void selectQuiz(quiz.id)} className={`w-full rounded-md border p-3 text-left hover:border-primary/30 hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${selected?.id === quiz.id ? "border-primary/40 bg-primary-subtle" : "border-border"}`}><span className="flex items-start justify-between gap-2"><span className="min-w-0"><span className="block truncate font-semibold text-text">{quiz.title}</span><span className="mt-1 block text-xs text-text-muted">{quiz.code} - {quiz.language} - {quiz.category} - {quiz.selectionMode}</span></span><Status status={quiz.status} /></span></button></li>)}</ul> : <p className="py-10 text-center text-sm text-text-muted">{t("No matching quizzes.")}</p>}</CardContent></Card>
+    <AdminViewTabs value={view} label={t("Quiz management views")} onChange={setView} items={[{ value: "list", label: t("Quiz list") }, { value: "editor", label: t("Create / edit quiz") }]} />
+    {view === "list" ? <section className="mt-7" aria-label={t("Quiz list")}>
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1"><Label htmlFor="quiz-list-search">{t("Search quizzes")}</Label><Input id="quiz-list-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Code or title")} /></div>
+        <div className="w-full sm:w-52"><Label htmlFor="quiz-list-status">{t("Status")}</Label><Select id="quiz-list-status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">{t("All statuses")}</option>{["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"].map((status) => <option key={status} value={status}>{t(status)}</option>)}</Select></div>
+        <p className="shrink-0 pb-2 text-sm font-medium text-text-muted">{t("{{count}} quizzes", { count: totalElements })}</p>
+      </div>
+      <div className="mt-5">{loading ? <p className="py-12 text-center text-sm text-text-muted">{t("Loading quizzes...")}</p> : visible.length ? <AdminDataTable caption={t("Quiz list")} rows={visible} rowKey={(quiz) => quiz.id} columns={[
+        { key: "quiz", header: t("Quiz"), cell: (quiz) => <div><p className="font-semibold text-text">{quiz.title}</p><p className="mt-1 font-mono text-xs">{quiz.code}</p></div> },
+        { key: "type", header: t("Type / selection"), cell: (quiz) => `${t(quiz.type)} / ${t(quiz.selectionMode)}` },
+        { key: "language", header: t("Language / category"), cell: (quiz) => `${t(quiz.language)} / ${t(quiz.category)}` },
+        { key: "pass", header: t("Pass percentage"), cell: (quiz) => `${quiz.passPercentage}%` },
+        { key: "status", header: t("Status"), cell: (quiz) => <Status status={quiz.status} /> },
+        { key: "action", header: t("Action"), className: "text-right", cell: (quiz) => <Button size="sm" variant="secondary" onClick={() => void selectQuiz(quiz.id)}>{t("Edit")}</Button> },
+      ]} /> : <p className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-text-muted">{t("No matching quizzes.")}</p>}</div>
+    </section> : null}
+    <div className={view === "editor" ? "mt-8" : "hidden"}>
+      <Card className="hidden"><CardContent><Label htmlFor="quiz-search">{t("Search quizzes")}</Label><Input id="quiz-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Code, title, type, or mode")} /><div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3"><FilterSelect label={t("Language")} value={languageFilter} onChange={setLanguageFilter} options={["VI", "EN"]} /><FilterSelect label={t("Category")} value={categoryFilter} onChange={setCategoryFilter} options={quizCategories} /><FilterSelect label={t("Status")} value={statusFilter} onChange={setStatusFilter} options={["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"]} /></div>{loading ? <p className="py-10 text-center text-sm text-text-muted">{t("Loading quizzes...")}</p> : visible.length ? <ul className="mt-5 max-h-[50vh] space-y-2 overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]">{visible.map((quiz) => <li key={quiz.id}><button type="button" onClick={() => void selectQuiz(quiz.id)} className={`w-full rounded-md border p-3 text-left hover:border-primary/30 hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 ${selected?.id === quiz.id ? "border-primary/40 bg-primary-subtle" : "border-border"}`}><span className="flex items-start justify-between gap-2"><span className="min-w-0"><span className="block truncate font-semibold text-text">{quiz.title}</span><span className="mt-1 block text-xs text-text-muted">{quiz.code} - {quiz.language} - {quiz.category} - {quiz.selectionMode}</span></span><Status status={quiz.status} /></span></button></li>)}</ul> : <p className="py-10 text-center text-sm text-text-muted">{t("No matching quizzes.")}</p>}</CardContent></Card>
       <div className="space-y-6">
         <Card><CardContent><div className="flex justify-between gap-3"><div><h2 className="text-lg font-semibold text-text">{selected ? t("Quiz details") : t("Create quiz")}</h2><p className="mt-1 text-sm text-text-muted">{t("Changing type or mode requires an empty configuration.")}</p></div>{selected ? <Status status={selected.status} /> : null}</div>
           <form className="mt-6 grid gap-5 sm:grid-cols-2" onSubmit={submitQuiz}>
