@@ -21,6 +21,8 @@ export function KnowledgeTree({
   onSelect,
   onAddChild,
   onAddLesson,
+  onRefresh,
+  refreshing = false,
 }: {
   nodes: KnowledgeNode[];
   query?: string;
@@ -30,6 +32,8 @@ export function KnowledgeTree({
   onSelect?: (node: KnowledgeNode) => void;
   onAddChild?: (parent: KnowledgeNode, type: KnowledgeNodeType) => void;
   onAddLesson?: (subtopic: KnowledgeNode) => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }) {
   const { t } = useI18n();
   const flattened = useMemo(() => flattenKnowledgeTree(nodes), [nodes]);
@@ -38,12 +42,21 @@ export function KnowledgeTree({
     `${node.name} ${node.slug} ${node.type}`.toLowerCase().includes(normalizedQuery),
   );
 
-  if (!visible.length) {
-    return <p className="py-8 text-center text-sm text-text-muted">{t("No matching knowledge nodes.")}</p>;
-  }
-
   return (
-    <ul className="max-h-[50vh] space-y-1 overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]" aria-label={t("Knowledge hierarchy")}>
+    <div>
+      {onRefresh ? <div className="mb-2 flex justify-end">
+        <button
+          type="button"
+          className="inline-flex size-10 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-primary-subtle hover:text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 disabled:cursor-wait disabled:opacity-60"
+          aria-label={t("Refresh knowledge tree")}
+          title={t("Refresh knowledge tree")}
+          disabled={refreshing}
+          onClick={onRefresh}
+        >
+          <RefreshIcon spinning={refreshing} />
+        </button>
+      </div> : null}
+      {!visible.length ? <p className="py-8 text-center text-sm text-text-muted">{t("No matching knowledge nodes.")}</p> : <ul className="max-h-[50vh] space-y-1 overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]" aria-label={t("Knowledge hierarchy")}>
       {visible.map(({ node, depth }) => {
         const nextType = childType[node.type];
         const canAdd = mode === "manage" ? Boolean(nextType) : node.type === "SUBTOPIC";
@@ -88,7 +101,8 @@ export function KnowledgeTree({
           </li>
         );
       })}
-    </ul>
+      </ul>}
+    </div>
   );
 }
 
@@ -125,6 +139,15 @@ function PlusIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M10 4v12M4 10h12" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function RefreshIcon({ spinning }: { spinning: boolean }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" className={`size-4 ${spinning ? "animate-spin motion-reduce:animate-none" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M16 7a6.5 6.5 0 1 0 .2 5.3" strokeLinecap="round" />
+      <path d="M16 3v4h-4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

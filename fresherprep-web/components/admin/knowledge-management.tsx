@@ -203,6 +203,8 @@ export function KnowledgeManagement() {
                   creatingUnderId={creatingParentId}
                   onSelect={selectNode}
                   onAddChild={(parent, type) => startCreate(parent, type)}
+                  onRefresh={() => void load()}
+                  refreshing={loading}
                 />
               )}
             </div>

@@ -359,6 +359,8 @@ export function LessonManagement() {
                       setPage(0);
                     }}
                     onAddLesson={startCreateForSubtopic}
+                    onRefresh={() => void loadReferences()}
+                    refreshing={loading}
                   />
                 )}
               </div>

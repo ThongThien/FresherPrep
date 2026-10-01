@@ -8,6 +8,7 @@ const storageKey = "fresherprep-language";
 const changeEvent = "fresherprep-language-change";
 
 const vi: Record<string, string> = {
+  "Refresh knowledge tree": "L\u00e0m m\u1edbi c\u00e2y ki\u1ebfn th\u1ee9c",
   "Processing data...": "\u0110ang x\u1eed l\u00fd d\u1eef li\u1ec7u...",
   "Publish batch questions?": "Xu\u1ea5t b\u1ea3n to\u00e0n b\u1ed9 c\u00e2u h\u1ecfi?",
   "Choose whether all new questions and their first versions are published immediately or kept as drafts.": "Ch\u1ecdn xu\u1ea5t b\u1ea3n ngay to\u00e0n b\u1ed9 c\u00e2u h\u1ecfi v\u00e0 phi\u00ean b\u1ea3n \u0111\u1ea7u ti\u00ean, ho\u1eb7c gi\u1eef t\u1ea5t c\u1ea3 \u1edf b\u1ea3n nh\u00e1p.",
