@@ -12,6 +12,7 @@ public record QuizAttemptQuestionResponse(
         String questionCode,
         int position,
         String content,
+        String explanation,
         List<QuizAttemptOptionResponse> options,
         UUID selectedOptionId,
         Boolean answerCorrect
@@ -27,6 +28,7 @@ public record QuizAttemptQuestionResponse(
                 question.getQuestionVersion().getQuestion().getCode(),
                 question.getPosition(),
                 question.getQuestionVersion().getContent(),
+                revealResult ? question.getQuestionVersion().getExplanation() : null,
                 question.getQuestionVersion().getOptions().stream()
                         .map(option -> QuizAttemptOptionResponse.from(option, revealResult))
                         .toList(),
