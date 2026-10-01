@@ -118,6 +118,9 @@ export interface AdminUserDetail {
 export interface LessonSummary {
   id: string;
   subtopicId: string;
+  topicId?: string | null;
+  topicName?: string;
+  subtopicName?: string;
   title: string;
   slug: string;
   status: ContentStatus;

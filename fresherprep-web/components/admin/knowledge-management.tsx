@@ -255,6 +255,7 @@ export function KnowledgeManagement() {
         onSecondary={() => void saveNode(false)}
         onClose={() => setCreateDecisionOpen(false)}
       />
+      <div className="flex justify-end"><Button onClick={() => startCreate()}>{t("Add technology")}</Button></div>
       {error ? (
         <Feedback className="mt-6" tone="error" title={t("Action failed")}>
           {error}
@@ -264,7 +265,7 @@ export function KnowledgeManagement() {
         <Feedback className="mt-6" tone="success" title={success} />
       ) : null}
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <Card>
           <CardContent>
             <Label htmlFor="knowledge-search">{t("Search hierarchy")}</Label>
@@ -523,22 +524,6 @@ function countDescendants(nodes: KnowledgeNode[], rootId: string) {
     pending.push(...(childrenByParent.get(currentId) ?? []));
   }
   return count;
-}
-
-function AdminHeader({
-  title,
-  action,
-}: {
-  title: string;
-  description: string;
-  action: React.ReactNode;
-}) {
-  return (
-    <>
-      <h1 className="sr-only">{title}</h1>
-      <div className="flex justify-end">{action}</div>
-    </>
-  );
 }
 
 function StatusBadge({ status }: { status: ContentStatus }) {

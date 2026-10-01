@@ -53,6 +53,7 @@ const emptyForm = {
 export function LessonManagement() {
   const { t } = useI18n();
   const [lessons, setLessons] = useState<LessonSummary[]>([]);
+  const [treeLessons, setTreeLessons] = useState<LessonSummary[]>([]);
   const [relationLessons, setRelationLessons] = useState<LessonSummary[]>([]);
   const [subtopics, setSubtopics] = useState<KnowledgeNode[]>([]);
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
@@ -61,7 +62,8 @@ export function LessonManagement() {
   const [form, setForm] = useState(emptyForm);
   const [query, setQuery] = useState("");
   const [loadingCount, setLoadingCount] = useState(0);
-  const loading = loadingCount > 0;
+  const [tabLoading, setTabLoading] = useState(false);
+  const loading = loadingCount > 0 || tabLoading;
   const [pending, setPending] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [createDecisionOpen, setCreateDecisionOpen] = useState(false);
@@ -72,7 +74,7 @@ export function LessonManagement() {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [view, setView] = useState<"list" | "editor">("list");
+  const [view, setView] = useState<"list" | "editor">("editor");
   const [leftTab, setLeftTab] = useState<"lessons" | "knowledge">("knowledge");
   const [treeQuery, setTreeQuery] = useState("");
   const [creatingSubtopicId, setCreatingSubtopicId] = useState<string>();
@@ -82,14 +84,16 @@ export function LessonManagement() {
     setLoadingCount((count) => count + 1);
     setError(undefined);
     try {
-      const [nodes, quizPage] = await Promise.all([
+      const [nodes, quizPage, lessonPage] = await Promise.all([
         adminRequest<KnowledgeNode[]>("knowledge/nodes"),
         adminRequest<AdminPage<QuizSummary>>(
           "quizzes?page=0&size=200&sort=title,asc",
         ),
+        adminRequest<AdminPage<LessonSummary>>("lessons?page=0&size=500&sort=displayOrder,asc"),
       ]);
       setSubtopics(nodes);
       setQuizzes(quizPage.content);
+      setTreeLessons(lessonPage.content);
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
@@ -116,6 +120,7 @@ export function LessonManagement() {
       setError(messageOf(reason));
     } finally {
       setLoadingCount((count) => Math.max(0, count - 1));
+      setTabLoading(false);
     }
   }, [page, selectedSubtopicId]);
 
@@ -125,9 +130,10 @@ export function LessonManagement() {
   }, [loadReferences]);
 
   useEffect(() => {
+    if (view !== "list") return;
     const timer = window.setTimeout(() => void loadLessons(), 0);
     return () => window.clearTimeout(timer);
-  }, [loadLessons]);
+  }, [loadLessons, view]);
 
   const visibleLessons = useMemo(
     () =>
@@ -265,7 +271,8 @@ export function LessonManagement() {
           ...jsonBody(editing ? payload : { ...payload, publish }),
         },
       );
-      await loadLessons();
+      await loadReferences();
+      if (view === "list") await loadLessons();
       if (editing) {
         await selectLesson(saved.id);
         setSuccess("Lesson updated.");
@@ -304,7 +311,8 @@ export function LessonManagement() {
         },
       );
       setDetail(saved);
-      await loadLessons();
+      await loadReferences();
+      if (view === "list") await loadLessons();
       setSuccess(`Status changed to ${status.toLowerCase()}.`);
     } catch (reason) {
       setError(messageOf(reason));
@@ -324,7 +332,8 @@ export function LessonManagement() {
     try {
       await adminRequest<void>(`lessons/${detail.id}`, { method: "DELETE" });
       startCreate();
-      await loadLessons();
+      await loadReferences();
+      if (view === "list") await loadLessons();
       setSuccess("Lesson deleted.");
     } catch (reason) {
       setError(messageOf(reason));
@@ -371,10 +380,10 @@ export function LessonManagement() {
       <AdminViewTabs
         value={view}
         label={t("Lesson management views")}
-        onChange={setView}
+        onChange={(nextView) => { setTabLoading(nextView === "list"); setView(nextView); }}
         items={[
-          { value: "list", label: t("Lesson list") },
           { value: "editor", label: t("Create / edit lesson") },
+          { value: "list", label: t("Lesson list") },
         ]}
       />
 
@@ -493,7 +502,7 @@ export function LessonManagement() {
       <div
         className={
           view === "editor"
-            ? "mt-8 grid gap-6 lg:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)]"
+            ? "mt-8 grid gap-6 lg:grid-cols-2"
             : "hidden"
         }
       >
@@ -611,8 +620,9 @@ export function LessonManagement() {
                       {t("Loading knowledge nodes")}
                     </p>
                   ) : (
-                    <KnowledgeTree
-                      nodes={subtopics}
+                  <KnowledgeTree
+                    nodes={subtopics}
+                    lessons={treeLessons}
                       query={treeQuery}
                       mode="lesson"
                       selectedId={creatingSubtopicId ?? selectedSubtopicId}
@@ -621,7 +631,8 @@ export function LessonManagement() {
                         setSelectedSubtopicId(node.id);
                         setPage(0);
                       }}
-                      onAddLesson={startCreateForSubtopic}
+                    onAddLesson={startCreateForSubtopic}
+                    onSelectLesson={(lesson) => void selectLesson(lesson.id)}
                       onRefresh={() => void loadReferences()}
                       refreshing={loading}
                     />

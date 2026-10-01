@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui";
-import type { ContentStatus, KnowledgeNode, KnowledgeNodeType } from "@/lib/admin/types";
+import type { ContentStatus, KnowledgeNode, KnowledgeNodeType, LessonSummary } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
 
 const childType: Partial<Record<KnowledgeNodeType, KnowledgeNodeType>> = {
@@ -23,6 +23,8 @@ export function KnowledgeTree({
   onAddLesson,
   onRefresh,
   refreshing = false,
+  lessons = [],
+  onSelectLesson,
 }: {
   nodes: KnowledgeNode[];
   query?: string;
@@ -34,6 +36,8 @@ export function KnowledgeTree({
   onAddLesson?: (subtopic: KnowledgeNode) => void;
   onRefresh?: () => void;
   refreshing?: boolean;
+  lessons?: LessonSummary[];
+  onSelectLesson?: (lesson: LessonSummary) => void;
 }) {
   const { t } = useI18n();
   const [toggledIds, setToggledIds] = useState<Set<string>>(() => new Set());
@@ -45,12 +49,23 @@ export function KnowledgeTree({
     });
     return counts;
   }, [nodes]);
+  const lessonsBySubtopic = useMemo(() => {
+    const grouped = new Map<string, LessonSummary[]>();
+    lessons.forEach((lesson) => {
+      const items = grouped.get(lesson.subtopicId) ?? [];
+      items.push(lesson);
+      grouped.set(lesson.subtopicId, items);
+    });
+    grouped.forEach((items) => items.sort((a, b) => a.displayOrder - b.displayOrder || a.title.localeCompare(b.title)));
+    return grouped;
+  }, [lessons]);
   const expandedIds = useMemo(() => new Set(nodes
     .filter((node) => {
       const expandedByDefault = node.type === "TECHNOLOGY" || node.type === "CATEGORY";
-      return childCounts.has(node.id) && (toggledIds.has(node.id) ? !expandedByDefault : expandedByDefault);
+      const hasChildren = childCounts.has(node.id) || (lessonsBySubtopic.get(node.id)?.length ?? 0) > 0;
+      return hasChildren && (toggledIds.has(node.id) ? !expandedByDefault : expandedByDefault);
     })
-    .map((node) => node.id)), [childCounts, nodes, toggledIds]);
+    .map((node) => node.id)), [childCounts, lessonsBySubtopic, nodes, toggledIds]);
   const flattened = useMemo(
     () => flattenKnowledgeTree(nodes, normalizedQuery ? undefined : expandedIds),
     [expandedIds, nodes, normalizedQuery],
@@ -61,7 +76,11 @@ export function KnowledgeTree({
 
   return (
     <div>
-      {onRefresh ? <div className="mb-2 flex justify-end">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2" aria-label={t("Knowledge type colors")}>
+          {(["TECHNOLOGY", "CATEGORY", "TOPIC", "SUBTOPIC"] as KnowledgeNodeType[]).map((type) => <span className="inline-flex items-center gap-1.5 text-xs text-text-muted" key={type}><span className={`size-2.5 rounded-full ${typeDotClass[type]}`} aria-hidden="true" />{t(type)}</span>)}
+        </div>
+      {onRefresh ? <div className="ml-auto">
         <button
           type="button"
           className="inline-flex size-10 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-primary-subtle hover:text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20 disabled:cursor-wait disabled:opacity-60"
@@ -73,6 +92,7 @@ export function KnowledgeTree({
           <RefreshIcon spinning={refreshing} />
         </button>
       </div> : null}
+      </div>
       {!visible.length ? <p className="py-8 text-center text-sm text-text-muted">{t("No matching knowledge nodes.")}</p> : <ul className="max-h-[50vh] space-y-1 overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]" aria-label={t("Knowledge hierarchy")}>
       {visible.map(({ node, depth }) => {
         const nextType = childType[node.type];
@@ -81,7 +101,8 @@ export function KnowledgeTree({
           ? t("Add {{type}} under {{name}}", { type: t(nextType).toLowerCase(), name: node.name })
           : t("Add lesson to {{name}}", { name: node.name });
         const selected = selectedId === node.id || creatingUnderId === node.id;
-        const hasChildren = childCounts.has(node.id);
+        const nodeLessons = lessonsBySubtopic.get(node.id) ?? [];
+        const hasChildren = childCounts.has(node.id) || nodeLessons.length > 0;
         const expanded = hasChildren && expandedIds.has(node.id);
 
         return (
@@ -109,10 +130,10 @@ export function KnowledgeTree({
               >
                 <span className="flex min-w-0 items-center gap-2">
                   {hasChildren ? <ChevronIcon expanded={expanded} /> : <span className="size-4 shrink-0" aria-hidden="true" />}
-                  <FolderIcon open={expanded} leaf={!hasChildren} />
+                  <FolderIcon open={expanded} leaf={!hasChildren} type={node.type} />
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-text">{node.name}</span>
-                    <span className="block truncate text-xs text-text-muted">{t(node.type)} · {node.slug} · {t("order {{order}}", { order: node.displayOrder })}</span>
+                    <span className="flex min-w-0 items-center gap-2"><span className="truncate text-sm font-semibold text-text">{node.name}</span>{node.type === "SUBTOPIC" && onSelectLesson ? <span className="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">{t("{{count}} lessons", { count: nodeLessons.length })}</span> : null}</span>
+                    <span className="flex items-center gap-1.5 truncate text-xs text-text-muted"><TypeBadge type={node.type} />{node.slug} · {t("order {{order}}", { order: node.displayOrder })}</span>
                   </span>
                 </span>
                 <StatusBadge status={node.status} />
@@ -132,6 +153,7 @@ export function KnowledgeTree({
                 </button>
               ) : null}
             </div>
+            {expanded && nodeLessons.length ? <ul className="ml-8 mt-1 space-y-1 border-l border-border pl-3">{nodeLessons.map((lesson) => <li key={lesson.id}><button type="button" className="flex min-h-10 w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20" onClick={() => onSelectLesson?.(lesson)}><span className="min-w-0 truncate text-sm font-medium text-text">{lesson.title}</span><StatusBadge status={lesson.status} /></button></li>)}</ul> : null}
           </li>
         );
       })}
@@ -175,12 +197,30 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
   );
 }
 
-function FolderIcon({ open, leaf }: { open: boolean; leaf: boolean }) {
+const typeDotClass: Record<KnowledgeNodeType, string> = {
+  TECHNOLOGY: "bg-blue-500",
+  CATEGORY: "bg-violet-500",
+  TOPIC: "bg-amber-500",
+  SUBTOPIC: "bg-emerald-500",
+};
+const typeTextClass: Record<KnowledgeNodeType, string> = {
+  TECHNOLOGY: "text-blue-500",
+  CATEGORY: "text-violet-500",
+  TOPIC: "text-amber-500",
+  SUBTOPIC: "text-emerald-500",
+};
+
+function TypeBadge({ type }: { type: KnowledgeNodeType }) {
+  const { t } = useI18n();
+  return <span className="inline-flex shrink-0 items-center gap-1"><span className={`size-2 rounded-full ${typeDotClass[type]}`} aria-hidden="true" />{t(type)}</span>;
+}
+
+function FolderIcon({ open, leaf, type }: { open: boolean; leaf: boolean; type: KnowledgeNodeType }) {
   if (leaf) {
     return <span className="size-3 shrink-0 rounded-sm border border-text-muted/60 bg-surface-muted" aria-hidden="true" />;
   }
   return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" className="size-4 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <svg aria-hidden="true" viewBox="0 0 20 20" className={`size-4 shrink-0 ${typeTextClass[type]}`} fill="none" stroke="currentColor" strokeWidth="1.6">
       <path d={open ? "M2.5 6.5h15l-2 9h-13z" : "M2.5 5h5l1.5 2h8.5v8.5h-15z"} strokeLinejoin="round" />
     </svg>
   );

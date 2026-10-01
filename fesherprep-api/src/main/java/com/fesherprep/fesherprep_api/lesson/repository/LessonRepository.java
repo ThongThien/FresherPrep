@@ -13,20 +13,20 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface LessonRepository extends JpaRepository<Lesson, UUID> {
-    @EntityGraph(attributePaths = "subtopic")
+    @EntityGraph(attributePaths = {"subtopic", "subtopic.parent"})
     Optional<Lesson> findByIdAndStatus(UUID id, ContentStatus status);
 
-    @EntityGraph(attributePaths = "subtopic")
+    @EntityGraph(attributePaths = {"subtopic", "subtopic.parent"})
     Optional<Lesson> findBySlugAndStatus(String slug, ContentStatus status);
 
-    @EntityGraph(attributePaths = "subtopic")
+    @EntityGraph(attributePaths = {"subtopic", "subtopic.parent"})
     Page<Lesson> findAllBySubtopicIdAndStatus(
             UUID subtopicId,
             ContentStatus status,
             Pageable pageable
     );
 
-    @EntityGraph(attributePaths = "subtopic")
+    @EntityGraph(attributePaths = {"subtopic", "subtopic.parent"})
     @Query("""
             select lesson
             from Lesson lesson
@@ -45,11 +45,11 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
             Pageable pageable
     );
 
-    @EntityGraph(attributePaths = "subtopic")
+    @EntityGraph(attributePaths = {"subtopic", "subtopic.parent"})
     Page<Lesson> findAllBySubtopicId(UUID subtopicId, Pageable pageable);
 
     @Override
-    @EntityGraph(attributePaths = "subtopic")
+    @EntityGraph(attributePaths = {"subtopic", "subtopic.parent"})
     Page<Lesson> findAll(Pageable pageable);
 
     boolean existsBySlug(String slug);

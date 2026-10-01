@@ -8,6 +8,8 @@ const storageKey = "fresherprep-language";
 const changeEvent = "fresherprep-language-change";
 
 const vi: Record<string, string> = {
+  "Knowledge type colors": "M\u00e0u ph\u00e2n lo\u1ea1i ki\u1ebfn th\u1ee9c",
+  "Other topic": "Ch\u1ee7 \u0111\u1ec1 kh\u00e1c",
   "Publish new lesson?": "Xu\u1ea5t b\u1ea3n b\u00e0i h\u1ecdc m\u1edbi?",
   "Choose whether this lesson is published immediately or kept as a draft.": "Ch\u1ecdn xu\u1ea5t b\u1ea3n b\u00e0i h\u1ecdc ngay ho\u1eb7c gi\u1eef \u1edf b\u1ea3n nh\u00e1p.",
   "Publish new subtopic?": "Xu\u1ea5t b\u1ea3n ch\u1ee7 \u0111\u1ec1 con m\u1edbi?",

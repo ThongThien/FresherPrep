@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim() ?? "";
   const params = new URLSearchParams({
     page: String(page),
-    size: "12",
+    size: "200",
     sort: "title,asc",
   });
   if (query) params.set("q", query.slice(0, 200));

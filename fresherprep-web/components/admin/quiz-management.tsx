@@ -61,28 +61,36 @@ export function QuizManagement() {
   const [languageFilter, setLanguageFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [referencesLoading, setReferencesLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [validation, setValidation] = useState<Record<string, string>>({});
   const [totalElements, setTotalElements] = useState(0);
-  const [view, setView] = useState<"list" | "editor">("list");
+  const [view, setView] = useState<"list" | "editor">("editor");
 
-  const loadLists = useCallback(async () => {
+  const loadReferences = useCallback(async () => {
+    setReferencesLoading(true);
+    try {
+      setNodes(await adminRequest<KnowledgeNode[]>("knowledge/nodes"));
+    } catch (reason) {
+      setError(messageOf(reason));
+    } finally {
+      setReferencesLoading(false);
+    }
+  }, []);
+
+  const loadQuizzes = useCallback(async () => {
     setLoading(true);
     setError(undefined);
     try {
-      const [quizPage, knowledge] = await Promise.all([
-        adminRequest<AdminPage<QuizDetail>>(
-          "quizzes?page=0&size=200&sort=title,asc",
-        ),
-        adminRequest<KnowledgeNode[]>("knowledge/nodes"),
-      ]);
+      const quizPage = await adminRequest<AdminPage<QuizDetail>>(
+        "quizzes?page=0&size=200&sort=title,asc",
+      );
       setQuizzes(quizPage.content);
       setTotalElements(quizPage.totalElements);
-      setNodes(knowledge);
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
@@ -91,9 +99,15 @@ export function QuizManagement() {
   }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void loadLists(), 0);
+    const timer = window.setTimeout(() => void loadReferences(), 0);
     return () => window.clearTimeout(timer);
-  }, [loadLists]);
+  }, [loadReferences]);
+
+  useEffect(() => {
+    if (view !== "list") return;
+    const timer = window.setTimeout(() => void loadQuizzes(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadQuizzes, view]);
 
   const visible = useMemo(
     () =>
@@ -171,7 +185,7 @@ export function QuizManagement() {
           }),
         },
       );
-      await loadLists();
+      if (view === "list") await loadQuizzes();
       await selectQuiz(saved.id);
       setSuccess(selected ? "Quiz updated." : "Quiz created.");
     } catch (reason) {
@@ -192,7 +206,7 @@ export function QuizManagement() {
     setError(undefined);
     try {
       await adminRequest(path, { method, ...(body ? jsonBody(body) : {}) });
-      await loadLists();
+      if (view === "list") await loadQuizzes();
       await selectQuiz(selected.id);
       setSuccess(message);
     } catch (reason) {
@@ -217,7 +231,7 @@ export function QuizManagement() {
     try {
       await adminRequest<void>(`quizzes/${selected.id}`, { method: "DELETE" });
       startCreate();
-      await loadLists();
+      if (view === "list") await loadQuizzes();
       setSuccess("Quiz deleted.");
     } catch (reason) {
       setError(messageOf(reason));
@@ -229,7 +243,7 @@ export function QuizManagement() {
   return (
     <div className="mx-auto max-w-7xl">
       <AdminLoadingOverlay
-        show={loading || pending || detailLoading}
+        show={loading || referencesLoading || pending || detailLoading}
         label={t("Processing data...")}
       />
       {error ? (
@@ -243,10 +257,10 @@ export function QuizManagement() {
       <AdminViewTabs
         value={view}
         label={t("Quiz management views")}
-        onChange={setView}
+        onChange={(nextView) => { setLoading(nextView === "list"); setView(nextView); }}
         items={[
-          { value: "list", label: t("Quiz list") },
           { value: "editor", label: t("Create / edit quiz") },
+          { value: "list", label: t("Quiz list") },
         ]}
       />
       {view === "list" ? (

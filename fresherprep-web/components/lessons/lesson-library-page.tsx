@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
-import { Badge, Button, Card, CardContent, Feedback, Input, Label, LoadingState } from "@/components/ui";
+import { Badge, Button, Card, CardContent, Feedback, Input, Label, LoadingState, Select } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { PageResponse } from "@/lib/dashboard/types";
 import { useI18n } from "@/lib/i18n";
@@ -14,9 +14,27 @@ export function LessonLibraryPage() {
   const [page, setPage] = useState(0);
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
+  const [topicFilter, setTopicFilter] = useState("");
   const [reload, setReload] = useState(0);
   const [data, setData] = useState<PageResponse<LessonSummary>>();
   const [error, setError] = useState<string>();
+  const topics = useMemo(() => {
+    const unique = new Map<string, string>();
+    data?.content.forEach((lesson) => unique.set(lesson.topicId ?? "other", lesson.topicName ?? t("Other topic")));
+    return [...unique.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [data, t]);
+  const groupedLessons = useMemo(() => {
+    const groups = new Map<string, { name: string; lessons: LessonSummary[] }>();
+    data?.content
+      .filter((lesson) => !topicFilter || (lesson.topicId ?? "other") === topicFilter)
+      .forEach((lesson) => {
+        const key = lesson.topicId ?? "other";
+        const group = groups.get(key) ?? { name: lesson.topicName ?? t("Other topic"), lessons: [] };
+        group.lessons.push(lesson);
+        groups.set(key, group);
+      });
+    return [...groups.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
+  }, [data, topicFilter, t]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -57,6 +75,7 @@ export function LessonLibraryPage() {
   function clearSearch() {
     setDraftQuery("");
     setQuery("");
+    setTopicFilter("");
     setPage(0);
     setData(undefined);
   }
@@ -80,7 +99,7 @@ export function LessonLibraryPage() {
         </p>
       </header>
 
-      <form className="mt-7 flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-end" onSubmit={search}>
+      <form className="mt-7 grid max-w-3xl gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(12rem,0.55fr)_auto] sm:items-end" onSubmit={search}>
         <div className="min-w-0 flex-1">
           <Label htmlFor="lesson-library-search">{t("Find a lesson")}</Label>
           <Input
@@ -91,9 +110,16 @@ export function LessonLibraryPage() {
             onChange={(event) => setDraftQuery(event.target.value)}
           />
         </div>
+        <div>
+          <Label htmlFor="lesson-topic-filter">{t("Topic")}</Label>
+          <Select id="lesson-topic-filter" value={topicFilter} onChange={(event) => setTopicFilter(event.target.value)}>
+            <option value="">{t("All topics")}</option>
+            {topics.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </Select>
+        </div>
         <div className="flex gap-2">
           <Button type="submit">{t("Search")}</Button>
-          {query ? <Button type="button" variant="secondary" onClick={clearSearch}>{t("Clear")}</Button> : null}
+          {query || topicFilter ? <Button type="button" variant="secondary" onClick={clearSearch}>{t("Clear")}</Button> : null}
         </div>
       </form>
 
@@ -102,50 +128,15 @@ export function LessonLibraryPage() {
       <div className="mt-8">
         {!data ? (
           <LoadingState title={t("Loading published lessons...")} description={t("Please wait a moment.")} />
-        ) : data.content.length ? (
-          <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {data.content.map((lesson) => (
-              <li key={lesson.id}>
-                <Card className="h-full">
-                  <CardContent className="flex h-full flex-col">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="success">{t("Published")}</Badge>
-                      <Badge>{t("Lesson")}</Badge>
-                    </div>
-                    <h2 className="mt-4 text-lg font-semibold leading-7 text-text">
-                      <Link className="transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20" href={"/lessons/" + lesson.id}>
-                        {lesson.title}
-                      </Link>
-                    </h2>
-                    <p className="mt-1 break-all font-mono text-xs text-text-subtle">{lesson.slug}</p>
-                    <dl className="mt-5 grid grid-cols-2 gap-3 border-t border-border pt-4 text-sm">
-                      <div>
-                        <dt className="text-xs text-text-muted">{t("Minimum reading")}</dt>
-                        <dd className="mt-1 font-semibold text-text">{t("{{seconds}} seconds", { seconds: lesson.minimumReadSeconds })}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-text-muted">{t("Required scroll")}</dt>
-                        <dd className="mt-1 font-semibold text-text">{lesson.requiredScrollPercent}%</dd>
-                      </div>
-                    </dl>
-                    <Link
-                      className="mt-6 inline-flex min-h-10 items-center justify-center rounded-md border border-primary-solid bg-primary-solid px-4 text-sm font-semibold text-white shadow-button transition-colors hover:bg-primary-solid-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/25"
-                      href={"/lessons/" + lesson.id}
-                    >
-                      {t("Read lesson")}
-                    </Link>
-                  </CardContent>
-                </Card>
-              </li>
-            ))}
-          </ul>
+        ) : groupedLessons.length ? (
+          <div className="space-y-9">{groupedLessons.map(([topicId, group]) => <section key={topicId} aria-labelledby={`topic-${topicId}`}><div className="mb-4 flex items-center justify-between gap-4 border-b border-border pb-3"><h2 className="text-xl font-semibold text-text" id={`topic-${topicId}`}>{group.name}</h2><span className="text-sm text-text-muted">{t("{{count}} lessons", { count: group.lessons.length })}</span></div><ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{group.lessons.map((lesson) => <LessonCard key={lesson.id} lesson={lesson} />)}</ul></section>)}</div>
         ) : (
           <div className="rounded-lg border border-dashed border-border-strong bg-surface px-6 py-12 text-center">
-            <h2 className="text-lg font-semibold text-text">{t(query ? "No lessons match your search" : "No published lessons")}</h2>
+            <h2 className="text-lg font-semibold text-text">{t(query || topicFilter ? "No lessons match your search" : "No published lessons")}</h2>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-text-muted">
-              {t(query ? "Try a different title or clear the search." : "Published lessons will appear here when they are available.")}
+              {t(query || topicFilter ? "Try a different title or clear the search." : "Published lessons will appear here when they are available.")}
             </p>
-            {query ? <Button className="mt-5" variant="secondary" onClick={clearSearch}>{t("Clear search")}</Button> : null}
+            {query || topicFilter ? <Button className="mt-5" variant="secondary" onClick={clearSearch}>{t("Clear search")}</Button> : null}
           </div>
         )}
       </div>
@@ -159,4 +150,9 @@ export function LessonLibraryPage() {
       ) : null}
     </div>
   );
+}
+
+function LessonCard({ lesson }: { lesson: LessonSummary }) {
+  const { t } = useI18n();
+  return <li><Card className="h-full"><CardContent className="flex h-full flex-col"><div className="flex flex-wrap items-center gap-2"><Badge variant="success">{t("Published")}</Badge><Badge>{lesson.subtopicName ?? t("Lesson")}</Badge></div><h3 className="mt-4 text-lg font-semibold leading-7 text-text"><Link className="transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20" href={"/lessons/" + lesson.id}>{lesson.title}</Link></h3><p className="mt-1 break-all font-mono text-xs text-text-subtle">{lesson.slug}</p><dl className="mt-5 grid grid-cols-2 gap-3 border-t border-border pt-4 text-sm"><div><dt className="text-xs text-text-muted">{t("Minimum reading")}</dt><dd className="mt-1 font-semibold text-text">{t("{{seconds}} seconds", { seconds: lesson.minimumReadSeconds })}</dd></div><div><dt className="text-xs text-text-muted">{t("Required scroll")}</dt><dd className="mt-1 font-semibold text-text">{lesson.requiredScrollPercent}%</dd></div></dl><Link className="mt-6 inline-flex min-h-10 items-center justify-center rounded-md border border-primary-solid bg-primary-solid px-4 text-sm font-semibold text-white shadow-button transition-colors hover:bg-primary-solid-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/25" href={"/lessons/" + lesson.id}>{t("Read lesson")}</Link></CardContent></Card></li>;
 }

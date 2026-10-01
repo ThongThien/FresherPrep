@@ -89,7 +89,7 @@ export function QuestionManagement() {
   const [knowledgeFilter, setKnowledgeFilter] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [nodesLoading, setNodesLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -100,7 +100,7 @@ export function QuestionManagement() {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [view, setView] = useState<"list" | "editor">("list");
+  const [view, setView] = useState<"list" | "editor">("editor");
 
   const loadNodes = useCallback(async () => {
     setNodesLoading(true);
@@ -145,9 +145,10 @@ export function QuestionManagement() {
   }, [loadNodes]);
 
   useEffect(() => {
+    if (view !== "list") return;
     const timer = window.setTimeout(() => void loadQuestions(), 0);
     return () => window.clearTimeout(timer);
-  }, [loadQuestions]);
+  }, [loadQuestions, view]);
 
   const visible = useMemo(
     () =>
@@ -215,7 +216,7 @@ export function QuestionManagement() {
         selected ? `questions/${selected.id}` : "questions",
         { method: selected ? "PUT" : "POST", ...jsonBody(form) },
       );
-      await loadQuestions();
+      if (view === "list") await loadQuestions();
       await selectQuestion(saved.id);
       setSuccess(
         selected
@@ -248,7 +249,7 @@ export function QuestionManagement() {
           { count: payload.questions.length },
         ),
       );
-      await loadQuestions();
+      if (view === "list") await loadQuestions();
     } catch (reason) {
       setError(messageOf(reason));
       throw reason;
@@ -284,7 +285,7 @@ export function QuestionManagement() {
         method: "DELETE",
       });
       startCreate();
-      await loadQuestions();
+      if (view === "list") await loadQuestions();
       setSuccess("Question deleted.");
     } catch (reason) {
       setError(messageOf(reason));
@@ -416,7 +417,7 @@ export function QuestionManagement() {
     setError(undefined);
     try {
       await adminRequest(path, { method, ...(body ? jsonBody(body) : {}) });
-      await loadQuestions();
+      if (view === "list") await loadQuestions();
       await selectQuestion(selected.id);
       setSuccess(message);
     } catch (reason) {
@@ -467,7 +468,7 @@ export function QuestionManagement() {
       <AdminViewTabs
         value={view}
         label={t("Question management views")}
-        onChange={setView}
+        onChange={(nextView) => { setLoading(nextView === "list"); setView(nextView); }}
         items={[
           { value: "editor", label: t("Create / edit question") },
           { value: "list", label: t("Question list") },
