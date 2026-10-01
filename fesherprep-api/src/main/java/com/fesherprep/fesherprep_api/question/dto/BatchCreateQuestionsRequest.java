@@ -13,6 +13,7 @@ public record BatchCreateQuestionsRequest(
         @NotNull UUID subtopicId,
         QuestionLanguage language,
         QuestionCategory category,
+        boolean publish,
         @NotNull @Size(min = 1, max = 50) List<@NotNull @Valid BatchQuestionItemRequest> questions
 ) {
 }

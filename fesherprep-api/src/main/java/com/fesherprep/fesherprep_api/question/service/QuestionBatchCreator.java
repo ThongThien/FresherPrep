@@ -51,6 +51,9 @@ public class QuestionBatchCreator {
         if (subtopic.getType() != NodeType.SUBTOPIC) {
             throw new IllegalArgumentException("Question must belong to a subtopic");
         }
+        if (publishWhenEligible && subtopic.getStatus() != ContentStatus.PUBLISHED) {
+            throw new IllegalStateException("Publish the subtopic before publishing batch questions");
+        }
 
         QuestionLanguage language = request.language() == null ? QuestionLanguage.VI : request.language();
         QuestionCategory category = request.category() == null
@@ -64,7 +67,7 @@ public class QuestionBatchCreator {
             QuestionVersion version = new QuestionVersion(
                     question, 1, item.content(), item.explanation(), optionDefinitions(item.options()));
             QuestionVersion savedVersion = saveVersion(version);
-            if (publishWhenEligible && subtopic.getStatus() == ContentStatus.PUBLISHED) {
+            if (publishWhenEligible) {
                 question.publishByAdministrator(savedVersion);
             }
             created.add(new CreatedQuestion(question, savedVersion));

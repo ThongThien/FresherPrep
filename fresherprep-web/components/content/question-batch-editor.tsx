@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button, Card, CardContent, Feedback, Input, Label, Select, Textarea } from "@/components/ui";
 import type { Difficulty, KnowledgeNode, QuestionCategory, QuestionLanguage } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
+import { AdminConfirmDialog } from "@/components/admin/admin-ui";
 import { KnowledgePathSelect, knowledgePathLabel } from "./knowledge-path-select";
 
 type OptionDraft = { position: number; content: string; correct: boolean; explanation: string };
@@ -18,6 +19,7 @@ export type BatchQuestionPayload = {
   subtopicId: string;
   language: QuestionLanguage;
   category: QuestionCategory;
+  publish: boolean;
   questions: BatchQuestionDraft[];
 };
 
@@ -33,10 +35,12 @@ const blankQuestion = (): BatchQuestionDraft => ({
 export function QuestionBatchEditor({
   nodes,
   pending,
+  allowPublish = false,
   onSubmit,
 }: {
   nodes: KnowledgeNode[];
   pending: boolean;
+  allowPublish?: boolean;
   onSubmit: (payload: BatchQuestionPayload) => Promise<void>;
 }) {
   const { t } = useI18n();
@@ -47,6 +51,7 @@ export function QuestionBatchEditor({
   const [importText, setImportText] = useState("");
   const [preview, setPreview] = useState(false);
   const [error, setError] = useState<string>();
+  const [decisionOpen, setDecisionOpen] = useState(false);
 
   function update(index: number, next: BatchQuestionDraft) {
     setQuestions((current) => current.map((item, itemIndex) => itemIndex === index ? next : item));
@@ -64,12 +69,18 @@ export function QuestionBatchEditor({
     }
   }
 
-  async function submit() {
+  function requestSubmit() {
     const validation = validate(questions, subtopicId, t);
     if (validation) { setError(validation); return; }
     setError(undefined);
+    if (allowPublish) setDecisionOpen(true);
+    else void submit(false);
+  }
+
+  async function submit(publish: boolean) {
+    setDecisionOpen(false);
     try {
-      await onSubmit({ subtopicId, language, category, questions });
+      await onSubmit({ subtopicId, language, category, publish, questions });
       setQuestions([blankQuestion()]);
       setImportText("");
       setPreview(false);
@@ -112,10 +123,22 @@ export function QuestionBatchEditor({
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
           {!preview ? <Button variant="secondary" onClick={() => setQuestions((current) => [...current, blankQuestion()])}>{t("Add another question")}</Button> : null}
-          <Button loading={pending} disabled={!subtopicId || !questions.length} onClick={() => void submit()}>{t("Create {{count}} questions", { count: questions.length })}</Button>
+          <Button loading={pending} disabled={!subtopicId || !questions.length} onClick={requestSubmit}>{t("Create {{count}} questions", { count: questions.length })}</Button>
         </div>
         {subtopicId ? <p className="mt-3 text-xs text-text-muted">{knowledgePathLabel(nodes, subtopicId)}</p> : null}
       </CardContent>
+      {allowPublish ? <AdminConfirmDialog
+        open={decisionOpen}
+        title={t("Publish batch questions?")}
+        description={t("Choose whether all new questions and their first versions are published immediately or kept as drafts.")}
+        confirmLabel={t("Publish all")}
+        secondaryLabel={t("Keep as draft")}
+        cancelLabel={t("Cancel")}
+        pending={pending}
+        onConfirm={() => void submit(true)}
+        onSecondary={() => void submit(false)}
+        onClose={() => setDecisionOpen(false)}
+      /> : null}
     </Card>
   );
 }

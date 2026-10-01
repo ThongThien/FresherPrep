@@ -18,7 +18,7 @@ import type {
   QuizType,
 } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
-import { AdminDataTable, AdminViewTabs } from "./admin-ui";
+import { AdminDataTable, AdminLoadingOverlay, AdminViewTabs } from "./admin-ui";
 
 const quizTypes: QuizType[] = ["LESSON", "TOPIC", "MIXED", "READINESS"];
 const selectionModes: QuizSelectionMode[] = ["FIXED", "RULE_BASED"];
@@ -37,6 +37,7 @@ export function QuizManagement() {
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [validation, setValidation] = useState<Record<string, string>>({});
@@ -70,6 +71,7 @@ export function QuizManagement() {
   ), [quizzes, query, languageFilter, categoryFilter, statusFilter]);
 
   async function selectQuiz(quizId: string) {
+    setDetailLoading(true);
     setError(undefined);
     setSuccess(undefined);
     try {
@@ -79,6 +81,7 @@ export function QuizManagement() {
       setValidation({});
       setView("editor");
     } catch (reason) { setError(messageOf(reason)); }
+    finally { setDetailLoading(false); }
   }
 
   function startCreate() {
@@ -138,6 +141,7 @@ export function QuizManagement() {
   }
 
   return <div className="mx-auto max-w-7xl">
+    <AdminLoadingOverlay show={loading || pending || detailLoading} label={t("Processing data...")} />
     <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Quizzes")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Configure fixed or rule-based quizzes. The backend remains authoritative for question selection.")}</p></div><Button onClick={startCreate}>{t("New quiz")}</Button></header>
     {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
     {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
@@ -251,6 +255,15 @@ function FixedQuestions({ quiz, nodes, pending, mutate }: { quiz: QuizDetail; no
         && (!normalizedSearch || `${question.code} ${question.publishedContent ?? ""} ${question.difficulty}`.toLowerCase().includes(normalizedSearch)),
     );
   }, [questions, quiz.fixedQuestions, search]);
+  const allVisibleSelected = available.length > 0
+    && available.every((question) => selectedIds.includes(question.id));
+
+  function toggleAllVisible() {
+    const visibleIds = new Set(available.map((question) => question.id));
+    setSelectedIds((current) => allVisibleSelected
+      ? current.filter((id) => !visibleIds.has(id))
+      : Array.from(new Set([...current, ...visibleIds])));
+  }
 
   function chooseCategory(value: string) {
     setCategoryId(value);
@@ -278,11 +291,10 @@ function FixedQuestions({ quiz, nodes, pending, mutate }: { quiz: QuizDetail; no
   }
 
   return <Card><CardContent>
+    <AdminLoadingOverlay show={questionLoading} label={t("Loading questions...")} />
     <h2 className="text-lg font-semibold text-text">{t("Fixed questions")}</h2>
     <p className="mt-1 text-sm text-text-muted">{t("FIXED uses the exact questions you choose. New selections are appended in order; the current domain has no reorder operation.")}</p>
-    {quiz.fixedQuestions.length ? <ol className="mt-5 space-y-2">{[...quiz.fixedQuestions].sort((a, b) => a.position - b.position).map((item) => <li key={item.id} className="flex items-center justify-between gap-3 rounded-md border border-border p-3"><span className="text-sm font-semibold text-text">{item.position}. {item.questionCode}</span><Button size="sm" variant="ghost" disabled={pending || quiz.status !== "DRAFT"} onClick={() => { if (window.confirm(t("Remove {{code}} from this quiz?", { code: item.questionCode }))) void mutate(`quizzes/${quiz.id}/fixed-questions/${item.questionId}`, "DELETE", t("Fixed question removed.")); }}>{t("Remove")}</Button></li>)}</ol> : <p className="mt-5 text-sm text-text-muted">{t("No fixed questions configured.")}</p>}
-
-    <div className="mt-6 border-t border-border pt-6">
+    <div className="mt-6">
       <h3 className="text-sm font-semibold text-text">{t("Choose questions by knowledge path")}</h3>
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <div><Label htmlFor="fixed-category">{t("Category")}</Label><Select id="fixed-category" value={categoryId} disabled={quiz.status !== "DRAFT"} onChange={(event) => chooseCategory(event.target.value)}><option value="">{t("Select category")}</option>{categories.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}</Select></div>
@@ -291,13 +303,24 @@ function FixedQuestions({ quiz, nodes, pending, mutate }: { quiz: QuizDetail; no
       </div>
 
       {subtopicId ? <div className="mt-4"><Label htmlFor="fixed-search">{t("Search published questions")}</Label><Input id="fixed-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("Code or question content")} disabled={quiz.status !== "DRAFT"}/></div> : null}
-      <div className="mt-3 max-h-80 space-y-2 overflow-y-auto overscroll-contain rounded-md border border-border p-3">
+      {available.length ? <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-border bg-surface-muted px-3 text-sm font-semibold text-text">
+        <input type="checkbox" className="size-4 accent-primary" checked={allVisibleSelected} onChange={toggleAllVisible} disabled={quiz.status !== "DRAFT" || questionLoading} />
+        {t("Select all visible ({{count}})", { count: available.length })}
+      </label> : null}
+      <div className="mt-2 max-h-80 space-y-2 overflow-y-auto overscroll-contain rounded-md border border-border p-3">
         {!subtopicId ? <p className="p-3 text-sm text-text-muted">{t("Select a category, topic, and subtopic to view questions.")}</p> : questionLoading ? <p className="p-3 text-sm text-text-muted">{t("Loading questions...")}</p> : questionError ? <Feedback tone="error" title={t("Unable to load questions")}>{questionError}</Feedback> : available.length ? available.map((question) => <label key={question.id} className="flex cursor-pointer items-start justify-between gap-3 rounded p-2 hover:bg-surface-muted"><span className="flex min-w-0 items-start gap-3"><input type="checkbox" className="mt-1 size-4 shrink-0 accent-primary" checked={selectedIds.includes(question.id)} onChange={() => setSelectedIds((current) => current.includes(question.id) ? current.filter((id) => id !== question.id) : [...current, question.id])}/><span className="min-w-0"><span className="block font-mono text-sm font-semibold text-text">{question.code}</span><span className="mt-1 block line-clamp-2 text-sm text-text-muted">{question.publishedContent}</span></span></span><span className="shrink-0 text-xs text-text-muted">{t(question.difficulty)}</span></label>) : <p className="p-3 text-sm text-text-muted">{t("No eligible questions found.")}</p>}
       </div>
       <Button className="mt-3" disabled={!selectedIds.length || quiz.status !== "DRAFT"} loading={pending} onClick={() => void mutate(`quizzes/${quiz.id}/fixed-questions/batch`, "POST", t("{{count}} fixed questions added.", { count: selectedIds.length }), { questionIds: selectedIds }).then(() => setSelectedIds([]))}>{t("Add selected ({{count}})", { count: selectedIds.length })}</Button>
       <p className="mt-2 text-xs text-text-muted">{t("Knowledge filters stay selected after questions are added.")}</p>
     </div>
     {quiz.status !== "DRAFT" ? <p className="mt-3 text-xs text-warning-strong">{t("Move the quiz to draft before changing its fixed questions.")}</p> : null}
+    <section className="mt-7 border-t border-border pt-6" aria-labelledby="fixed-question-list-title">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-text" id="fixed-question-list-title">{t("Questions in this quiz")}</h3>
+        <span className="text-xs tabular-nums text-text-muted">{quiz.fixedQuestions.length}</span>
+      </div>
+      {quiz.fixedQuestions.length ? <ol className="mt-4 max-h-80 space-y-2 overflow-y-auto overscroll-contain pr-1">{[...quiz.fixedQuestions].sort((a, b) => a.position - b.position).map((item) => <li key={item.id} className="flex items-center justify-between gap-3 rounded-md border border-border p-3"><span className="text-sm font-semibold text-text">{item.position}. {item.questionCode}</span><Button size="sm" variant="ghost" disabled={pending || quiz.status !== "DRAFT"} onClick={() => { if (window.confirm(t("Remove {{code}} from this quiz?", { code: item.questionCode }))) void mutate(`quizzes/${quiz.id}/fixed-questions/${item.questionId}`, "DELETE", t("Fixed question removed.")); }}>{t("Remove")}</Button></li>)}</ol> : <p className="mt-4 text-sm text-text-muted">{t("No fixed questions configured.")}</p>}
+    </section>
   </CardContent></Card>;
 }
 

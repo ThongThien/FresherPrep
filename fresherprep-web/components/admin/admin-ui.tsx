@@ -292,6 +292,30 @@ export function AdminLoadingState({ label }: { label: string }) {
   );
 }
 
+export function AdminLoadingOverlay({
+  show,
+  label,
+}: {
+  show: boolean;
+  label: string;
+}) {
+  if (!show) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] grid place-items-center bg-background/35 px-4 backdrop-blur-[1px]"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 text-sm font-medium text-text shadow-card">
+        <span className="size-5 animate-spin rounded-full border-2 border-primary border-r-transparent motion-reduce:animate-none" aria-hidden="true" />
+        {label}
+      </div>
+    </div>
+  );
+}
+
 export function AdminErrorState({
   title,
   message,
@@ -344,7 +368,9 @@ export function AdminConfirmDialog({
   cancelLabel,
   pending = false,
   danger = false,
+  secondaryLabel,
   onConfirm,
+  onSecondary,
   onClose,
 }: {
   open: boolean;
@@ -354,7 +380,9 @@ export function AdminConfirmDialog({
   cancelLabel: string;
   pending?: boolean;
   danger?: boolean;
+  secondaryLabel?: string;
   onConfirm: () => void;
+  onSecondary?: () => void;
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -388,6 +416,7 @@ export function AdminConfirmDialog({
         <p className="mt-2 text-sm leading-6 text-text-muted" id={descriptionId}>{description}</p>
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" disabled={pending} onClick={onClose}>{cancelLabel}</Button>
+          {secondaryLabel && onSecondary ? <Button variant="secondary" disabled={pending} onClick={onSecondary}>{secondaryLabel}</Button> : null}
           <Button variant={danger ? "danger" : "primary"} loading={pending} onClick={onConfirm}>{confirmLabel}</Button>
         </div>
       </div>

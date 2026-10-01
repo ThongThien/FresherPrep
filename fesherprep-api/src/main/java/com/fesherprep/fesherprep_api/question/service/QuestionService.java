@@ -93,7 +93,10 @@ public class QuestionService {
     public List<BatchCreatedQuestionResponse> createBatch(
             @Valid BatchCreateQuestionsRequest request
     ) {
-        return batchCreator.createPublished(request).stream()
+        var createdQuestions = request.publish()
+                ? batchCreator.createPublished(request)
+                : batchCreator.create(request);
+        return createdQuestions.stream()
                 .map(created -> BatchCreatedQuestionResponse.from(
                         created.question(), created.version()))
                 .toList();

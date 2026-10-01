@@ -8,7 +8,7 @@ import type { AdminPage, ContentStatus, Difficulty, KnowledgeNode, Question, Que
 import { useI18n } from "@/lib/i18n";
 import { KnowledgePathSelect, knowledgePathLabel } from "@/components/content/knowledge-path-select";
 import { QuestionBatchEditor, type BatchQuestionPayload } from "@/components/content/question-batch-editor";
-import { AdminDataTable, AdminPagination, AdminViewTabs } from "./admin-ui";
+import { AdminDataTable, AdminLoadingOverlay, AdminPagination, AdminViewTabs } from "./admin-ui";
 
 type OptionDraft = { position: number; content: string; correct: boolean; explanation: string };
 const difficulties: Difficulty[] = ["EASY", "MEDIUM", "HARD"];
@@ -33,7 +33,9 @@ export function QuestionManagement() {
   const [difficultyFilter, setDifficultyFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const [nodesLoading, setNodesLoading] = useState(true);
   const [pending, setPending] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [validation, setValidation] = useState<Record<string, string>>({});
@@ -43,10 +45,12 @@ export function QuestionManagement() {
   const [view, setView] = useState<"list" | "editor">("list");
 
   const loadNodes = useCallback(async () => {
+    setNodesLoading(true);
     try {
       const nodes = await adminRequest<KnowledgeNode[]>("knowledge/nodes");
       setSubtopics(nodes);
     } catch (reason) { setError(messageOf(reason)); }
+    finally { setNodesLoading(false); }
   }, []);
 
   const loadQuestions = useCallback(async () => {
@@ -83,6 +87,7 @@ export function QuestionManagement() {
   ), [questions, query]);
 
   async function selectQuestion(questionId: string) {
+    setDetailLoading(true);
     setError(undefined);
     setSuccess(undefined);
     try {
@@ -100,7 +105,7 @@ export function QuestionManagement() {
       setView("editor");
     } catch (reason) {
       setError(messageOf(reason));
-    }
+    } finally { setDetailLoading(false); }
   }
 
   function startCreate() {
@@ -140,7 +145,7 @@ export function QuestionManagement() {
       await adminRequest("questions/batch", { method: "POST", ...jsonBody(payload) });
       setKnowledgeFilter(payload.subtopicId);
       setPage(0);
-      setSuccess(t("{{count}} questions created and published.", { count: payload.questions.length }));
+      setSuccess(t(payload.publish ? "{{count}} questions created and published." : "{{count}} questions created as drafts.", { count: payload.questions.length }));
       await loadQuestions();
     } catch (reason) { setError(messageOf(reason)); throw reason; }
     finally { setPending(false); }
@@ -239,6 +244,7 @@ export function QuestionManagement() {
   function clearMessages() { setError(undefined); setSuccess(undefined); setValidation({}); }
 
   return <div className="mx-auto max-w-7xl">
+    <AdminLoadingOverlay show={loading || nodesLoading || pending || detailLoading} label={t("Processing data...")} />
     <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Questions")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Manage question metadata and immutable content versions.")}</p></div><div className="flex gap-2"><Button variant="secondary" onClick={() => { setView("editor"); setShowBatch(true); setSelected(undefined); }}>{t("Create in batch")}</Button><Button onClick={startCreate}>{t("New question")}</Button></div></header>
     {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
     {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
@@ -258,7 +264,7 @@ export function QuestionManagement() {
         { key: "action", header: t("Action"), className: "text-right", cell: (question) => <Button size="sm" variant="secondary" onClick={() => void selectQuestion(question.id)}>{t("Edit")}</Button> },
       ]} /><AdminPagination page={page} totalPages={totalPages} disabled={loading} onPageChange={setPage} /></> : <p className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-text-muted">{t("No matching questions.")}</p>}</div>
     </section> : null}
-    {view === "editor" && showBatch ? <div className="mt-6"><QuestionBatchEditor nodes={subtopics} pending={pending} onSubmit={createBatch} /></div> : null}
+    {view === "editor" && showBatch ? <div className="mt-6"><QuestionBatchEditor nodes={subtopics} pending={pending} allowPublish onSubmit={createBatch} /></div> : null}
     <div className={view === "editor" && !showBatch ? "mt-8" : "hidden"}>
       <Card className="hidden"><CardContent><Label htmlFor="question-search">{t("Search questions")}</Label><Input id="question-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Code, language, category, difficulty, or status")} />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">

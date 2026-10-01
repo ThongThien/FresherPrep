@@ -17,7 +17,7 @@ import { useI18n } from "@/lib/i18n";
 import { KnowledgePathSelect, knowledgePathLabel } from "@/components/content/knowledge-path-select";
 import { LessonContent } from "@/components/lessons/lesson-content";
 import { hasMeaningfulLessonContent } from "@/lib/lessons/content";
-import { AdminDataTable, AdminPagination, AdminViewTabs } from "./admin-ui";
+import { AdminDataTable, AdminLoadingOverlay, AdminPagination, AdminViewTabs } from "./admin-ui";
 import { LessonRichTextEditor } from "./lesson-rich-text-editor";
 import { KnowledgeTree } from "./knowledge-tree";
 
@@ -41,8 +41,10 @@ export function LessonManagement() {
   const [assessment, setAssessment] = useState<LessonAssessment>();
   const [form, setForm] = useState(emptyForm);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loadingCount, setLoadingCount] = useState(0);
+  const loading = loadingCount > 0;
   const [pending, setPending] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [validation, setValidation] = useState<Record<string, string>>({});
@@ -57,7 +59,7 @@ export function LessonManagement() {
   const [returnLessonId, setReturnLessonId] = useState<string>();
 
   const loadReferences = useCallback(async () => {
-    setLoading(true);
+    setLoadingCount((count) => count + 1);
     setError(undefined);
     try {
       const [nodes, quizPage] = await Promise.all([
@@ -69,12 +71,12 @@ export function LessonManagement() {
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
-      setLoading(false);
+      setLoadingCount((count) => Math.max(0, count - 1));
     }
   }, []);
 
   const loadLessons = useCallback(async () => {
-    setLoading(true);
+    setLoadingCount((count) => count + 1);
     try {
       const params = new URLSearchParams({ page: String(page), size: "20", sort: "title,asc" });
       if (selectedSubtopicId) params.set("subtopicId", selectedSubtopicId);
@@ -83,7 +85,7 @@ export function LessonManagement() {
       setTotalPages(result.totalPages);
       setTotalElements(result.totalElements);
     } catch (reason) { setError(messageOf(reason)); }
-    finally { setLoading(false); }
+    finally { setLoadingCount((count) => Math.max(0, count - 1)); }
   }, [page, selectedSubtopicId]);
 
   useEffect(() => {
@@ -101,6 +103,7 @@ export function LessonManagement() {
   ), [lessons, query]);
 
   async function selectLesson(lessonId: string) {
+    setDetailLoading(true);
     setError(undefined);
     setSuccess(undefined);
     try {
@@ -127,7 +130,7 @@ export function LessonManagement() {
       setView("editor");
     } catch (reason) {
       setError(messageOf(reason));
-    }
+    } finally { setDetailLoading(false); }
   }
 
   function startCreate() {
@@ -258,6 +261,7 @@ export function LessonManagement() {
 
   return (
     <div className="mx-auto max-w-7xl">
+      <AdminLoadingOverlay show={loading || pending || detailLoading} label={t("Processing data...")} />
       <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Lessons")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Maintain content, reading requirements, prerequisites, and assessment links.")}</p></div>
         <Button onClick={startCreate}>{t("New lesson")}</Button>

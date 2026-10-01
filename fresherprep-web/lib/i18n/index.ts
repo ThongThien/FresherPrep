@@ -8,6 +8,14 @@ const storageKey = "fresherprep-language";
 const changeEvent = "fresherprep-language-change";
 
 const vi: Record<string, string> = {
+  "Processing data...": "\u0110ang x\u1eed l\u00fd d\u1eef li\u1ec7u...",
+  "Publish batch questions?": "Xu\u1ea5t b\u1ea3n to\u00e0n b\u1ed9 c\u00e2u h\u1ecfi?",
+  "Choose whether all new questions and their first versions are published immediately or kept as drafts.": "Ch\u1ecdn xu\u1ea5t b\u1ea3n ngay to\u00e0n b\u1ed9 c\u00e2u h\u1ecfi v\u00e0 phi\u00ean b\u1ea3n \u0111\u1ea7u ti\u00ean, ho\u1eb7c gi\u1eef t\u1ea5t c\u1ea3 \u1edf b\u1ea3n nh\u00e1p.",
+  "Publish all": "Xu\u1ea5t b\u1ea3n t\u1ea5t c\u1ea3",
+  "Keep as draft": "Gi\u1eef b\u1ea3n nh\u00e1p",
+  "{{count}} questions created as drafts.": "\u0110\u00e3 t\u1ea1o {{count}} c\u00e2u h\u1ecfi \u1edf tr\u1ea1ng th\u00e1i nh\u00e1p.",
+  "Select all visible ({{count}})": "Ch\u1ecdn t\u1ea5t c\u1ea3 \u0111ang hi\u1ec3n th\u1ecb ({{count}})",
+  "Questions in this quiz": "C\u00e2u h\u1ecfi trong quiz n\u00e0y",
   "Lesson list": "Danh s\u00e1ch b\u00e0i h\u1ecdc",
   "Create / edit lesson": "T\u1ea1o / ch\u1ec9nh s\u1eeda b\u00e0i h\u1ecdc",
   "{{count}} lessons": "{{count}} b\u00e0i h\u1ecdc",
