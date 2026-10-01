@@ -160,7 +160,7 @@ public class QuestionService {
                 request.options()
         );
         QuestionVersion savedVersion = saveVersion(version);
-        publishAdminVersionWhenEligible(question, savedVersion);
+        publishAdminVersionIfRequested(question, savedVersion, request.publish());
         return QuestionVersionResponse.from(savedVersion);
     }
 
@@ -186,7 +186,7 @@ public class QuestionService {
                 request.options()
         );
         QuestionVersion savedVersion = saveVersion(replacement);
-        publishAdminVersionWhenEligible(question, savedVersion);
+        publishAdminVersionIfRequested(question, savedVersion, request.publish());
         return QuestionVersionResponse.from(savedVersion);
     }
 
@@ -309,13 +309,16 @@ public class QuestionService {
         }
     }
 
-    private static void publishAdminVersionWhenEligible(
+    private static void publishAdminVersionIfRequested(
             Question question,
-            QuestionVersion version
+            QuestionVersion version,
+            boolean publish
     ) {
-        if (question.getSubtopic().getStatus() == ContentStatus.PUBLISHED) {
-            question.publishByAdministrator(version);
+        if (!publish) return;
+        if (question.getSubtopic().getStatus() != ContentStatus.PUBLISHED) {
+            throw new IllegalStateException("Publish the question subtopic first");
         }
+        question.publishByAdministrator(version);
     }
 
     private static QuestionLanguage languageOrDefault(QuestionLanguage language) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui";
 import type { ContentStatus, KnowledgeNode, KnowledgeNodeType } from "@/lib/admin/types";
@@ -36,8 +36,25 @@ export function KnowledgeTree({
   refreshing?: boolean;
 }) {
   const { t } = useI18n();
-  const flattened = useMemo(() => flattenKnowledgeTree(nodes), [nodes]);
+  const [toggledIds, setToggledIds] = useState<Set<string>>(() => new Set());
   const normalizedQuery = query.trim().toLowerCase();
+  const childCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    nodes.forEach((node) => {
+      if (node.parentId) counts.set(node.parentId, (counts.get(node.parentId) ?? 0) + 1);
+    });
+    return counts;
+  }, [nodes]);
+  const expandedIds = useMemo(() => new Set(nodes
+    .filter((node) => {
+      const expandedByDefault = node.type === "TECHNOLOGY" || node.type === "CATEGORY";
+      return childCounts.has(node.id) && (toggledIds.has(node.id) ? !expandedByDefault : expandedByDefault);
+    })
+    .map((node) => node.id)), [childCounts, nodes, toggledIds]);
+  const flattened = useMemo(
+    () => flattenKnowledgeTree(nodes, normalizedQuery ? undefined : expandedIds),
+    [expandedIds, nodes, normalizedQuery],
+  );
   const visible = flattened.filter(({ node }) =>
     `${node.name} ${node.slug} ${node.type}`.toLowerCase().includes(normalizedQuery),
   );
@@ -64,6 +81,8 @@ export function KnowledgeTree({
           ? t("Add {{type}} under {{name}}", { type: t(nextType).toLowerCase(), name: node.name })
           : t("Add lesson to {{name}}", { name: node.name });
         const selected = selectedId === node.id || creatingUnderId === node.id;
+        const hasChildren = childCounts.has(node.id);
+        const expanded = hasChildren && expandedIds.has(node.id);
 
         return (
           <li key={node.id}>
@@ -74,12 +93,27 @@ export function KnowledgeTree({
               <button
                 type="button"
                 className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-sm px-1 py-2 text-left focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/20"
-                onClick={() => onSelect?.(node)}
+                onClick={() => {
+                  onSelect?.(node);
+                  if (hasChildren && !normalizedQuery) {
+                    setToggledIds((current) => {
+                      const next = new Set(current);
+                      if (next.has(node.id)) next.delete(node.id);
+                      else next.add(node.id);
+                      return next;
+                    });
+                  }
+                }}
                 aria-current={selectedId === node.id ? "true" : undefined}
+                aria-expanded={hasChildren ? expanded : undefined}
               >
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-text">{node.name}</span>
-                  <span className="block truncate text-xs text-text-muted">{t(node.type)} · {node.slug} · {t("order {{order}}", { order: node.displayOrder })}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  {hasChildren ? <ChevronIcon expanded={expanded} /> : <span className="size-4 shrink-0" aria-hidden="true" />}
+                  <FolderIcon open={expanded} leaf={!hasChildren} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-text">{node.name}</span>
+                    <span className="block truncate text-xs text-text-muted">{t(node.type)} · {node.slug} · {t("order {{order}}", { order: node.displayOrder })}</span>
+                  </span>
                 </span>
                 <StatusBadge status={node.status} />
               </button>
@@ -106,7 +140,7 @@ export function KnowledgeTree({
   );
 }
 
-export function flattenKnowledgeTree(nodes: KnowledgeNode[]) {
+export function flattenKnowledgeTree(nodes: KnowledgeNode[], expandedIds?: ReadonlySet<string>) {
   const byParent = new Map<string | null, KnowledgeNode[]>();
   nodes.forEach((node) => {
     const list = byParent.get(node.parentId) ?? [];
@@ -122,12 +156,34 @@ export function flattenKnowledgeTree(nodes: KnowledgeNode[]) {
       if (seen.has(node.id)) continue;
       seen.add(node.id);
       result.push({ node, depth });
-      visit(node.id, depth + 1);
+      if (!expandedIds || expandedIds.has(node.id)) visit(node.id, depth + 1);
     }
   }
   visit(null, 0);
-  nodes.filter((node) => !seen.has(node.id)).forEach((node) => result.push({ node, depth: 0 }));
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  nodes
+    .filter((node) => !seen.has(node.id) && (!node.parentId || !nodeIds.has(node.parentId)))
+    .forEach((node) => result.push({ node, depth: 0 }));
   return result;
+}
+
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" className={`size-4 shrink-0 transition-transform motion-reduce:transition-none ${expanded ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="m7 4 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function FolderIcon({ open, leaf }: { open: boolean; leaf: boolean }) {
+  if (leaf) {
+    return <span className="size-3 shrink-0 rounded-sm border border-text-muted/60 bg-surface-muted" aria-hidden="true" />;
+  }
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" className="size-4 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <path d={open ? "M2.5 6.5h15l-2 9h-13z" : "M2.5 5h5l1.5 2h8.5v8.5h-15z"} strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 function StatusBadge({ status }: { status: ContentStatus }) {

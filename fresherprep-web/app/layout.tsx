@@ -24,11 +24,12 @@ const themeScript = `
 const languageScript = `
 (() => {
   try {
-    const locale = localStorage.getItem("fresherprep-language") === "en" ? "en" : "vi";
+    const saved = localStorage.getItem("fresherprep-language");
+    const locale = saved === "vi" ? "vi" : "en";
     document.documentElement.lang = locale;
     document.documentElement.dataset.locale = locale;
   } catch {
-    document.documentElement.lang = "vi";
+    document.documentElement.lang = "en";
   }
 })();
 `;
@@ -60,7 +61,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="vi"
+      lang="en"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >

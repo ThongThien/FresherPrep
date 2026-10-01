@@ -34,17 +34,7 @@ export function UiFoundationPreview() {
   const { t } = useI18n();
   return (
     <div className="mx-auto max-w-6xl">
-      <header className="max-w-3xl border-b border-border pb-8">
-        <Badge variant="info">{t("UI foundation")}</Badge>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-text sm:text-4xl">
-          {t("FresherPrep Design System")}
-        </h1>
-        <p className="mt-3 text-base leading-7 text-text-muted sm:text-lg">
-          {t("A calm, consistent visual foundation for focused Java Backend learning.")}
-        </p>
-      </header>
-
-      <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
         <div className="space-y-8">
           <Section title={t("Actions")} description={t("Primary, supporting, and system-level actions.")}>
             <div className="flex flex-wrap gap-3">

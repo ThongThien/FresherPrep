@@ -120,7 +120,12 @@ public class KnowledgeService {
                 parent,
                 request.displayOrder()
         );
-        return KnowledgeNodeResponse.from(save(node, slug));
+        KnowledgeNode saved = save(node, slug);
+        if (request.publish()) {
+            validatePublish(saved);
+            publish(saved);
+        }
+        return KnowledgeNodeResponse.from(saved);
     }
 
     @PreAuthorize("hasRole('ADMIN')")

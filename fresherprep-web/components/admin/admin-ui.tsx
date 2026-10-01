@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   useEffect,
   useId,
@@ -53,50 +52,14 @@ export function AdminViewTabs<T extends string>({
 
 export function AdminPageHeader({
   title,
-  description,
   action,
-  breadcrumbs,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
   breadcrumbs?: readonly AdminBreadcrumb[];
 }) {
-  const { t } = useI18n();
-
-  return (
-    <header className="border-b border-border pb-7">
-      {breadcrumbs?.length ? (
-        <nav aria-label={t("Breadcrumb")} className="mb-3">
-          <ol className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-            {breadcrumbs.map((item, index) => (
-              <li className="flex items-center gap-2" key={item.href ?? item.label}>
-                {index ? <span aria-hidden="true">/</span> : null}
-                {item.href ? (
-                  <Link className="font-medium hover:text-primary" href={item.href}>
-                    {t(item.label)}
-                  </Link>
-                ) : (
-                  <span aria-current="page">{t(item.label)}</span>
-                )}
-              </li>
-            ))}
-          </ol>
-        </nav>
-      ) : (
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
-          {t("Administration")}
-        </p>
-      )}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-3xl">
-          <h1 className="text-3xl font-semibold tracking-tight text-text">{title}</h1>
-          {description ? <p className="mt-2 text-sm leading-6 text-text-muted">{description}</p> : null}
-        </div>
-        {action ? <div className="shrink-0">{action}</div> : null}
-      </div>
-    </header>
-  );
+  return <><h1 className="sr-only">{title}</h1>{action ? <div className="flex justify-end">{action}</div> : null}</>;
 }
 
 export function AdminStatCard({

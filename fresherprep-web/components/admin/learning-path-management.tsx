@@ -173,10 +173,7 @@ export function LearningPathManagement() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Learning paths")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Create curricula and maintain their ordered lesson sequence.")}</p></div>
-        <Button onClick={startCreate}>{t("New learning path")}</Button>
-      </header>
+      <div className="flex justify-end"><Button onClick={startCreate}>{t("New learning path")}</Button></div>
       {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
       {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
 

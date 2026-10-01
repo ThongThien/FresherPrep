@@ -8,6 +8,18 @@ const storageKey = "fresherprep-language";
 const changeEvent = "fresherprep-language-change";
 
 const vi: Record<string, string> = {
+  "Publish new lesson?": "Xu\u1ea5t b\u1ea3n b\u00e0i h\u1ecdc m\u1edbi?",
+  "Choose whether this lesson is published immediately or kept as a draft.": "Ch\u1ecdn xu\u1ea5t b\u1ea3n b\u00e0i h\u1ecdc ngay ho\u1eb7c gi\u1eef \u1edf b\u1ea3n nh\u00e1p.",
+  "Publish new subtopic?": "Xu\u1ea5t b\u1ea3n ch\u1ee7 \u0111\u1ec1 con m\u1edbi?",
+  "Choose whether this subtopic is published immediately or kept as a draft.": "Ch\u1ecdn xu\u1ea5t b\u1ea3n ch\u1ee7 \u0111\u1ec1 con ngay ho\u1eb7c gi\u1eef \u1edf b\u1ea3n nh\u00e1p.",
+  "Publish question version?": "Xu\u1ea5t b\u1ea3n phi\u00ean b\u1ea3n c\u00e2u h\u1ecfi?",
+  "Choose whether this version becomes the published question immediately or remains a draft version.": "Ch\u1ecdn d\u00f9ng phi\u00ean b\u1ea3n n\u00e0y l\u00e0m c\u00e2u h\u1ecfi \u0111\u01b0\u1ee3c xu\u1ea5t b\u1ea3n ngay ho\u1eb7c gi\u1eef \u1edf b\u1ea3n nh\u00e1p.",
+  "Yes, publish": "C\u00f3, xu\u1ea5t b\u1ea3n",
+  "No, keep draft": "Kh\u00f4ng, gi\u1eef b\u1ea3n nh\u00e1p",
+  "Lesson created and published.": "\u0110\u00e3 t\u1ea1o v\u00e0 xu\u1ea5t b\u1ea3n b\u00e0i h\u1ecdc.",
+  "Lesson created as draft.": "\u0110\u00e3 t\u1ea1o b\u00e0i h\u1ecdc \u1edf b\u1ea3n nh\u00e1p.",
+  "Version {{number}} created and published.": "\u0110\u00e3 t\u1ea1o v\u00e0 xu\u1ea5t b\u1ea3n phi\u00ean b\u1ea3n {{number}}.",
+  "Version {{number}} created as draft.": "\u0110\u00e3 t\u1ea1o phi\u00ean b\u1ea3n {{number}} \u1edf tr\u1ea1ng th\u00e1i nh\u00e1p.",
   "Refresh knowledge tree": "L\u00e0m m\u1edbi c\u00e2y ki\u1ebfn th\u1ee9c",
   "Processing data...": "\u0110ang x\u1eed l\u00fd d\u1eef li\u1ec7u...",
   "Publish batch questions?": "Xu\u1ea5t b\u1ea3n to\u00e0n b\u1ed9 c\u00e2u h\u1ecfi?",
@@ -1317,11 +1329,11 @@ export function useI18n() {
 }
 
 function readLocale(): Locale {
-  return window.localStorage.getItem(storageKey) === "en" ? "en" : "vi";
+  return window.localStorage.getItem(storageKey) === "vi" ? "vi" : "en";
 }
 
 function readServerLocale(): Locale {
-  return "vi";
+  return "en";
 }
 
 function subscribe(onStoreChange: () => void) {

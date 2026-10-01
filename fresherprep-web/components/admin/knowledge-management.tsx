@@ -17,6 +17,7 @@ import { adminRequest, jsonBody } from "@/lib/admin/client";
 import type { ContentStatus, KnowledgeNode, KnowledgeNodeType } from "@/lib/admin/types";
 import { useI18n } from "@/lib/i18n";
 import { KnowledgeTree } from "./knowledge-tree";
+import { AdminConfirmDialog } from "./admin-ui";
 
 const expectedParent: Record<KnowledgeNodeType, KnowledgeNodeType | null> = {
   TECHNOLOGY: null,
@@ -40,6 +41,7 @@ export function KnowledgeManagement() {
   const [validation, setValidation] = useState<Record<string, string>>({});
   const [creatingParentId, setCreatingParentId] = useState<string>();
   const [returnSelectedId, setReturnSelectedId] = useState<string>();
+  const [createDecisionOpen, setCreateDecisionOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -96,7 +98,7 @@ export function KnowledgeManagement() {
     clearMessages();
   }
 
-  async function submit(event: React.FormEvent) {
+  function submit(event: React.FormEvent) {
     event.preventDefault();
     const errors: Record<string, string> = {};
     if (!form.name.trim()) errors.name = t("Name is required.");
@@ -105,6 +107,15 @@ export function KnowledgeManagement() {
     setValidation(errors);
     if (Object.keys(errors).length) return;
 
+    if (!selectedId && form.type === "SUBTOPIC") {
+      setCreateDecisionOpen(true);
+      return;
+    }
+    void saveNode(false);
+  }
+
+  async function saveNode(publish: boolean) {
+    setCreateDecisionOpen(false);
     setPending(true);
     setError(undefined);
     setSuccess(undefined);
@@ -114,6 +125,7 @@ export function KnowledgeManagement() {
         parentId: form.parentId || null,
         name: form.name.trim(),
         displayOrder: form.displayOrder,
+        ...(!selectedId ? { publish } : {}),
       };
       const saved = await adminRequest<KnowledgeNode>(
         selectedId ? `knowledge/nodes/${selectedId}` : "knowledge/nodes",
@@ -180,6 +192,7 @@ export function KnowledgeManagement() {
 
   return (
     <div className="mx-auto max-w-7xl">
+      <AdminConfirmDialog open={createDecisionOpen} title={t("Publish new subtopic?")} description={t("Choose whether this subtopic is published immediately or kept as a draft.")} confirmLabel={t("Yes, publish")} secondaryLabel={t("No, keep draft")} cancelLabel={t("Cancel")} pending={pending} onConfirm={() => void saveNode(true)} onSecondary={() => void saveNode(false)} onClose={() => setCreateDecisionOpen(false)} />
       <AdminHeader
         title={t("Knowledge hierarchy")}
         description={t("Manage the Technology → Category → Topic → Subtopic curriculum structure.")}
@@ -290,9 +303,8 @@ function countDescendants(nodes: KnowledgeNode[], rootId: string) {
   return count;
 }
 
-function AdminHeader({ title, description, action }: { title: string; description: string; action: React.ReactNode }) {
-  const { t } = useI18n();
-  return <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{description}</p></div>{action}</header>;
+function AdminHeader({ title, action }: { title: string; description: string; action: React.ReactNode }) {
+  return <><h1 className="sr-only">{title}</h1><div className="flex justify-end">{action}</div></>;
 }
 
 function StatusBadge({ status }: { status: ContentStatus }) {

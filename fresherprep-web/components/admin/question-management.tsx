@@ -8,7 +8,7 @@ import type { AdminPage, ContentStatus, Difficulty, KnowledgeNode, Question, Que
 import { useI18n } from "@/lib/i18n";
 import { KnowledgePathSelect, knowledgePathLabel } from "@/components/content/knowledge-path-select";
 import { QuestionBatchEditor, type BatchQuestionPayload } from "@/components/content/question-batch-editor";
-import { AdminDataTable, AdminLoadingOverlay, AdminPagination, AdminViewTabs } from "./admin-ui";
+import { AdminConfirmDialog, AdminDataTable, AdminLoadingOverlay, AdminPagination, AdminViewTabs } from "./admin-ui";
 
 type OptionDraft = { position: number; content: string; correct: boolean; explanation: string };
 const difficulties: Difficulty[] = ["EASY", "MEDIUM", "HARD"];
@@ -36,6 +36,7 @@ export function QuestionManagement() {
   const [nodesLoading, setNodesLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [versionDecisionOpen, setVersionDecisionOpen] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [validation, setValidation] = useState<Record<string, string>>({});
@@ -181,7 +182,7 @@ export function QuestionManagement() {
     setSuccess(undefined);
   }
 
-  async function submitVersion(event: React.FormEvent) {
+  function submitVersion(event: React.FormEvent) {
     event.preventDefault();
     if (!selected) return;
     const errors: Record<string, string> = {};
@@ -195,6 +196,12 @@ export function QuestionManagement() {
     setValidation(errors);
     if (Object.keys(errors).length) return;
 
+    setVersionDecisionOpen(true);
+  }
+
+  async function saveVersion(publish: boolean) {
+    if (!selected) return;
+    setVersionDecisionOpen(false);
     setPending(true);
     setError(undefined);
     setSuccess(undefined);
@@ -203,6 +210,7 @@ export function QuestionManagement() {
         content: versionForm.content.trim(),
         explanation: versionForm.explanation.trim(),
         options: versionForm.options.map((option) => ({ ...option, content: option.content.trim(), explanation: option.explanation.trim() })),
+        publish,
       };
       const nextVersion = Math.max(0, ...versions.map((version) => version.versionNumber)) + 1;
       const created = await adminRequest<QuestionVersion>(
@@ -212,11 +220,13 @@ export function QuestionManagement() {
       const refreshed = await adminRequest<QuestionVersion[]>(`questions/${selected.id}/versions`);
       setVersions(refreshed);
       setSelectedVersionId(created.id);
-      if (subtopics.find((node) => node.id === selected.subtopicId)?.status === "PUBLISHED") {
+      if (publish) {
         setSelected({ ...selected, status: "PUBLISHED", publishedVersionId: created.id });
       }
       resetVersionEditor();
-      setSuccess(`Version ${created.versionNumber} created and published. Existing versions remain unchanged.`);
+      setSuccess(publish
+        ? t("Version {{number}} created and published.", { number: created.versionNumber })
+        : t("Version {{number}} created as draft.", { number: created.versionNumber }));
     } catch (reason) { setError(messageOf(reason)); } finally { setPending(false); }
   }
 
@@ -245,7 +255,8 @@ export function QuestionManagement() {
 
   return <div className="mx-auto max-w-7xl">
     <AdminLoadingOverlay show={loading || nodesLoading || pending || detailLoading} label={t("Processing data...")} />
-    <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Questions")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Manage question metadata and immutable content versions.")}</p></div><div className="flex gap-2"><Button variant="secondary" onClick={() => { setView("editor"); setShowBatch(true); setSelected(undefined); }}>{t("Create in batch")}</Button><Button onClick={startCreate}>{t("New question")}</Button></div></header>
+    <AdminConfirmDialog open={versionDecisionOpen} title={t("Publish question version?")} description={t("Choose whether this version becomes the published question immediately or remains a draft version.")} confirmLabel={t("Yes, publish")} secondaryLabel={t("No, keep draft")} cancelLabel={t("Cancel")} pending={pending} onConfirm={() => void saveVersion(true)} onSecondary={() => void saveVersion(false)} onClose={() => setVersionDecisionOpen(false)} />
+    <div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" onClick={() => { setView("editor"); setShowBatch(true); setSelected(undefined); }}>{t("Create in batch")}</Button><Button onClick={startCreate}>{t("New question")}</Button></div>
     {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
     {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
     <AdminViewTabs value={view} label={t("Question management views")} onChange={setView} items={[{ value: "list", label: t("Question list") }, { value: "editor", label: t("Create / edit question") }]} />

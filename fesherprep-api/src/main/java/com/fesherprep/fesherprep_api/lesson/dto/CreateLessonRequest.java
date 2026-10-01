@@ -10,6 +10,7 @@ public record CreateLessonRequest(
         @NotBlank @Size(max = 200000) String content,
         @PositiveOrZero int displayOrder,
         @Positive int minimumReadSeconds,
-        @Min(1) @Max(100) int requiredScrollPercent
+        @Min(1) @Max(100) int requiredScrollPercent,
+        boolean publish
 ) {
 }

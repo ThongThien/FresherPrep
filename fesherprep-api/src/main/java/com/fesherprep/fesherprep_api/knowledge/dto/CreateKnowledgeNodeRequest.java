@@ -12,6 +12,7 @@ public record CreateKnowledgeNodeRequest(
         @NotNull NodeType type,
         UUID parentId,
         @NotBlank @Size(max = 150) String name,
-        @PositiveOrZero int displayOrder
+        @PositiveOrZero int displayOrder,
+        boolean publish
 ) {
 }

@@ -205,7 +205,13 @@ public class LessonService {
                 request.minimumReadSeconds(),
                 request.requiredScrollPercent()
         );
-        return toDetail(save(lesson, slug), false);
+        Lesson saved = save(lesson, slug);
+        if (request.publish()) {
+            validatePublish(saved);
+            saved.changeStatus(ContentStatus.REVIEW);
+            saved.changeStatus(ContentStatus.PUBLISHED);
+        }
+        return toDetail(saved, false);
     }
 
     @PreAuthorize("hasRole('ADMIN')")

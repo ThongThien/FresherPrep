@@ -17,7 +17,7 @@ import { useI18n } from "@/lib/i18n";
 import { KnowledgePathSelect, knowledgePathLabel } from "@/components/content/knowledge-path-select";
 import { LessonContent } from "@/components/lessons/lesson-content";
 import { hasMeaningfulLessonContent } from "@/lib/lessons/content";
-import { AdminDataTable, AdminLoadingOverlay, AdminPagination, AdminViewTabs } from "./admin-ui";
+import { AdminConfirmDialog, AdminDataTable, AdminLoadingOverlay, AdminPagination, AdminViewTabs } from "./admin-ui";
 import { LessonRichTextEditor } from "./lesson-rich-text-editor";
 import { KnowledgeTree } from "./knowledge-tree";
 
@@ -45,6 +45,7 @@ export function LessonManagement() {
   const loading = loadingCount > 0;
   const [pending, setPending] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [createDecisionOpen, setCreateDecisionOpen] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [validation, setValidation] = useState<Record<string, string>>({});
@@ -176,7 +177,7 @@ export function LessonManagement() {
     setForm({ ...emptyForm, subtopicId: selectedSubtopicId });
   }
 
-  async function submit(event: React.FormEvent) {
+  function submit(event: React.FormEvent) {
     event.preventDefault();
     const errors: Record<string, string> = {};
     if (!form.subtopicId) errors.subtopicId = "Select a subtopic.";
@@ -188,6 +189,15 @@ export function LessonManagement() {
     setValidation(errors);
     if (Object.keys(errors).length) return;
 
+    if (!detail) {
+      setCreateDecisionOpen(true);
+      return;
+    }
+    void saveLesson(false);
+  }
+
+  async function saveLesson(publish: boolean) {
+    setCreateDecisionOpen(false);
     setPending(true);
     setError(undefined);
     setSuccess(undefined);
@@ -196,7 +206,7 @@ export function LessonManagement() {
       const editing = Boolean(detail);
       const saved = await adminRequest<LessonDetail>(
         detail ? `lessons/${detail.id}` : "lessons",
-        { method: detail ? "PUT" : "POST", ...jsonBody(payload) },
+        { method: detail ? "PUT" : "POST", ...jsonBody(editing ? payload : { ...payload, publish }) },
       );
       await loadLessons();
       if (editing) {
@@ -208,7 +218,7 @@ export function LessonManagement() {
         setReturnLessonId(undefined);
         setForm({ ...emptyForm, subtopicId: payload.subtopicId });
         setValidation({});
-        setSuccess("Lesson created.");
+        setSuccess(publish ? t("Lesson created and published.") : t("Lesson created as draft."));
         window.requestAnimationFrame(() => document.getElementById("lesson-title")?.focus());
       }
     } catch (reason) {
@@ -262,10 +272,8 @@ export function LessonManagement() {
   return (
     <div className="mx-auto max-w-7xl">
       <AdminLoadingOverlay show={loading || pending || detailLoading} label={t("Processing data...")} />
-      <header className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{t("Administration")}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">{t("Lessons")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{t("Maintain content, reading requirements, prerequisites, and assessment links.")}</p></div>
-        <Button onClick={startCreate}>{t("New lesson")}</Button>
-      </header>
+      <AdminConfirmDialog open={createDecisionOpen} title={t("Publish new lesson?")} description={t("Choose whether this lesson is published immediately or kept as a draft.")} confirmLabel={t("Yes, publish")} secondaryLabel={t("No, keep draft")} cancelLabel={t("Cancel")} pending={pending} onConfirm={() => void saveLesson(true)} onSecondary={() => void saveLesson(false)} onClose={() => setCreateDecisionOpen(false)} />
+      <div className="flex justify-end"><Button onClick={startCreate}>{t("New lesson")}</Button></div>
       {error ? <Feedback className="mt-6" tone="error" title={t("Action failed")}>{error}</Feedback> : null}
       {success ? <Feedback className="mt-6" tone="success" title={success} /> : null}
 

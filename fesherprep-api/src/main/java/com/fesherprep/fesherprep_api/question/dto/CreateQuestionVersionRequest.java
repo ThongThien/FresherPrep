@@ -12,6 +12,7 @@ public record CreateQuestionVersionRequest(
         @Positive int versionNumber,
         @NotBlank @Size(max = 10000) String content,
         @NotBlank @Size(max = 20000) String explanation,
-        @NotNull @Size(min = 4, max = 4) List<@NotNull @Valid QuestionOptionRequest> options
+        @NotNull @Size(min = 4, max = 4) List<@NotNull @Valid QuestionOptionRequest> options,
+        boolean publish
 ) {
 }
