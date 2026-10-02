@@ -9,6 +9,7 @@ import { Button, Feedback, LoadingState } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { CurrentUser } from "@/lib/auth/types";
 import { useI18n } from "@/lib/i18n";
+import { clearAllProgressCaches } from "@/lib/progress/cache";
 
 import { CurrentUserProvider } from "./current-user-context";
 
@@ -68,6 +69,7 @@ export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) 
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
+      clearAllProgressCaches();
       window.location.replace("/login");
     }
   }

@@ -5,7 +5,7 @@ import { apiError, backendErrorResponse, readResponseBody } from "@/lib/api/erro
 
 export async function GET() {
   try {
-    const response = await backendFetch("/api/learning-paths?page=0&size=6&sort=name,asc");
+    const response = await backendFetch("/api/learning-paths?page=0&size=6&sort=createdAt,asc");
     const payload = await readResponseBody(response);
     return response.ok ? NextResponse.json(payload) : backendErrorResponse(response.status, payload);
   } catch {

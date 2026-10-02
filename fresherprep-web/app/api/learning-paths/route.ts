@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const publishedResponse = await backendFetch(
-      `/api/learning-paths?page=${page}&size=${PAGE_SIZE}&sort=name,asc`,
+      `/api/learning-paths?page=${page}&size=${PAGE_SIZE}&sort=createdAt,asc`,
     );
     const publishedPayload = await readResponseBody(publishedResponse);
     if (!publishedResponse.ok) {

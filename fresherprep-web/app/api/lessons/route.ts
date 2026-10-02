@@ -5,14 +5,11 @@ import { apiError, backendErrorResponse } from "@/lib/api/errors";
 import { setAuthCookies } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
-  const page = Math.max(0, Number.parseInt(request.nextUrl.searchParams.get("page") ?? "0", 10) || 0);
-  const query = request.nextUrl.searchParams.get("q")?.trim() ?? "";
   const params = new URLSearchParams({
-    page: String(page),
-    size: "200",
+    page: "0",
+    size: "500",
     sort: "title,asc",
   });
-  if (query) params.set("q", query.slice(0, 200));
 
   try {
     const result = await authenticatedBackendRequest(

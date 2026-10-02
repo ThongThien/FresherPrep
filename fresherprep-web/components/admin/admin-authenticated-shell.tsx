@@ -9,6 +9,7 @@ import { Button, Feedback, LoadingState } from "@/components/ui";
 import { readApiError } from "@/lib/api/client";
 import type { CurrentUser } from "@/lib/auth/types";
 import { useI18n } from "@/lib/i18n";
+import { clearAllProgressCaches } from "@/lib/progress/cache";
 
 import { AdminShell } from "./admin-shell";
 
@@ -59,7 +60,7 @@ export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
     if (loggingOut) return;
     setLoggingOut(true);
     try { await fetch("/api/auth/logout", { method: "POST" }); }
-    finally { window.location.replace("/login"); }
+    finally { clearAllProgressCaches(); window.location.replace("/login"); }
   }
 
   if (session.status === "loading") return <AdminGateLoading />;

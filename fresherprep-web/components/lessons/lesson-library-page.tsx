@@ -11,7 +11,6 @@ import type { LessonSummary } from "@/lib/lessons/types";
 
 export function LessonLibraryPage() {
   const { t } = useI18n();
-  const [page, setPage] = useState(0);
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
   const [topicFilter, setTopicFilter] = useState("");
@@ -26,7 +25,12 @@ export function LessonLibraryPage() {
   const groupedLessons = useMemo(() => {
     const groups = new Map<string, { name: string; lessons: LessonSummary[] }>();
     data?.content
-      .filter((lesson) => !topicFilter || (lesson.topicId ?? "other") === topicFilter)
+      .filter((lesson) => {
+        const normalizedQuery = query.toLocaleLowerCase();
+        const matchesQuery = !normalizedQuery || lesson.title.toLocaleLowerCase().includes(normalizedQuery) || lesson.slug.toLocaleLowerCase().includes(normalizedQuery);
+        const matchesTopic = !topicFilter || (lesson.topicId ?? "other") === topicFilter;
+        return matchesQuery && matchesTopic;
+      })
       .forEach((lesson) => {
         const key = lesson.topicId ?? "other";
         const group = groups.get(key) ?? { name: lesson.topicName ?? t("Other topic"), lessons: [] };
@@ -34,14 +38,11 @@ export function LessonLibraryPage() {
         groups.set(key, group);
       });
     return [...groups.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
-  }, [data, topicFilter, t]);
+  }, [data, query, topicFilter, t]);
 
   useEffect(() => {
     const controller = new AbortController();
-    const params = new URLSearchParams({ page: String(page) });
-    if (query) params.set("q", query);
-
-    void fetch("/api/lessons?" + params.toString(), {
+    void fetch("/api/lessons", {
       cache: "no-store",
       signal: controller.signal,
     })
@@ -63,12 +64,10 @@ export function LessonLibraryPage() {
         }
       });
     return () => controller.abort();
-  }, [page, query, reload, t]);
+  }, [reload, t]);
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setData(undefined);
-    setPage(0);
     setQuery(draftQuery.trim());
   }
 
@@ -76,8 +75,6 @@ export function LessonLibraryPage() {
     setDraftQuery("");
     setQuery("");
     setTopicFilter("");
-    setPage(0);
-    setData(undefined);
   }
 
   if (error && !data) {
@@ -141,13 +138,6 @@ export function LessonLibraryPage() {
         )}
       </div>
 
-      {data && data.totalPages > 1 ? (
-        <nav className="mt-7 flex items-center justify-between gap-4" aria-label={t("Lesson pages")}>
-          <Button variant="secondary" disabled={data.first} onClick={() => { setData(undefined); setPage((value) => value - 1); }}>{t("Previous")}</Button>
-          <span className="text-sm tabular-nums text-text-muted">{t("Page {{page}} of {{total}}", { page: data.number + 1, total: data.totalPages })}</span>
-          <Button variant="secondary" disabled={data.last} onClick={() => { setData(undefined); setPage((value) => value + 1); }}>{t("Next")}</Button>
-        </nav>
-      ) : null}
     </div>
   );
 }

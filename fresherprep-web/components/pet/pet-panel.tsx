@@ -100,7 +100,17 @@ export function PetPanel() {
       )}
       {collection.completedPets.length ? <div>
         <h3 className="text-lg font-semibold text-text">{t("Pet Collection")}</h3>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">{collection.completedPets.map((item) => <div key={item.progressionId} className="rounded-lg border border-border bg-surface p-4"><Badge variant="success">{t("Completed")}</Badge><p className="mt-2 font-semibold text-text">{item.petName[locale]}</p><p className="mt-1 text-sm text-text-muted">{t("Level {{level}}", { level: item.currentLevel })}</p></div>)}</div>
+        <p className="mt-1 text-sm text-text-muted">{t("Review the highest form of every Pet you have completed.")}</p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {collection.completedPets.map((item) => (
+            <CompletedPetCard
+              key={item.progressionId}
+              pet={item}
+              locale={locale}
+              t={t}
+            />
+          ))}
+        </div>
       </div> : null}
     </section>
   );
@@ -133,6 +143,42 @@ function ActivePet({ pet, locale, pending, feedback, upgradeEffect, error, act, 
       </div>
     </div>
   </div>;
+}
+
+function CompletedPetCard({ pet, locale, t }: { pet: PetState; locale: "vi" | "en"; t: (key: string, values?: Record<string, string | number>) => string }) {
+  return (
+    <article className="group overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+      <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-primary-subtle p-4">
+        <Image
+          src={petAsset(pet.assetReference)}
+          alt={t("{{name}}, Pet level {{level}}", {
+            name: pet.petName[locale],
+            level: pet.currentLevel,
+          })}
+          width={240}
+          height={240}
+          className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+        />
+        <Badge className="absolute left-3 top-3" variant="success">
+          {t("Completed")}
+        </Badge>
+      </div>
+      <div className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="font-semibold text-text">{pet.petName[locale]}</h4>
+          <span className="text-xs font-semibold text-primary">
+            {t("Level {{level}}", { level: pet.maximumLevel })}
+          </span>
+        </div>
+        <p className="mt-2 text-sm font-medium text-text">
+          {pet.levelName[locale]}
+        </p>
+        <p className="mt-1 text-sm leading-6 text-text-muted">
+          {pet.levelDescription[locale] || pet.petDescription[locale]}
+        </p>
+      </div>
+    </article>
+  );
 }
 
 function Stat({ label, value }: { label: string; value: string | number }) {

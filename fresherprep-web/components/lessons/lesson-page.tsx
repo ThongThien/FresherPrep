@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Badge, Button, Feedback, LoadingState, NavigationConfirm } from "@/components/ui";
+import { useCurrentUser } from "@/components/auth";
 import { readApiError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
 import type { LessonDetailData, LessonProgress } from "@/lib/lessons/types";
+import { clearProgressCache } from "@/lib/progress/cache";
 
 import { LessonContent } from "./lesson-content";
 import { LessonAssessmentPanel } from "./lesson-assessment-panel";
@@ -20,6 +22,7 @@ export function LessonPage({
   pathId?: string;
 }) {
   const { t } = useI18n();
+  const user = useCurrentUser();
   const [data, setData] = useState<LessonDetailData>();
   const [error, setError] = useState<string>();
   const [progress, setProgress] = useState<LessonProgress>();
@@ -54,6 +57,7 @@ export function LessonPage({
         return;
       }
       const value = (await response.json()) as LessonProgress;
+      clearProgressCache(user.id);
       progressRef.current = value;
       maxScroll.current = value.maxScrollPercent;
       setProgress(value);
@@ -64,7 +68,7 @@ export function LessonPage({
         t("Reading progress could not be started. Try again while reading."),
       );
     }
-  }, [lessonId, pathId, t]);
+  }, [lessonId, pathId, t, user.id]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -144,6 +148,7 @@ export function LessonPage({
       }
       if (!response.ok) throw new Error((await readApiError(response)).message);
       const value = (await response.json()) as LessonProgress;
+      clearProgressCache(user.id);
       progressRef.current = value;
       maxScroll.current = Math.max(maxScroll.current, value.maxScrollPercent);
       setProgress(value);
@@ -159,7 +164,7 @@ export function LessonPage({
     } finally {
       syncing.current = false;
     }
-  }, [lessonId, pathId, recordElapsed, t]);
+  }, [lessonId, pathId, recordElapsed, t, user.id]);
 
   useEffect(() => {
     if (!progress) return;

@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { Badge, Button, Feedback, LoadingState, Progress } from "@/components/ui";
+import { useCurrentUser } from "@/components/auth";
 import { readApiError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
+import { clearProgressCache } from "@/lib/progress/cache";
 import type {
   LearningPathDetailData,
   LearningPathItem,
@@ -21,6 +23,7 @@ type DetailState =
 
 export function LearningPathDetailPage({ pathId }: { pathId: string }) {
   const { t } = useI18n();
+  const user = useCurrentUser();
   const [state, setState] = useState<DetailState>({ status: "loading" });
   const [requestVersion, setRequestVersion] = useState(0);
   const [joining, setJoining] = useState(false);
@@ -85,6 +88,7 @@ export function LearningPathDetailPage({ pathId }: { pathId: string }) {
       }
 
       setJoinedNotice(true);
+      clearProgressCache(user.id);
       setState({ status: "loading" });
       setRequestVersion((current) => current + 1);
     } catch {

@@ -30,7 +30,7 @@ public class QuizController {
     public Page<PublishedQuizResponse> getPublishedQuizzes(
             @RequestParam(required = false) QuestionLanguage language,
             @RequestParam(required = false) QuizCategory category,
-            @PageableDefault(size = 20, sort = "title", direction = Sort.Direction.ASC) Pageable pageable
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return quizService.getPublishedQuizzes(language, category, pageable);
     }

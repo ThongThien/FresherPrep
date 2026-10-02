@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const result = await authenticatedBackendRequest(
       request,
-      "/api/learning-paths?page=0&size=100&sort=name,asc",
+      "/api/learning-paths?page=0&size=100&sort=createdAt,asc",
     );
     if (!result.authenticated) return result.response;
     if (!result.ok) return backendErrorResponse(result.status, result.payload);

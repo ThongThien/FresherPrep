@@ -27,7 +27,7 @@ public class LearningPathController {
     @GetMapping
     @SecurityRequirements
     public Page<LearningPathSummaryResponse> getPublishedPaths(
-            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return learningPathService.getPublishedPaths(pageable);
     }

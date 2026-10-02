@@ -5,13 +5,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge, Button, ConfirmDialog, Feedback, LoadingState, NavigationConfirm, Progress } from "@/components/ui";
+import { useCurrentUser } from "@/components/auth";
 import { readApiError } from "@/lib/api/client";
 import type { QuizAttempt } from "@/lib/quizzes/types";
 import { useI18n } from "@/lib/i18n";
+import { clearProgressCache } from "@/lib/progress/cache";
 
 export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attemptId: string }) {
   const router = useRouter();
   const { t } = useI18n();
+  const user = useCurrentUser();
   const [attempt, setAttempt] = useState<QuizAttempt>();
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -102,6 +105,7 @@ export function QuizAttemptPage({ quizId, attemptId }: { quizId: string; attempt
         return;
       }
       sessionStorage.removeItem("fresherprep-attempt-" + attempt.id);
+      clearProgressCache(user.id);
       router.replace("/quizzes/" + quizId + "/attempts/" + attempt.id + "/result");
     } catch { setError(t("Unable to submit this attempt. You can safely try again.")); }
     finally {

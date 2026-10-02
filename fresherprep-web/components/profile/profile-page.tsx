@@ -24,6 +24,7 @@ import { readApiError } from "@/lib/api/client";
 import type { CurrentUser } from "@/lib/auth/types";
 import { cn } from "@/lib/cn";
 import { type Locale, useI18n } from "@/lib/i18n";
+import { clearAllProgressCaches } from "@/lib/progress/cache";
 import { type ThemePreference, useThemePreference } from "@/lib/theme";
 
 const themeOptions: ThemePreference[] = ["light", "dark", "coder", "system"];
@@ -100,6 +101,7 @@ export function ProfilePage() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
+      clearAllProgressCaches();
       window.location.replace("/login");
     }
   }

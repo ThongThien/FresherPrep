@@ -5,30 +5,37 @@ import { useEffect, useState } from "react";
 
 import { Badge, Button, Feedback, LoadingState, Progress } from "@/components/ui";
 import { PetPanel } from "@/components/pet/pet-panel";
+import { useCurrentUser } from "@/components/auth";
 import { readApiError } from "@/lib/api/client";
 import type { LessonProgress, QuizAttemptSummary } from "@/lib/dashboard/types";
 import { useI18n } from "@/lib/i18n";
 import type { ProgressData } from "@/lib/progress/types";
+import { readProgressCache, writeProgressCache } from "@/lib/progress/cache";
 
 export function LearningProgressPage() {
   const { t } = useI18n();
-  const [data, setData] = useState<ProgressData>();
+  const user = useCurrentUser();
+  const [cachedData] = useState<ProgressData | undefined>(() => readProgressCache(user.id));
+  const [data, setData] = useState<ProgressData | undefined>(cachedData);
   const [error, setError] = useState<string>();
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
+    if (cachedData && reload === 0) return;
     const controller = new AbortController();
     void fetch("/api/progress", { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
         if (response.status === 401) return window.location.replace("/login?next=%2Fprogress");
         if (!response.ok) return setError((await readApiError(response)).message);
-        setData(await response.json() as ProgressData);
+        const value = await response.json() as ProgressData;
+        setData(value);
+        writeProgressCache(user.id, value);
         setError(undefined);
       }).catch((reason: unknown) => {
         if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(t("Unable to load your learning progress."));
       });
     return () => controller.abort();
-  }, [reload, t]);
+  }, [cachedData, reload, t, user.id]);
 
   if (error && !data) return <div className="mx-auto max-w-3xl py-10"><Feedback tone="error" title={t("Progress unavailable")}>{error}</Feedback><Button className="mt-4" variant="secondary" onClick={() => setReload((value) => value + 1)}>{t("Try again")}</Button></div>;
   if (!data) return <ProgressSkeleton />;

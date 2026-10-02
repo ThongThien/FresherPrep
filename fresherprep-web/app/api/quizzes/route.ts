@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const page = Math.max(0, Number.parseInt(request.nextUrl.searchParams.get("page") ?? "0", 10) || 0);
   const language = request.nextUrl.searchParams.get("language");
   const category = request.nextUrl.searchParams.get("category");
-  const params = new URLSearchParams({ page: String(page), size: "12", sort: "title,asc" });
+  const params = new URLSearchParams({ page: String(page), size: "12", sort: "createdAt,asc" });
   if (language === "VI" || language === "EN") params.set("language", language);
   if (category && ["TECHNICAL", "GRAMMAR", "VOCABULARY", "TOEIC", "MIXED"].includes(category)) {
     params.set("category", category);

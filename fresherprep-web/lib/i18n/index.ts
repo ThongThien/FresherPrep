@@ -8,6 +8,7 @@ const storageKey = "fresherprep-language";
 const changeEvent = "fresherprep-language-change";
 
 const vi: Record<string, string> = {
+  "Review the highest form of every Pet you have completed.": "Xem lại hình dạng cao nhất của mỗi Pet bạn đã hoàn thành.",
   "Back to create": "Quay lại form tạo mới",
   "Select lessons to add": "Chọn các bài học cần thêm",
   "Select at least one lesson to add.": "Chọn ít nhất một bài học để thêm.",
