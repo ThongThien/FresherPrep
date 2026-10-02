@@ -12,14 +12,12 @@ import type {
   UserLearningPath,
 } from "@/lib/learning-paths/types";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 200;
 
 export async function GET(request: NextRequest) {
-  const page = parsePage(request.nextUrl.searchParams.get("page"));
-
   try {
     const publishedResponse = await backendFetch(
-      `/api/learning-paths?page=${page}&size=${PAGE_SIZE}&sort=createdAt,asc`,
+      `/api/learning-paths?page=0&size=${PAGE_SIZE}&sort=createdAt,asc`,
     );
     const publishedPayload = await readResponseBody(publishedResponse);
     if (!publishedResponse.ok) {
@@ -120,11 +118,6 @@ export async function GET(request: NextRequest) {
   } catch {
     return apiError(503, "LEARNING_PATH_SERVICE_UNAVAILABLE", "Unable to load learning paths right now.");
   }
-}
-
-function parsePage(value: string | null) {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
 }
 
 function isPage<T>(value: unknown): value is PageResponse<T> {

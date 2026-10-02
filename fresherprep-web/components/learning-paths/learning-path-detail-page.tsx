@@ -8,6 +8,7 @@ import { useCurrentUser } from "@/components/auth";
 import { readApiError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
 import { clearProgressCache } from "@/lib/progress/cache";
+import { clearLearningPathListCache } from "@/lib/learning-paths/cache";
 import type {
   LearningPathDetailData,
   LearningPathItem,
@@ -89,6 +90,7 @@ export function LearningPathDetailPage({ pathId }: { pathId: string }) {
 
       setJoinedNotice(true);
       clearProgressCache(user.id);
+      clearLearningPathListCache(user.id);
       setState({ status: "loading" });
       setRequestVersion((current) => current + 1);
     } catch {

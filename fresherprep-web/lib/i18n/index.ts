@@ -8,6 +8,13 @@ const storageKey = "fresherprep-language";
 const changeEvent = "fresherprep-language-change";
 
 const vi: Record<string, string> = {
+  "Learning paths are numbered by creation order. Follow the numbers from smallest to largest if you want to study along the recommended roadmap.": "Các lộ trình được đánh số theo thứ tự tạo. Hãy học từ số nhỏ đến số lớn nếu bạn muốn bám theo lộ trình được đề xuất.",
+  "Find a learning path": "Tìm lộ trình",
+  "Search by path or technology": "Tìm theo lộ trình hoặc công nghệ",
+  "No learning paths match your search": "Không có lộ trình phù hợp",
+  "Try another path name or technology.": "Hãy thử tên lộ trình hoặc công nghệ khác.",
+  "Learning path number {{number}}": "Lộ trình số {{number}}",
+  "Created {{date}}": "Tạo ngày {{date}}",
   "Review the highest form of every Pet you have completed.": "Xem lại hình dạng cao nhất của mỗi Pet bạn đã hoàn thành.",
   "Back to create": "Quay lại form tạo mới",
   "Select lessons to add": "Chọn các bài học cần thêm",

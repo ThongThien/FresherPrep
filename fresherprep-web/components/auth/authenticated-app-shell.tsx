@@ -10,6 +10,7 @@ import { readApiError } from "@/lib/api/client";
 import type { CurrentUser } from "@/lib/auth/types";
 import { useI18n } from "@/lib/i18n";
 import { clearAllProgressCaches } from "@/lib/progress/cache";
+import { clearAllLearningPathListCaches } from "@/lib/learning-paths/cache";
 
 import { CurrentUserProvider } from "./current-user-context";
 
@@ -70,6 +71,7 @@ export function AuthenticatedAppShell({ children }: AuthenticatedAppShellProps) 
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       clearAllProgressCaches();
+      clearAllLearningPathListCaches();
       window.location.replace("/login");
     }
   }

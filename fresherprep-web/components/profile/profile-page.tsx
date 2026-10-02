@@ -25,6 +25,7 @@ import type { CurrentUser } from "@/lib/auth/types";
 import { cn } from "@/lib/cn";
 import { type Locale, useI18n } from "@/lib/i18n";
 import { clearAllProgressCaches } from "@/lib/progress/cache";
+import { clearAllLearningPathListCaches } from "@/lib/learning-paths/cache";
 import { type ThemePreference, useThemePreference } from "@/lib/theme";
 
 const themeOptions: ThemePreference[] = ["light", "dark", "coder", "system"];
@@ -102,6 +103,7 @@ export function ProfilePage() {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       clearAllProgressCaches();
+      clearAllLearningPathListCaches();
       window.location.replace("/login");
     }
   }

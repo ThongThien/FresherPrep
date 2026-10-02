@@ -8,6 +8,7 @@ import { readApiError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
 import type { QuizAttempt } from "@/lib/quizzes/types";
 import { clearProgressCache } from "@/lib/progress/cache";
+import { clearLearningPathListCache } from "@/lib/learning-paths/cache";
 
 export function LessonAssessmentPanel({ quizId, passPercentage, onCompleted }: { quizId: string; passPercentage: number | null; onCompleted: () => Promise<void> }) {
   const { t } = useI18n();
@@ -55,6 +56,7 @@ export function LessonAssessmentPanel({ quizId, passPercentage, onCompleted }: {
       if (!response.ok) throw new Error((await readApiError(response)).message);
       const result = await response.json() as QuizAttempt;
       clearProgressCache(user.id);
+      clearLearningPathListCache(user.id);
       sessionStorage.removeItem(storageKey(attempt.id));
       setAttempt(result);
       await onCompleted();

@@ -9,6 +9,7 @@ import { readApiError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
 import type { LessonDetailData, LessonProgress } from "@/lib/lessons/types";
 import { clearProgressCache } from "@/lib/progress/cache";
+import { clearLearningPathListCache } from "@/lib/learning-paths/cache";
 
 import { LessonContent } from "./lesson-content";
 import { LessonAssessmentPanel } from "./lesson-assessment-panel";
@@ -58,6 +59,7 @@ export function LessonPage({
       }
       const value = (await response.json()) as LessonProgress;
       clearProgressCache(user.id);
+      clearLearningPathListCache(user.id);
       progressRef.current = value;
       maxScroll.current = value.maxScrollPercent;
       setProgress(value);
@@ -149,6 +151,7 @@ export function LessonPage({
       if (!response.ok) throw new Error((await readApiError(response)).message);
       const value = (await response.json()) as LessonProgress;
       clearProgressCache(user.id);
+      clearLearningPathListCache(user.id);
       progressRef.current = value;
       maxScroll.current = Math.max(maxScroll.current, value.maxScrollPercent);
       setProgress(value);
