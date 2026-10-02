@@ -27,6 +27,7 @@ export interface AttemptQuestion {
   questionCode: string;
   position: number;
   content: string;
+  explanation: string | null;
   options: AttemptOption[];
   selectedOptionId: string | null;
   answerCorrect: boolean | null;

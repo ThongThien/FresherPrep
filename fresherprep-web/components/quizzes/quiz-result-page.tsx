@@ -72,7 +72,7 @@ function QuestionReview({ question, index }: { question: AttemptQuestion; index:
     <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-semibold text-primary">{t("Question {{number}}", { number: index + 1 })}</p><Badge variant={state === "Correct" ? "success" : state === "Incorrect" ? "danger" : "neutral"}>{t(state)}</Badge></div>
     <h3 className="mt-3 font-semibold leading-7 text-text">{question.content}</h3>
     <dl className="mt-5 space-y-4 text-sm"><ReviewRow label={t("Your answer")} value={selected?.content ?? t("No answer submitted")} tone={state === "Correct" ? "success" : state === "Incorrect" ? "danger" : "neutral"} /><ReviewRow label={t("Correct answer")} value={correct?.content ?? t("Not provided")} tone="success" /></dl>
-    {(selected?.explanation || correct?.explanation) ? <div className="mt-5 border-l-3 border-primary bg-primary-subtle px-4 py-3"><p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary-strong">{t("Explanation")}</p><p className="mt-1 text-sm leading-6 text-text-muted">{selected?.explanation ?? correct?.explanation}</p></div> : null}
+    {(question.explanation || correct?.explanation) ? <div className="mt-5 border-l-3 border-primary bg-primary-subtle px-4 py-3"><p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary-strong">{t("Explanation")}</p><p className="mt-1 text-sm leading-6 text-text-muted">{question.explanation ?? correct?.explanation}</p></div> : null}
   </article>;
 }
 
