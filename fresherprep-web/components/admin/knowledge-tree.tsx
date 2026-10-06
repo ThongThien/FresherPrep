@@ -59,13 +59,20 @@ export function KnowledgeTree({
     grouped.forEach((items) => items.sort((a, b) => a.displayOrder - b.displayOrder || a.title.localeCompare(b.title)));
     return grouped;
   }, [lessons]);
-  const expandedIds = useMemo(() => new Set(nodes
-    .filter((node) => {
-      const expandedByDefault = node.type === "TECHNOLOGY" || node.type === "CATEGORY";
-      const hasChildren = childCounts.has(node.id) || (lessonsBySubtopic.get(node.id)?.length ?? 0) > 0;
-      return hasChildren && (toggledIds.has(node.id) ? !expandedByDefault : expandedByDefault);
-    })
-    .map((node) => node.id)), [childCounts, lessonsBySubtopic, nodes, toggledIds]);
+  const expandedIds = useMemo(
+    () =>
+      new Set(
+        nodes
+          .filter((node) => {
+            const hasChildren =
+              childCounts.has(node.id) ||
+              (lessonsBySubtopic.get(node.id)?.length ?? 0) > 0;
+            return hasChildren && toggledIds.has(node.id);
+          })
+          .map((node) => node.id),
+      ),
+    [childCounts, lessonsBySubtopic, nodes, toggledIds],
+  );
   const flattened = useMemo(
     () => flattenKnowledgeTree(nodes, normalizedQuery ? undefined : expandedIds),
     [expandedIds, nodes, normalizedQuery],
@@ -93,7 +100,7 @@ export function KnowledgeTree({
         </button>
       </div> : null}
       </div>
-      {!visible.length ? <p className="py-8 text-center text-sm text-text-muted">{t("No matching knowledge nodes.")}</p> : <ul className="max-h-[50vh] space-y-1 overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]" aria-label={t("Knowledge hierarchy")}>
+      {!visible.length ? <p className="py-8 text-center text-sm text-text-muted">{t("No matching knowledge nodes.")}</p> : <ul className="max-h-[70vh] space-y-1 overflow-y-auto overscroll-contain pr-1 sm:max-h-[calc(100vh-14rem)]" aria-label={t("Knowledge hierarchy")}>
       {visible.map(({ node, depth }) => {
         const nextType = childType[node.type];
         const canAdd = mode === "manage" ? Boolean(nextType) : node.type === "SUBTOPIC";

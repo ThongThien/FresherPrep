@@ -94,6 +94,11 @@ public class LessonController {
         return lessonService.getAllLessons(subtopicId, pageable);
     }
 
+    @GetMapping("/admin/tree")
+    public List<LessonSummaryResponse> getAllLessonsForTree() {
+        return lessonService.getAllLessonsForTree();
+    }
+
     @GetMapping("/admin/{lessonId}")
     public LessonDetailResponse getLesson(@PathVariable UUID lessonId) {
         return lessonService.getLesson(lessonId);

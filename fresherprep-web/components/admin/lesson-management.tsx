@@ -94,9 +94,7 @@ export function LessonManagement() {
         adminRequest<AdminPage<QuizSummary>>(
           "quizzes?page=0&size=200&sort=title,asc",
         ),
-        adminRequestAllPages<LessonSummary>(
-          "lessons?sort=displayOrder,asc&sort=id,asc",
-        ),
+        adminRequest<LessonSummary[]>("lessons/tree"),
       ]);
       setSubtopics(nodes);
       setQuizzes(quizPage.content);

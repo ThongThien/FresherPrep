@@ -185,6 +185,14 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly = true)
+    public List<LessonSummaryResponse> getAllLessonsForTree() {
+        return lessonRepository.findAllForAdminTree().stream()
+                .map(LessonSummaryResponse::from)
+                .toList();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional(readOnly = true)
     public LessonDetailResponse getLesson(UUID lessonId) {
         return toDetail(requireLesson(lessonId), false);
     }

@@ -23,6 +23,15 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
     })
     List<Lesson> findAllById(Iterable<UUID> ids);
 
+    @EntityGraph(attributePaths = {
+            "subtopic",
+            "subtopic.parent",
+            "subtopic.parent.parent",
+            "subtopic.parent.parent.parent"
+    })
+    @Query("select lesson from Lesson lesson")
+    List<Lesson> findAllForAdminTree();
+
     @EntityGraph(attributePaths = {"subtopic", "subtopic.parent"})
     Optional<Lesson> findByIdAndStatus(UUID id, ContentStatus status);
 
