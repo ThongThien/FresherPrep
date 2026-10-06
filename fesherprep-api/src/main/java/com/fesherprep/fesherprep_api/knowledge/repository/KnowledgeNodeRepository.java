@@ -5,12 +5,20 @@ import com.fesherprep.fesherprep_api.knowledge.domain.NodeType;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface KnowledgeNodeRepository extends JpaRepository<KnowledgeNode, UUID> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select node from KnowledgeNode node where node.id = :id")
+    Optional<KnowledgeNode> findByIdForUpdate(@Param("id") UUID id);
+
     @EntityGraph(attributePaths = "parent")
     Optional<KnowledgeNode> findByIdAndStatus(UUID id, ContentStatus status);
 

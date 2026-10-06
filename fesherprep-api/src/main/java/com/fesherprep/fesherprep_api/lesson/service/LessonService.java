@@ -193,15 +193,17 @@ public class LessonService {
     @Transactional
     @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
     public LessonDetailResponse createLesson(@Valid CreateLessonRequest request) {
-        KnowledgeNode subtopic = requireSubtopic(request.subtopicId());
+        KnowledgeNode subtopic = requireSubtopicForUpdate(request.subtopicId());
         String slug = generateUniqueSlug(request.title());
+        Integer currentMaximum = lessonRepository.findMaxDisplayOrderBySubtopicId(subtopic.getId());
+        int displayOrder = currentMaximum == null ? 0 : currentMaximum + 1;
 
         Lesson lesson = new Lesson(
                 subtopic,
                 request.title(),
                 slug,
                 contentSanitizer.sanitize(request.content()),
-                request.displayOrder(),
+                displayOrder,
                 request.minimumReadSeconds(),
                 request.requiredScrollPercent()
         );
@@ -225,6 +227,11 @@ public class LessonService {
         if (lesson.getStatus() == ContentStatus.PUBLISHED
                 && subtopic.getStatus() != ContentStatus.PUBLISHED) {
             throw new IllegalStateException("A published lesson requires a published subtopic");
+        }
+
+        if (lessonRepository.existsBySubtopicIdAndDisplayOrderAndIdNot(
+                subtopic.getId(), request.displayOrder(), lessonId)) {
+            throw new IllegalStateException("Display order is already used by another lesson in this subtopic");
         }
 
         lesson.assignSubtopic(subtopic);
@@ -364,6 +371,15 @@ public class LessonService {
 
     private KnowledgeNode requireSubtopic(UUID subtopicId) {
         KnowledgeNode node = knowledgeNodeRepository.findById(subtopicId)
+                .orElseThrow(() -> new IllegalArgumentException("Subtopic does not exist"));
+        if (node.getType() != NodeType.SUBTOPIC) {
+            throw new IllegalArgumentException("A lesson must belong to a subtopic");
+        }
+        return node;
+    }
+
+    private KnowledgeNode requireSubtopicForUpdate(UUID subtopicId) {
+        KnowledgeNode node = knowledgeNodeRepository.findByIdForUpdate(subtopicId)
                 .orElseThrow(() -> new IllegalArgumentException("Subtopic does not exist"));
         if (node.getType() != NodeType.SUBTOPIC) {
             throw new IllegalArgumentException("A lesson must belong to a subtopic");

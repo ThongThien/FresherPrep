@@ -4,13 +4,22 @@ import com.fesherprep.fesherprep_api.learningpath.domain.LearningPath;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 import java.util.Optional;
 import java.util.UUID;
 
 public interface LearningPathRepository extends JpaRepository<LearningPath, UUID> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = "technology")
+    @Query("select path from LearningPath path where path.id = :id")
+    Optional<LearningPath> findByIdForUpdate(@Param("id") UUID id);
+
     @Override
     @EntityGraph(attributePaths = "technology")
     Optional<LearningPath> findById(UUID id);

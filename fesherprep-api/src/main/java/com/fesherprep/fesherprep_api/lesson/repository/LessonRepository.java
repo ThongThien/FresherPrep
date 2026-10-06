@@ -10,9 +10,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 public interface LessonRepository extends JpaRepository<Lesson, UUID> {
+    @Override
+    @EntityGraph(attributePaths = {
+            "subtopic",
+            "subtopic.parent",
+            "subtopic.parent.parent",
+            "subtopic.parent.parent.parent"
+    })
+    List<Lesson> findAllById(Iterable<UUID> ids);
+
     @EntityGraph(attributePaths = {"subtopic", "subtopic.parent"})
     Optional<Lesson> findByIdAndStatus(UUID id, ContentStatus status);
 
@@ -55,4 +65,13 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
     boolean existsBySlug(String slug);
 
     boolean existsBySlugAndIdNot(String slug, UUID id);
+
+    @Query("select max(lesson.displayOrder) from Lesson lesson where lesson.subtopic.id = :subtopicId")
+    Integer findMaxDisplayOrderBySubtopicId(@Param("subtopicId") UUID subtopicId);
+
+    boolean existsBySubtopicIdAndDisplayOrderAndIdNot(
+            UUID subtopicId,
+            int displayOrder,
+            UUID lessonId
+    );
 }

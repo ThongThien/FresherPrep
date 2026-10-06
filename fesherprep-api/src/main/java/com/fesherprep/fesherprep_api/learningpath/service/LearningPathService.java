@@ -39,6 +39,7 @@ import org.springframework.validation.annotation.Validated;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -275,7 +276,7 @@ public class LearningPathService {
             UUID pathId,
             @Valid AddLearningPathItemRequest request
     ) {
-        LearningPath path = requirePath(pathId);
+        LearningPath path = requirePathForUpdate(pathId);
         Lesson lesson = lessonRepository.findById(request.lessonId())
                 .orElseThrow(() -> new LessonNotFoundException(request.lessonId()));
         if (itemRepository.existsByLearningPathIdAndLessonId(pathId, lesson.getId())) {
@@ -299,6 +300,7 @@ public class LearningPathService {
         );
         try {
             itemRepository.saveAndFlush(item);
+            sortItemsByKnowledgeTree(pathId);
         } catch (DataIntegrityViolationException exception) {
             throw new IllegalStateException("Learning path item conflicts with existing data", exception);
         }
@@ -312,7 +314,7 @@ public class LearningPathService {
             UUID pathId,
             @Valid AddLearningPathItemsRequest request
     ) {
-        LearningPath path = requirePath(pathId);
+        LearningPath path = requirePathForUpdate(pathId);
         if (new HashSet<>(request.lessonIds()).size() != request.lessonIds().size()) {
             throw new IllegalArgumentException("Lesson selection must not contain duplicates");
         }
@@ -346,6 +348,7 @@ public class LearningPathService {
 
         try {
             itemRepository.saveAllAndFlush(items);
+            sortItemsByKnowledgeTree(pathId);
         } catch (DataIntegrityViolationException exception) {
             throw new IllegalStateException("Learning path items conflict with existing data", exception);
         }
@@ -423,6 +426,11 @@ public class LearningPathService {
                 .orElseThrow(() -> new LearningPathNotFoundException(pathId));
     }
 
+    private LearningPath requirePathForUpdate(UUID pathId) {
+        return pathRepository.findByIdForUpdate(pathId)
+                .orElseThrow(() -> new LearningPathNotFoundException(pathId));
+    }
+
     private LearningPathItem requireItem(UUID pathId, UUID itemId) {
         return itemRepository.findByIdAndLearningPathId(itemId, pathId)
                 .orElseThrow(() -> new IllegalArgumentException("Learning path item does not exist"));
@@ -479,6 +487,82 @@ public class LearningPathService {
     private int nextDisplayOrder(UUID pathId) {
         Integer maximum = itemRepository.findMaxDisplayOrder(pathId);
         return maximum == null ? 0 : Math.addExact(maximum, 1);
+    }
+
+    private void sortItemsByKnowledgeTree(UUID pathId) {
+        List<LearningPathItem> items = new ArrayList<>(
+                itemRepository.findAllByLearningPathIdOrderByDisplayOrderAsc(pathId)
+        );
+        items.sort(LearningPathService::compareByKnowledgeTree);
+
+        boolean requiresUpdate = false;
+        for (int index = 0; index < items.size(); index++) {
+            if (items.get(index).getDisplayOrder() != index) {
+                requiresUpdate = true;
+                break;
+            }
+        }
+        if (!requiresUpdate) return;
+
+        int currentMaximum = items.stream()
+                .mapToInt(LearningPathItem::getDisplayOrder)
+                .max()
+                .orElse(-1);
+        int temporaryStart = Math.addExact(currentMaximum, 1);
+        for (int index = 0; index < items.size(); index++) {
+            LearningPathItem item = items.get(index);
+            item.configure(
+                    Math.addExact(temporaryStart, index),
+                    item.isRequired(),
+                    item.getWeight()
+            );
+        }
+        itemRepository.flush();
+
+        for (int index = 0; index < items.size(); index++) {
+            LearningPathItem item = items.get(index);
+            item.configure(index, item.isRequired(), item.getWeight());
+        }
+        itemRepository.flush();
+    }
+
+    private static int compareByKnowledgeTree(LearningPathItem left, LearningPathItem right) {
+        List<KnowledgeNode> leftPath = hierarchy(left.getLesson());
+        List<KnowledgeNode> rightPath = hierarchy(right.getLesson());
+        int commonDepth = Math.min(leftPath.size(), rightPath.size());
+        for (int index = 0; index < commonDepth; index++) {
+            KnowledgeNode leftNode = leftPath.get(index);
+            KnowledgeNode rightNode = rightPath.get(index);
+            int comparison = Integer.compare(leftNode.getType().ordinal(), rightNode.getType().ordinal());
+            if (comparison != 0) return comparison;
+            comparison = Integer.compare(leftNode.getDisplayOrder(), rightNode.getDisplayOrder());
+            if (comparison != 0) return comparison;
+            comparison = leftNode.getName().compareToIgnoreCase(rightNode.getName());
+            if (comparison != 0) return comparison;
+            comparison = leftNode.getId().compareTo(rightNode.getId());
+            if (comparison != 0) return comparison;
+        }
+        int comparison = Integer.compare(leftPath.size(), rightPath.size());
+        if (comparison != 0) return comparison;
+
+        Lesson leftLesson = left.getLesson();
+        Lesson rightLesson = right.getLesson();
+        comparison = Integer.compare(leftLesson.getDisplayOrder(), rightLesson.getDisplayOrder());
+        if (comparison != 0) return comparison;
+        comparison = leftLesson.getCreatedAt().compareTo(rightLesson.getCreatedAt());
+        if (comparison != 0) return comparison;
+        return leftLesson.getId().compareTo(rightLesson.getId());
+    }
+
+    private static List<KnowledgeNode> hierarchy(Lesson lesson) {
+        List<KnowledgeNode> path = new ArrayList<>();
+        KnowledgeNode current = lesson.getSubtopic();
+        while (current != null) {
+            path.add(current);
+            current = current.getParent();
+        }
+        Collections.reverse(path);
+        return path;
     }
 
     private void reorderItem(

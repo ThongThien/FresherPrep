@@ -86,6 +86,10 @@ export function QuestionManagement() {
   });
   const [revisionSource, setRevisionSource] = useState<string>();
   const [query, setQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [technologyFilter, setTechnologyFilter] = useState("");
+  const [categoryNodeFilter, setCategoryNodeFilter] = useState("");
+  const [topicFilter, setTopicFilter] = useState("");
   const [knowledgeFilter, setKnowledgeFilter] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -123,7 +127,11 @@ export function QuestionManagement() {
         size: "20",
         sort: "code,asc",
       });
-      if (knowledgeFilter) params.set("knowledgeNodeId", knowledgeFilter);
+      if (technologyFilter) params.set("technologyId", technologyFilter);
+      if (categoryNodeFilter) params.set("categoryNodeId", categoryNodeFilter);
+      if (topicFilter) params.set("topicId", topicFilter);
+      if (knowledgeFilter) params.set("subtopicId", knowledgeFilter);
+      if (searchQuery) params.set("q", searchQuery);
       if (difficultyFilter) params.set("difficulty", difficultyFilter);
       if (statusFilter) params.set("status", statusFilter);
       const result = await adminRequest<AdminPage<Question>>(
@@ -137,7 +145,16 @@ export function QuestionManagement() {
     } finally {
       setLoading(false);
     }
-  }, [difficultyFilter, knowledgeFilter, page, statusFilter]);
+  }, [
+    categoryNodeFilter,
+    difficultyFilter,
+    knowledgeFilter,
+    page,
+    searchQuery,
+    statusFilter,
+    technologyFilter,
+    topicFilter,
+  ]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadNodes(), 0);
@@ -150,14 +167,21 @@ export function QuestionManagement() {
     return () => window.clearTimeout(timer);
   }, [loadQuestions, view]);
 
-  const visible = useMemo(
-    () =>
-      questions.filter((question) =>
-        `${question.code} ${question.publishedContent ?? ""} ${question.language} ${question.category} ${question.difficulty} ${question.status}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-      ),
-    [questions, query],
+  const technologies = useMemo(
+    () => subtopics.filter((node) => node.type === "TECHNOLOGY"),
+    [subtopics],
+  );
+  const categoryNodes = useMemo(
+    () => subtopics.filter((node) => node.type === "CATEGORY" && node.parentId === technologyFilter),
+    [subtopics, technologyFilter],
+  );
+  const topics = useMemo(
+    () => subtopics.filter((node) => node.type === "TOPIC" && node.parentId === categoryNodeFilter),
+    [categoryNodeFilter, subtopics],
+  );
+  const filteredSubtopics = useMemo(
+    () => subtopics.filter((node) => node.type === "SUBTOPIC" && node.parentId === topicFilter),
+    [subtopics, topicFilter],
   );
 
   async function selectQuestion(questionId: string) {
@@ -488,36 +512,75 @@ export function QuestionManagement() {
       />
       {view === "list" ? (
         <section className="mt-7" aria-label={t("Question list")}>
-          <div className="grid gap-3 rounded-lg border border-border bg-surface p-4 lg:grid-cols-[minmax(14rem,1fr)_minmax(18rem,1.4fr)_12rem_auto] lg:items-end">
+          <form
+            className="grid gap-3 rounded-lg border border-border bg-surface p-4 md:grid-cols-2 xl:grid-cols-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setSearchQuery(query.trim());
+              setPage(0);
+            }}
+          >
             <div>
               <Label htmlFor="question-list-search">
-                {t("Search questions")}
+                {t("Search question content")}
               </Label>
               <Input
                 id="question-list-search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder={t("Code or question content")}
+                placeholder={t("Search by question content or code")}
               />
             </div>
             <div>
-              <Label htmlFor="question-list-subtopic">{t("Subtopic")}</Label>
+              <Label htmlFor="question-list-technology">{t("Technology")}</Label>
               <Select
-                id="question-list-subtopic"
-                value={knowledgeFilter}
+                id="question-list-technology"
+                value={technologyFilter}
                 onChange={(event) => {
-                  setKnowledgeFilter(event.target.value);
+                  setTechnologyFilter(event.target.value);
+                  setCategoryNodeFilter("");
+                  setTopicFilter("");
+                  setKnowledgeFilter("");
                   setPage(0);
                 }}
               >
+                <option value="">{t("All technologies")}</option>
+                {technologies.map((node) => (
+                  <option key={node.id} value={node.id}>{node.name}</option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="question-list-category">{t("Category")}</Label>
+              <Select id="question-list-category" value={categoryNodeFilter} disabled={!technologyFilter} onChange={(event) => {
+                setCategoryNodeFilter(event.target.value);
+                setTopicFilter("");
+                setKnowledgeFilter("");
+                setPage(0);
+              }}>
+                <option value="">{t("All categories")}</option>
+                {categoryNodes.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="question-list-topic">{t("Topic")}</Label>
+              <Select id="question-list-topic" value={topicFilter} disabled={!categoryNodeFilter} onChange={(event) => {
+                setTopicFilter(event.target.value);
+                setKnowledgeFilter("");
+                setPage(0);
+              }}>
+                <option value="">{t("All topics")}</option>
+                {topics.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="question-list-subtopic">{t("Subtopic")}</Label>
+              <Select id="question-list-subtopic" value={knowledgeFilter} disabled={!topicFilter} onChange={(event) => {
+                setKnowledgeFilter(event.target.value);
+                setPage(0);
+              }}>
                 <option value="">{t("All subtopics")}</option>
-                {subtopics
-                  .filter((node) => node.type === "SUBTOPIC")
-                  .map((node) => (
-                    <option key={node.id} value={node.id}>
-                      {knowledgePathLabel(subtopics, node.id)}
-                    </option>
-                  ))}
+                {filteredSubtopics.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}
               </Select>
             </div>
             <FilterSelect
@@ -531,20 +594,33 @@ export function QuestionManagement() {
                 (value) => ({ value, label: t(value) }),
               )}
             />
-            <p className="pb-2 text-sm font-medium text-text-muted">
+            <div className="flex items-end gap-2">
+              <Button type="submit">{t("Apply filters")}</Button>
+              <Button type="button" variant="secondary" onClick={() => {
+                setQuery("");
+                setSearchQuery("");
+                setTechnologyFilter("");
+                setCategoryNodeFilter("");
+                setTopicFilter("");
+                setKnowledgeFilter("");
+                setStatusFilter("");
+                setPage(0);
+              }}>{t("Clear filters")}</Button>
+            </div>
+            <p className="flex items-end pb-2 text-sm font-medium text-text-muted">
               {t("{{count}} questions", { count: totalElements })}
             </p>
-          </div>
+          </form>
           <div className="mt-5">
             {loading ? (
               <p className="py-12 text-center text-sm text-text-muted">
                 {t("Loading questions...")}
               </p>
-            ) : visible.length ? (
+            ) : questions.length ? (
               <>
                 <AdminDataTable
                   caption={t("Question list")}
-                  rows={visible}
+                  rows={questions}
                   rowKey={(question) => question.id}
                   columns={[
                     {
@@ -681,9 +757,9 @@ export function QuestionManagement() {
               <p className="py-10 text-center text-sm text-text-muted">
                 {t("Loading questions...")}
               </p>
-            ) : visible.length ? (
+            ) : questions.length ? (
               <ul className="mt-5 max-h-[50vh] space-y-2 overflow-y-auto overscroll-contain pr-1 sm:max-h-[32rem]">
-                {visible.map((question) => (
+                {questions.map((question) => (
                   <li key={question.id}>
                     <button
                       type="button"

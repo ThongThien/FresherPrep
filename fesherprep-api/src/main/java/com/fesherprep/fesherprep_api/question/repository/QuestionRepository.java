@@ -30,16 +30,32 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
             from Question question
             where (:language is null or question.language = :language)
               and (:category is null or question.category = :category)
-              and (:knowledgeNodeId is null or question.subtopic.id = :knowledgeNodeId)
+              and (:technologyId is null or question.subtopic.parent.parent.parent.id = :technologyId)
+              and (:categoryNodeId is null or question.subtopic.parent.parent.id = :categoryNodeId)
+              and (:topicId is null or question.subtopic.parent.id = :topicId)
+              and (:subtopicId is null or question.subtopic.id = :subtopicId)
               and (:difficulty is null or question.difficulty = :difficulty)
               and (:status is null or question.status = :status)
+              and (
+                :query = ''
+                or lower(question.code) like lower(concat('%', :query, '%'))
+                or exists (
+                  select version.id from QuestionVersion version
+                  where version.question = question
+                    and lower(version.content) like lower(concat('%', :query, '%'))
+                )
+              )
             """)
     Page<Question> findAllFiltered(
             @Param("language") QuestionLanguage language,
             @Param("category") QuestionCategory category,
-            @Param("knowledgeNodeId") UUID knowledgeNodeId,
+            @Param("technologyId") UUID technologyId,
+            @Param("categoryNodeId") UUID categoryNodeId,
+            @Param("topicId") UUID topicId,
+            @Param("subtopicId") UUID subtopicId,
             @Param("difficulty") Difficulty difficulty,
             @Param("status") ContentStatus status,
+            @Param("query") String query,
             Pageable pageable
     );
 

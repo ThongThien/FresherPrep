@@ -83,8 +83,8 @@ public class ContributionService {
             Pageable pageable
     ) {
         return questionRepository.findAllFiltered(
-                language, category, knowledgeNodeId, difficulty,
-                ContentStatus.PUBLISHED, pageable).map(QuestionResponse::from);
+                language, category, null, null, null, knowledgeNodeId, difficulty,
+                ContentStatus.PUBLISHED, "", pageable).map(QuestionResponse::from);
     }
 
     @PreAuthorize("hasRole('CONTRIBUTOR')")
@@ -106,9 +106,12 @@ public class ContributionService {
     @Transactional
     public ContributionDetailResponse createLesson(@Valid CreateLessonRequest request) {
         User owner = currentUser();
+        KnowledgeNode subtopic = requireSubtopicForUpdate(request.subtopicId());
+        Integer currentMaximum = lessonRepository.findMaxDisplayOrderBySubtopicId(subtopic.getId());
+        int displayOrder = currentMaximum == null ? 0 : currentMaximum + 1;
         Lesson lesson = lessonRepository.saveAndFlush(new Lesson(
-                requireSubtopic(request.subtopicId()), request.title(), uniqueLessonSlug(request.title()),
-                lessonContentSanitizer.sanitize(request.content()), request.displayOrder(), request.minimumReadSeconds(),
+                subtopic, request.title(), uniqueLessonSlug(request.title()),
+                lessonContentSanitizer.sanitize(request.content()), displayOrder, request.minimumReadSeconds(),
                 request.requiredScrollPercent()
         ));
         return detail(createSubmission(ContributionContentType.LESSON, lesson.getId(), lesson.getTitle(), owner));
@@ -124,7 +127,12 @@ public class ContributionService {
         if (lesson.getStatus() != ContentStatus.DRAFT) {
             throw new IllegalStateException("Published lessons cannot be edited by a contributor");
         }
-        lesson.assignSubtopic(requireSubtopic(request.subtopicId()));
+        KnowledgeNode subtopic = requireSubtopic(request.subtopicId());
+        if (lessonRepository.existsBySubtopicIdAndDisplayOrderAndIdNot(
+                subtopic.getId(), request.displayOrder(), lessonId)) {
+            throw new IllegalStateException("Display order is already used by another lesson in this subtopic");
+        }
+        lesson.assignSubtopic(subtopic);
         lesson.updateContent(request.title(), lesson.getSlug(),
                 lessonContentSanitizer.sanitize(request.content()), request.displayOrder());
         lesson.configureReading(request.minimumReadSeconds(), request.requiredScrollPercent());
@@ -574,6 +582,15 @@ public class ContributionService {
 
     private KnowledgeNode requireSubtopic(UUID id) {
         KnowledgeNode node = knowledgeNodeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Subtopic does not exist"));
+        if (node.getType() != NodeType.SUBTOPIC) {
+            throw new IllegalArgumentException("Content must belong to a subtopic");
+        }
+        return node;
+    }
+
+    private KnowledgeNode requireSubtopicForUpdate(UUID id) {
+        KnowledgeNode node = knowledgeNodeRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new IllegalArgumentException("Subtopic does not exist"));
         if (node.getType() != NodeType.SUBTOPIC) {
             throw new IllegalArgumentException("Content must belong to a subtopic");

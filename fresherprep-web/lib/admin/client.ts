@@ -1,4 +1,5 @@
 import { readApiError } from "@/lib/api/client";
+import type { AdminPage } from "@/lib/admin/types";
 
 export async function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
@@ -22,6 +23,26 @@ export async function adminRequest<T>(path: string, init?: RequestInit): Promise
 
 export function jsonBody(value: unknown): RequestInit {
   return { body: JSON.stringify(value) };
+}
+
+export async function adminRequestAllPages<T>(
+  path: string,
+  pageSize = 100,
+): Promise<T[]> {
+  const pagePath = (page: number) =>
+    `${path}${path.includes("?") ? "&" : "?"}page=${page}&size=${pageSize}`;
+  const firstPage = await adminRequest<AdminPage<T>>(pagePath(0));
+  if (firstPage.totalPages <= 1) return firstPage.content;
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      adminRequest<AdminPage<T>>(pagePath(index + 1)),
+    ),
+  );
+  return [
+    ...firstPage.content,
+    ...remainingPages.flatMap((page) => page.content),
+  ];
 }
 
 export async function adminOptional<T>(path: string): Promise<T | undefined> {

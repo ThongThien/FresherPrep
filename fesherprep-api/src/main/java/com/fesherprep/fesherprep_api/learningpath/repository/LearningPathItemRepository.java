@@ -12,7 +12,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface LearningPathItemRepository extends JpaRepository<LearningPathItem, UUID> {
-    @EntityGraph(attributePaths = { "lesson", "lesson.subtopic" })
+    @EntityGraph(attributePaths = {
+            "lesson",
+            "lesson.subtopic",
+            "lesson.subtopic.parent",
+            "lesson.subtopic.parent.parent",
+            "lesson.subtopic.parent.parent.parent"
+    })
     List<LearningPathItem> findAllByLearningPathIdOrderByDisplayOrderAsc(UUID learningPathId);
 
     @EntityGraph(attributePaths = { "lesson", "lesson.subtopic" })

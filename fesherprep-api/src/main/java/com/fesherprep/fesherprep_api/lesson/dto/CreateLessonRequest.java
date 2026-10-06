@@ -8,7 +8,6 @@ public record CreateLessonRequest(
         @NotNull UUID subtopicId,
         @NotBlank @Size(max = 200) String title,
         @NotBlank @Size(max = 200000) String content,
-        @PositiveOrZero int displayOrder,
         @Positive int minimumReadSeconds,
         @Min(1) @Max(100) int requiredScrollPercent,
         boolean publish

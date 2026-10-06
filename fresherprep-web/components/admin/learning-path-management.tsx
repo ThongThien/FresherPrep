@@ -13,7 +13,11 @@ import {
   Label,
   Select,
 } from "@/components/ui";
-import { adminRequest, jsonBody } from "@/lib/admin/client";
+import {
+  adminRequest,
+  adminRequestAllPages,
+  jsonBody,
+} from "@/lib/admin/client";
 import type {
   AdminPage,
   ContentStatus,
@@ -47,19 +51,19 @@ export function LearningPathManagement() {
     setLoading(true);
     setError(undefined);
     try {
-      const [pathPage, nodes, lessonPage] = await Promise.all([
+      const [pathPage, nodes, allLessons] = await Promise.all([
         adminRequest<AdminPage<LearningPathSummary>>(
           "learning-paths?page=0&size=200&sort=name,asc",
         ),
         adminRequest<KnowledgeNode[]>("knowledge/nodes"),
-        adminRequest<AdminPage<LessonSummary>>(
-          "lessons?page=0&size=500&sort=title,asc",
+        adminRequestAllPages<LessonSummary>(
+          "lessons?sort=title,asc&sort=id,asc",
         ),
       ]);
       setPaths(pathPage.content);
       setTechnologies(nodes.filter((node) => node.type === "TECHNOLOGY"));
       setKnowledgeNodes(nodes);
-      setLessons(lessonPage.content);
+      setLessons(allLessons);
     } catch (reason) {
       setError(messageOf(reason));
     } finally {

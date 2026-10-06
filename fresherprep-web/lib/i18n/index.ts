@@ -8,6 +8,12 @@ const storageKey = "fresherprep-language";
 const changeEvent = "fresherprep-language-change";
 
 const vi: Record<string, string> = {
+  "Search question content": "Tìm theo nội dung câu hỏi",
+  "Search by question content or code": "Tìm theo nội dung câu hỏi hoặc mã",
+  "All technologies": "Tất cả công nghệ",
+  "Apply filters": "Áp dụng bộ lọc",
+  "Clear filters": "Xóa bộ lọc",
+  "Assigned automatically within the selected subtopic": "Tự động gán theo thứ tự trong chủ đề con đã chọn",
   "Learning paths are numbered by creation order. Follow the numbers from smallest to largest if you want to study along the recommended roadmap.": "Các lộ trình được đánh số theo thứ tự tạo. Hãy học từ số nhỏ đến số lớn nếu bạn muốn bám theo lộ trình được đề xuất.",
   "Find a learning path": "Tìm lộ trình",
   "Search by path or technology": "Tìm theo lộ trình hoặc công nghệ",

@@ -120,11 +120,14 @@ export function ContributorWorkspace() {
     try {
       let result: ContributionDetail;
       if (form.kind === "LESSON") {
-        const body = {
+        const baseBody = {
           subtopicId: form.subtopicId, title: form.title, content: form.content,
-          displayOrder: Number(form.displayOrder), minimumReadSeconds: Number(form.minimumReadSeconds),
+          minimumReadSeconds: Number(form.minimumReadSeconds),
           requiredScrollPercent: Number(form.requiredScrollPercent),
         };
+        const body = editing
+          ? { ...baseBody, displayOrder: Number(form.displayOrder) }
+          : baseBody;
         result = await contributorRequest<ContributionDetail>(
           editing ? `lessons/${editing.submission.contentId}` : "lessons",
           { method: editing ? "PUT" : "POST", ...contributorJson(body) },
@@ -263,7 +266,7 @@ export function ContributorWorkspace() {
         {form.kind === "LESSON" ? <>
           <Field label={t("Minimum read seconds")}><Input type="number" min="1" value={form.minimumReadSeconds} onChange={(event) => setForm({ ...form, minimumReadSeconds: event.target.value })} /></Field>
           <Field label={t("Required scroll percent")}><Input type="number" min="1" max="100" value={form.requiredScrollPercent} onChange={(event) => setForm({ ...form, requiredScrollPercent: event.target.value })} /></Field>
-          <Field label={t("Display order")}><Input type="number" min="0" value={form.displayOrder} onChange={(event) => setForm({ ...form, displayOrder: event.target.value })} /></Field>
+          {editing ? <Field label={t("Display order")}><Input type="number" min="0" value={form.displayOrder} onChange={(event) => setForm({ ...form, displayOrder: event.target.value })} /></Field> : <div><p className="text-sm font-medium text-text">{t("Display order")}</p><p className="mt-2 text-sm text-text-muted">{t("Assigned automatically within the selected subtopic")}</p></div>}
           <Field label={t("Lesson content")} wide><Textarea required rows={10} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} /></Field>
         </> : null}
         {form.kind === "QUESTION" ? <QuestionFields form={form} setForm={setForm} publishedRevision={editing?.submission.status === "PUBLISHED"} /> : null}

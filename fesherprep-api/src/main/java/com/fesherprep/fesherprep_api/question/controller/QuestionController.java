@@ -32,12 +32,21 @@ public class QuestionController {
     public Page<QuestionResponse> getAllQuestions(
             @RequestParam(required = false) QuestionLanguage language,
             @RequestParam(required = false) QuestionCategory category,
+            @RequestParam(required = false) UUID technologyId,
+            @RequestParam(required = false) UUID categoryNodeId,
+            @RequestParam(required = false) UUID topicId,
+            @RequestParam(required = false) UUID subtopicId,
             @RequestParam(required = false) UUID knowledgeNodeId,
             @RequestParam(required = false) Difficulty difficulty,
             @RequestParam(required = false) ContentStatus status,
+            @RequestParam(defaultValue = "") String q,
             @PageableDefault(size = 20, sort = "code", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        return questionService.getAllQuestions(language, category, knowledgeNodeId, difficulty, status, pageable);
+        return questionService.getAllQuestions(
+                language, category, technologyId, categoryNodeId, topicId,
+                subtopicId != null ? subtopicId : knowledgeNodeId,
+                difficulty, status, q, pageable
+        );
     }
 
     @GetMapping("/{questionId}")

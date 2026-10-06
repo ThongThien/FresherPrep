@@ -13,7 +13,12 @@ import {
   Label,
   Select,
 } from "@/components/ui";
-import { adminOptional, adminRequest, jsonBody } from "@/lib/admin/client";
+import {
+  adminOptional,
+  adminRequest,
+  adminRequestAllPages,
+  jsonBody,
+} from "@/lib/admin/client";
 import type {
   AdminPage,
   ContentStatus,
@@ -84,16 +89,18 @@ export function LessonManagement() {
     setLoadingCount((count) => count + 1);
     setError(undefined);
     try {
-      const [nodes, quizPage, lessonPage] = await Promise.all([
+      const [nodes, quizPage, allTreeLessons] = await Promise.all([
         adminRequest<KnowledgeNode[]>("knowledge/nodes"),
         adminRequest<AdminPage<QuizSummary>>(
           "quizzes?page=0&size=200&sort=title,asc",
         ),
-        adminRequest<AdminPage<LessonSummary>>("lessons?page=0&size=500&sort=displayOrder,asc"),
+        adminRequestAllPages<LessonSummary>(
+          "lessons?sort=displayOrder,asc&sort=id,asc",
+        ),
       ]);
       setSubtopics(nodes);
       setQuizzes(quizPage.content);
-      setTreeLessons(lessonPage.content);
+      setTreeLessons(allTreeLessons);
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
@@ -150,11 +157,11 @@ export function LessonManagement() {
     setError(undefined);
     setSuccess(undefined);
     try {
-      const [selected, selectedAssessment, relationPage] = await Promise.all([
+      const [selected, selectedAssessment, allRelationLessons] = await Promise.all([
         adminRequest<LessonDetail>(`lessons/${lessonId}`),
         adminOptional<LessonAssessment>(`lessons/${lessonId}/assessment`),
-        adminRequest<AdminPage<LessonSummary>>(
-          "lessons?page=0&size=200&sort=title,asc",
+        adminRequestAllPages<LessonSummary>(
+          "lessons?sort=title,asc&sort=id,asc",
         ),
       ]);
       setDetail(selected);
@@ -162,7 +169,7 @@ export function LessonManagement() {
       setCreatingSubtopicId(undefined);
       setReturnLessonId(undefined);
       setAssessment(selectedAssessment);
-      setRelationLessons(relationPage.content);
+      setRelationLessons(allRelationLessons);
       setForm({
         subtopicId: selected.subtopicId,
         title: selected.title,
@@ -251,7 +258,7 @@ export function LessonManagement() {
     if (!form.title.trim()) errors.title = "Title is required.";
     if (!hasMeaningfulLessonContent(form.content))
       errors.content = "Lesson content is required.";
-    if (form.displayOrder < 0)
+    if (detail && form.displayOrder < 0)
       errors.displayOrder = "Display order cannot be negative.";
     if (form.minimumReadSeconds < 1)
       errors.minimumReadSeconds =
@@ -275,12 +282,15 @@ export function LessonManagement() {
     setError(undefined);
     setSuccess(undefined);
     try {
-      const payload = {
-        ...form,
+      const basePayload = {
+        subtopicId: form.subtopicId,
         title: form.title.trim(),
         content: form.content.trim(),
+        minimumReadSeconds: form.minimumReadSeconds,
+        requiredScrollPercent: form.requiredScrollPercent,
       };
       const editing = Boolean(detail);
+      const payload = editing ? { ...basePayload, displayOrder: form.displayOrder } : basePayload;
       const saved = await adminRequest<LessonDetail>(
         detail ? `lessons/${detail.id}` : "lessons",
         {
@@ -749,25 +759,23 @@ export function LessonManagement() {
                       t("Generated automatically after creation")}
                   </p>
                 </div>
-                <Field
-                  label={t("Display order")}
-                  htmlFor="lesson-order"
-                  error={validation.displayOrder}
-                >
-                  <Input
-                    id="lesson-order"
-                    type="number"
-                    min={0}
-                    aria-invalid={Boolean(validation.displayOrder)}
-                    value={form.displayOrder}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        displayOrder: Number(event.target.value),
-                      }))
-                    }
-                  />
-                </Field>
+                {detail ? (
+                  <Field label={t("Display order")} htmlFor="lesson-order" error={validation.displayOrder}>
+                    <Input
+                      id="lesson-order"
+                      type="number"
+                      min={0}
+                      aria-invalid={Boolean(validation.displayOrder)}
+                      value={form.displayOrder}
+                      onChange={(event) => setForm((current) => ({ ...current, displayOrder: Number(event.target.value) }))}
+                    />
+                  </Field>
+                ) : (
+                  <div>
+                    <Label>{t("Display order")}</Label>
+                    <p className="mt-2 text-sm text-text-muted">{t("Assigned automatically within the selected subtopic")}</p>
+                  </div>
+                )}
                 <Field
                   label={t("Minimum read seconds")}
                   htmlFor="lesson-read-time"

@@ -40,17 +40,25 @@ public class QuestionService {
     public Page<QuestionResponse> getAllQuestions(
             QuestionLanguage language,
             QuestionCategory category,
-            UUID knowledgeNodeId,
+            UUID technologyId,
+            UUID categoryNodeId,
+            UUID topicId,
+            UUID subtopicId,
             Difficulty difficulty,
             ContentStatus status,
+            String query,
             Pageable pageable
     ) {
         return questionRepository.findAllFiltered(
                 language,
                 category,
-                knowledgeNodeId,
+                technologyId,
+                categoryNodeId,
+                topicId,
+                subtopicId,
                 difficulty,
                 status,
+                query == null ? "" : query.strip(),
                 pageable
         ).map(QuestionResponse::from);
     }
