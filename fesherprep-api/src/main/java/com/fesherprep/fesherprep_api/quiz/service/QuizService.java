@@ -67,6 +67,56 @@ public class QuizService {
 
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
+    public List<PublishedQuizResponse> getPublishedQuizCatalog() {
+        List<PublishedQuizProjection> quizzes = quizRepository.findPublishedCatalog(ContentStatus.PUBLISHED);
+        if (quizzes.isEmpty()) return List.of();
+
+        Set<UUID> quizIds = quizzes.stream()
+                .map(PublishedQuizProjection::id)
+                .collect(java.util.stream.Collectors.toSet());
+        Map<UUID, Map<UUID, QuizKnowledgeCategoryResponse>> categoriesByQuiz = new HashMap<>();
+
+        fixedQuestionRepository.findAllByQuizIdIn(quizIds).forEach(item -> addKnowledgeCategory(
+                categoriesByQuiz,
+                item.getQuiz().getId(),
+                item.getQuestion().getSubtopic()
+        ));
+        ruleRepository.findAllByQuizIdIn(quizIds).forEach(rule -> addKnowledgeCategory(
+                categoriesByQuiz,
+                rule.getQuiz().getId(),
+                rule.getKnowledgeNode()
+        ));
+
+        return quizzes.stream()
+                .map(quiz -> PublishedQuizResponse.from(
+                        quiz,
+                        categoriesByQuiz
+                                .getOrDefault(quiz.id(), Map.of())
+                                .values()
+                                .stream()
+                                .sorted(Comparator.comparing(QuizKnowledgeCategoryResponse::name))
+                                .toList()
+                ))
+                .toList();
+    }
+
+    private static void addKnowledgeCategory(
+            Map<UUID, Map<UUID, QuizKnowledgeCategoryResponse>> categoriesByQuiz,
+            UUID quizId,
+            KnowledgeNode node
+    ) {
+        KnowledgeNode category = node;
+        while (category != null && category.getType() != com.fesherprep.fesherprep_api.knowledge.domain.NodeType.CATEGORY) {
+            category = category.getParent();
+        }
+        if (category == null) return;
+        categoriesByQuiz
+                .computeIfAbsent(quizId, ignored -> new LinkedHashMap<>())
+                .putIfAbsent(category.getId(), QuizKnowledgeCategoryResponse.from(category));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheNames.QUIZ_DETAIL, key = "#quizId", sync = true)
     public PublishedQuizResponse getPublishedQuiz(UUID quizId) {
         return quizRepository

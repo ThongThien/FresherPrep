@@ -11,6 +11,7 @@ export interface PublishedQuiz {
   durationSeconds: number | null;
   passingScore: number;
   questionCount: number;
+  knowledgeCategories: Array<{ id: string; name: string }>;
 }
 
 export interface AttemptOption {

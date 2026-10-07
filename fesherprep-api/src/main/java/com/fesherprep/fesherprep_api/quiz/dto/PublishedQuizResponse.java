@@ -7,6 +7,7 @@ import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.quiz.domain.QuizCategory;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 public record PublishedQuizResponse(
@@ -21,7 +22,8 @@ public record PublishedQuizResponse(
         int maximumScore,
         Integer durationSeconds,
         BigDecimal passingScore,
-        int questionCount
+        int questionCount,
+        List<QuizKnowledgeCategoryResponse> knowledgeCategories
 ) {
     public static PublishedQuizResponse from(Quiz quiz) {
         return new PublishedQuizResponse(
@@ -41,11 +43,19 @@ public record PublishedQuizResponse(
                         .stripTrailingZeros(),
                 quiz.getSelectionMode() == QuizSelectionMode.FIXED
                         ? quiz.getFixedQuestions().size()
-                        : quiz.getRules().stream().mapToInt(rule -> rule.getQuestionCount()).sum()
+                        : quiz.getRules().stream().mapToInt(rule -> rule.getQuestionCount()).sum(),
+                List.of()
         );
     }
 
     public static PublishedQuizResponse from(PublishedQuizProjection quiz) {
+        return from(quiz, List.of());
+    }
+
+    public static PublishedQuizResponse from(
+            PublishedQuizProjection quiz,
+            List<QuizKnowledgeCategoryResponse> knowledgeCategories
+    ) {
         long count = quiz.selectionMode() == QuizSelectionMode.FIXED
                 ? quiz.fixedQuestionCount()
                 : quiz.ruleQuestionCount();
@@ -64,7 +74,8 @@ public record PublishedQuizResponse(
                         .multiply(BigDecimal.valueOf(quiz.passPercentage()))
                         .divide(BigDecimal.valueOf(100))
                         .stripTrailingZeros(),
-                Math.toIntExact(count)
+                Math.toIntExact(count),
+                List.copyOf(knowledgeCategories)
         );
     }
 }

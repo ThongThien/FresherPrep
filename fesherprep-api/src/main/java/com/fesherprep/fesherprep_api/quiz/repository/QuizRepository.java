@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 public interface QuizRepository extends JpaRepository<Quiz, UUID> {
@@ -48,6 +49,20 @@ public interface QuizRepository extends JpaRepository<Quiz, UUID> {
             @Param("category") QuizCategory category,
             Pageable pageable
     );
+
+    @Query("""
+            select new com.fesherprep.fesherprep_api.quiz.dto.PublishedQuizProjection(
+                quiz.id, quiz.code, quiz.title, quiz.type, quiz.selectionMode,
+                quiz.passPercentage, quiz.language, quiz.category, quiz.maximumScore,
+                quiz.durationSeconds,
+                (select count(item.id) from QuizFixedQuestion item where item.quiz = quiz),
+                (select coalesce(sum(rule.questionCount), 0) from QuizRule rule where rule.quiz = quiz)
+            )
+            from Quiz quiz
+            where quiz.status = :status
+            order by quiz.createdAt asc, quiz.id asc
+            """)
+    List<PublishedQuizProjection> findPublishedCatalog(@Param("status") ContentStatus status);
 
     @Query("""
             select new com.fesherprep.fesherprep_api.quiz.dto.PublishedQuizProjection(

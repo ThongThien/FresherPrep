@@ -18,6 +18,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/quizzes")
@@ -33,6 +34,11 @@ public class QuizController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return quizService.getPublishedQuizzes(language, category, pageable);
+    }
+
+    @GetMapping("/catalog")
+    public List<PublishedQuizResponse> getPublishedQuizCatalog() {
+        return quizService.getPublishedQuizCatalog();
     }
 
     @GetMapping("/{quizId}")

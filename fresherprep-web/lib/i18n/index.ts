@@ -8,6 +8,11 @@ const storageKey = "fresherprep-language";
 const changeEvent = "fresherprep-language-change";
 
 const vi: Record<string, string> = {
+  "Find a quiz": "Tìm bài kiểm tra",
+  "Search by title or code": "Tìm theo tiêu đề hoặc mã",
+  "Technical category": "Danh mục kiến thức",
+  "All technical categories": "Tất cả danh mục kỹ thuật",
+  "No quizzes match your filters": "Không có bài kiểm tra phù hợp bộ lọc",
   "Search question content": "Tìm theo nội dung câu hỏi",
   "Search by question content or code": "Tìm theo nội dung câu hỏi hoặc mã",
   "All technologies": "Tất cả công nghệ",
