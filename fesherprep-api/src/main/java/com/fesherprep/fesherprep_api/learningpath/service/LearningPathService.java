@@ -212,7 +212,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LEARNING_PATH_DETAIL, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LearningPathDetailResponse createPath(@Valid CreateLearningPathRequest request) {
         KnowledgeNode technology = requireTechnology(request.technologyId());
         String slug = normalizeSlug(request.slug());
@@ -223,7 +223,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LEARNING_PATH_DETAIL, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LearningPathDetailResponse updatePath(
             UUID pathId,
             @Valid UpdateLearningPathRequest request
@@ -237,7 +237,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LEARNING_PATH_DETAIL, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LearningPathDetailResponse changeStatus(
             UUID pathId,
             @Valid ChangeLearningPathStatusRequest request
@@ -252,7 +252,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LEARNING_PATH_DETAIL, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LearningPathDetailResponse publishPath(UUID pathId) {
         LearningPath path = requirePath(pathId);
         validatePublish(path);
@@ -262,7 +262,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LEARNING_PATH_DETAIL, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LearningPathDetailResponse archivePath(UUID pathId) {
         LearningPath path = requirePath(pathId);
         path.changeStatus(ContentStatus.ARCHIVED);
@@ -271,7 +271,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LEARNING_PATH_DETAIL, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LearningPathDetailResponse addItem(
             UUID pathId,
             @Valid AddLearningPathItemRequest request
@@ -309,7 +309,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LEARNING_PATH_DETAIL, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LearningPathDetailResponse addItems(
             UUID pathId,
             @Valid AddLearningPathItemsRequest request
@@ -357,7 +357,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LEARNING_PATH_DETAIL, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LearningPathDetailResponse updateItem(
             UUID pathId,
             UUID itemId,
@@ -372,7 +372,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LEARNING_PATH_DETAIL, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LearningPathDetailResponse removeItem(UUID pathId, UUID itemId) {
         LearningPath path = requirePath(pathId);
         LearningPathItem item = requireItem(pathId, itemId);
@@ -383,7 +383,7 @@ public class LearningPathService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.LEARNING_PATH_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LEARNING_PATH_DETAIL, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public void deletePath(UUID pathId) {
         LearningPath path = requirePath(pathId);
         if (path.getStatus() != ContentStatus.DRAFT && path.getStatus() != ContentStatus.ARCHIVED) {

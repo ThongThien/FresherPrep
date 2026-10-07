@@ -67,6 +67,7 @@ public class QuizService {
 
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.QUIZ_CATALOG, key = "'published'", sync = true)
     public List<PublishedQuizResponse> getPublishedQuizCatalog() {
         List<PublishedQuizProjection> quizzes = quizRepository.findPublishedCatalog(ContentStatus.PUBLISHED);
         if (quizzes.isEmpty()) return List.of();
@@ -260,7 +261,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public QuizResponse createQuiz(@Valid CreateQuizRequest request) {
         String code = normalizeCode(request.code());
         ensureUniqueCode(code, null);
@@ -280,7 +282,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public QuizResponse updateQuiz(UUID quizId, @Valid UpdateQuizRequest request) {
         Quiz quiz = requireQuiz(quizId);
         if (quizRepository.isUsedByLessonAssessment(quizId)
@@ -306,7 +309,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public QuizResponse changeStatus(UUID quizId, @Valid ChangeQuizStatusRequest request) {
         Quiz quiz = requireQuiz(quizId);
         if (request.status() == ContentStatus.PUBLISHED) {
@@ -318,7 +322,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public QuizResponse addFixedQuestions(
             UUID quizId,
             @Valid AddFixedQuestionsRequest request
@@ -342,7 +347,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public QuizResponse publishQuiz(UUID quizId) {
         Quiz quiz = requireQuiz(quizId);
         validatePublish(quiz);
@@ -352,7 +358,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public QuizResponse archiveQuiz(UUID quizId) {
         Quiz quiz = requireQuiz(quizId);
         quiz.archive();
@@ -361,7 +368,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public QuizResponse addFixedQuestion(
             UUID quizId,
             @Valid AddFixedQuestionRequest request
@@ -379,7 +387,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public QuizResponse removeFixedQuestion(UUID quizId, UUID questionId) {
         Quiz quiz = requireQuiz(quizId);
         QuizFixedQuestion removed = quiz.removeQuestion(questionId);
@@ -389,7 +398,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public QuizResponse addRule(UUID quizId, @Valid UpsertQuizRuleRequest request) {
         Quiz quiz = requireQuiz(quizId);
         KnowledgeNode node = requireKnowledgeNode(request.knowledgeNodeId());
@@ -401,7 +411,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public QuizResponse updateRule(
             UUID quizId,
             UUID ruleId,
@@ -415,7 +426,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public QuizResponse removeRule(UUID quizId, UUID ruleId) {
         Quiz quiz = requireQuiz(quizId);
         QuizRule removed = quiz.removeRule(ruleId);
@@ -425,7 +437,8 @@ public class QuizService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = CacheNames.QUIZ_DETAIL, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.QUIZ_DETAIL, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public void deleteQuiz(UUID quizId) {
         Quiz quiz = requireQuiz(quizId);
         if (quiz.getStatus() != ContentStatus.DRAFT && quiz.getStatus() != ContentStatus.ARCHIVED) {

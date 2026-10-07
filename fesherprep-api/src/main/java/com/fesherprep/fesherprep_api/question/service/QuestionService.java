@@ -1,5 +1,6 @@
 package com.fesherprep.fesherprep_api.question.service;
 
+import com.fesherprep.fesherprep_api.config.CacheNames;
 import com.fesherprep.fesherprep_api.knowledge.domain.KnowledgeNode;
 import com.fesherprep.fesherprep_api.knowledge.domain.NodeType;
 import com.fesherprep.fesherprep_api.knowledge.repository.KnowledgeNodeRepository;
@@ -15,6 +16,7 @@ import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
 import com.fesherprep.fesherprep_api.shared.util.ContentIdentityGenerator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -83,6 +85,8 @@ public class QuestionService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.ADMIN_DASHBOARD, CacheNames.QUIZ_DETAIL,
+            CacheNames.QUIZ_CATALOG }, allEntries = true)
     public QuestionResponse createQuestion(@Valid CreateQuestionRequest request) {
         KnowledgeNode subtopic = requireSubtopic(request.subtopicId());
         String code = generateUniqueCode(subtopic.getSlug());
@@ -98,6 +102,8 @@ public class QuestionService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.ADMIN_DASHBOARD, CacheNames.QUIZ_DETAIL,
+            CacheNames.QUIZ_CATALOG }, allEntries = true)
     public List<BatchCreatedQuestionResponse> createBatch(
             @Valid BatchCreateQuestionsRequest request
     ) {
@@ -111,6 +117,8 @@ public class QuestionService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.ADMIN_DASHBOARD, CacheNames.QUIZ_DETAIL,
+            CacheNames.QUIZ_CATALOG }, allEntries = true)
     public QuestionResponse updateQuestion(UUID questionId, @Valid UpdateQuestionRequest request) {
         Question question = requireQuestion(questionId);
         KnowledgeNode subtopic = requireSubtopic(request.subtopicId());
@@ -132,6 +140,8 @@ public class QuestionService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.ADMIN_DASHBOARD, CacheNames.QUIZ_DETAIL,
+            CacheNames.QUIZ_CATALOG }, allEntries = true)
     public QuestionResponse changeStatus(
             UUID questionId,
             @Valid ChangeQuestionStatusRequest request
@@ -150,6 +160,8 @@ public class QuestionService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.ADMIN_DASHBOARD, CacheNames.QUIZ_DETAIL,
+            CacheNames.QUIZ_CATALOG }, allEntries = true)
     public QuestionVersionResponse createVersion(
             UUID questionId,
             @Valid CreateQuestionVersionRequest request
@@ -177,6 +189,8 @@ public class QuestionService {
      * original content and answers.
      */
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.ADMIN_DASHBOARD, CacheNames.QUIZ_DETAIL,
+            CacheNames.QUIZ_CATALOG }, allEntries = true)
     public QuestionVersionResponse createRevision(
             UUID questionId,
             UUID versionId,
@@ -199,6 +213,8 @@ public class QuestionService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.ADMIN_DASHBOARD, CacheNames.QUIZ_DETAIL,
+            CacheNames.QUIZ_CATALOG }, allEntries = true)
     public QuestionResponse publishVersion(UUID questionId, UUID versionId) {
         Question question = requireQuestion(questionId);
         if (question.getSubtopic().getStatus() != ContentStatus.PUBLISHED) {
@@ -210,6 +226,8 @@ public class QuestionService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.ADMIN_DASHBOARD, CacheNames.QUIZ_DETAIL,
+            CacheNames.QUIZ_CATALOG }, allEntries = true)
     public void deleteQuestion(UUID questionId) {
         Question question = requireQuestion(questionId);
         if (question.getStatus() != ContentStatus.DRAFT

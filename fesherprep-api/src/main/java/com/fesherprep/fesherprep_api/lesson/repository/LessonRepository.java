@@ -2,6 +2,7 @@ package com.fesherprep.fesherprep_api.lesson.repository;
 
 import com.fesherprep.fesherprep_api.lesson.domain.Lesson;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
+import com.fesherprep.fesherprep_api.shared.dto.ContentStatusCount;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -70,6 +71,9 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
     @Override
     @EntityGraph(attributePaths = {"subtopic", "subtopic.parent"})
     Page<Lesson> findAll(Pageable pageable);
+
+    @Query("select lesson.status as status, count(lesson.id) as total from Lesson lesson group by lesson.status")
+    List<ContentStatusCount> countByStatus();
 
     boolean existsBySlug(String slug);
 

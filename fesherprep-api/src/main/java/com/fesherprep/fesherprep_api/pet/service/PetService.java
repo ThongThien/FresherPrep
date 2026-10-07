@@ -1,5 +1,6 @@
 package com.fesherprep.fesherprep_api.pet.service;
 
+import com.fesherprep.fesherprep_api.config.CacheNames;
 import com.fesherprep.fesherprep_api.lesson.domain.Lesson;
 import com.fesherprep.fesherprep_api.pet.domain.*;
 import com.fesherprep.fesherprep_api.pet.dto.*;
@@ -9,6 +10,8 @@ import com.fesherprep.fesherprep_api.user.domain.User;
 import com.fesherprep.fesherprep_api.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -105,12 +108,14 @@ public class PetService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.PET_CONFIGURATION, key = "'settings'", sync = true)
     public PetConfigResponse getConfiguration() {
         return PetConfigResponse.from(requireSettings());
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.PET_CONFIGURATION, allEntries = true)
     public PetConfigResponse updateConfiguration(@Valid UpdatePetConfigRequest request) {
         PetSettings settings = requireSettings();
         settings.update(request.lessonCompletionPoints(), request.quizPassPoints(),
@@ -120,12 +125,14 @@ public class PetService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.PET_DEFINITIONS, key = "'all'", sync = true)
     public List<PetDefinitionResponse> getPetDefinitions() {
         return petRepository.findAllByOrderByDisplayOrderAsc().stream().map(PetDefinitionResponse::from).toList();
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.PET_DEFINITIONS, allEntries = true)
     public PetDefinitionResponse createPet(@Valid UpsertPetRequest request) {
         if (petRepository.existsByCodeIgnoreCase(request.code())) {
             throw new IllegalStateException("Pet code already exists");
@@ -140,6 +147,7 @@ public class PetService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.PET_DEFINITIONS, allEntries = true)
     public PetDefinitionResponse updatePet(UUID petId, @Valid UpsertPetRequest request) {
         Pet pet = petRepository.findWithLevelsById(petId)
                 .orElseThrow(() -> new IllegalArgumentException("Pet does not exist"));

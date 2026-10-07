@@ -4,7 +4,11 @@ import com.fesherprep.fesherprep_api.knowledge.dto.KnowledgeNodeResponse;
 import com.fesherprep.fesherprep_api.knowledge.dto.KnowledgeTreeNodeResponse;
 import com.fesherprep.fesherprep_api.learningpath.dto.LearningPathDetailResponse;
 import com.fesherprep.fesherprep_api.lesson.dto.LessonDetailResponse;
+import com.fesherprep.fesherprep_api.lesson.dto.LessonSummaryResponse;
+import com.fesherprep.fesherprep_api.pet.dto.PetConfigResponse;
+import com.fesherprep.fesherprep_api.pet.dto.PetDefinitionResponse;
 import com.fesherprep.fesherprep_api.quiz.dto.PublishedQuizResponse;
+import com.fesherprep.fesherprep_api.shared.dto.AdminDashboardResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -40,23 +44,49 @@ public class CacheConfiguration implements CachingConfigurer {
                 .entryTtl(Duration.ofMinutes(10))
                 .prefixCacheNameWith("fresherprep:");
 
-        Map<String, RedisCacheConfiguration> configurations = Map.of(
-                CacheNames.KNOWLEDGE_TREE,
-                typed(defaults, objectMapper, objectMapper.getTypeFactory()
-                        .constructCollectionType(List.class, KnowledgeTreeNodeResponse.class))
-                        .entryTtl(Duration.ofMinutes(20)),
-                CacheNames.KNOWLEDGE_NODE,
-                typed(defaults, objectMapper, KnowledgeNodeResponse.class)
-                        .entryTtl(Duration.ofMinutes(20)),
-                CacheNames.LEARNING_PATH_DETAIL,
-                typed(defaults, objectMapper, LearningPathDetailResponse.class)
-                        .entryTtl(Duration.ofMinutes(15)),
-                CacheNames.LESSON_DETAIL,
-                typed(defaults, objectMapper, LessonDetailResponse.class)
-                        .entryTtl(Duration.ofMinutes(20)),
-                CacheNames.QUIZ_DETAIL,
-                typed(defaults, objectMapper, PublishedQuizResponse.class)
-                        .entryTtl(Duration.ofMinutes(10))
+        Map<String, RedisCacheConfiguration> configurations = Map.ofEntries(
+                Map.entry(CacheNames.KNOWLEDGE_TREE,
+                        typed(defaults, objectMapper, objectMapper.getTypeFactory()
+                                .constructCollectionType(List.class, KnowledgeTreeNodeResponse.class))
+                                .entryTtl(Duration.ofMinutes(20))),
+                Map.entry(CacheNames.KNOWLEDGE_NODE,
+                        typed(defaults, objectMapper, KnowledgeNodeResponse.class)
+                                .entryTtl(Duration.ofMinutes(20))),
+                Map.entry(CacheNames.PUBLISHED_KNOWLEDGE_NODES,
+                        typed(defaults, objectMapper, objectMapper.getTypeFactory()
+                                .constructCollectionType(List.class, KnowledgeNodeResponse.class))
+                                .entryTtl(Duration.ofMinutes(20))),
+                Map.entry(CacheNames.ADMIN_KNOWLEDGE_NODES,
+                        typed(defaults, objectMapper, objectMapper.getTypeFactory()
+                                .constructCollectionType(List.class, KnowledgeNodeResponse.class))
+                                .entryTtl(Duration.ofMinutes(5))),
+                Map.entry(CacheNames.LEARNING_PATH_DETAIL,
+                        typed(defaults, objectMapper, LearningPathDetailResponse.class)
+                                .entryTtl(Duration.ofMinutes(15))),
+                Map.entry(CacheNames.LESSON_DETAIL,
+                        typed(defaults, objectMapper, LessonDetailResponse.class)
+                                .entryTtl(Duration.ofMinutes(20))),
+                Map.entry(CacheNames.ADMIN_LESSON_TREE,
+                        typed(defaults, objectMapper, objectMapper.getTypeFactory()
+                                .constructCollectionType(List.class, LessonSummaryResponse.class))
+                                .entryTtl(Duration.ofMinutes(5))),
+                Map.entry(CacheNames.QUIZ_DETAIL,
+                        typed(defaults, objectMapper, PublishedQuizResponse.class)
+                                .entryTtl(Duration.ofMinutes(10))),
+                Map.entry(CacheNames.QUIZ_CATALOG,
+                        typed(defaults, objectMapper, objectMapper.getTypeFactory()
+                                .constructCollectionType(List.class, PublishedQuizResponse.class))
+                                .entryTtl(Duration.ofMinutes(10))),
+                Map.entry(CacheNames.PET_CONFIGURATION,
+                        typed(defaults, objectMapper, PetConfigResponse.class)
+                                .entryTtl(Duration.ofMinutes(20))),
+                Map.entry(CacheNames.PET_DEFINITIONS,
+                        typed(defaults, objectMapper, objectMapper.getTypeFactory()
+                                .constructCollectionType(List.class, PetDefinitionResponse.class))
+                                .entryTtl(Duration.ofMinutes(20))),
+                Map.entry(CacheNames.ADMIN_DASHBOARD,
+                        typed(defaults, objectMapper, AdminDashboardResponse.class)
+                                .entryTtl(Duration.ofMinutes(1)))
         );
 
         return RedisCacheManager.builder(connectionFactory)

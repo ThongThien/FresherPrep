@@ -5,6 +5,7 @@ import com.fesherprep.fesherprep_api.question.domain.Difficulty;
 import com.fesherprep.fesherprep_api.question.domain.QuestionCategory;
 import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
+import com.fesherprep.fesherprep_api.shared.dto.ContentStatusCount;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,6 +25,9 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
     @Override
     @EntityGraph(attributePaths = { "subtopic", "publishedVersion" })
     Page<Question> findAll(Pageable pageable);
+
+    @Query("select question.status as status, count(question.id) as total from Question question group by question.status")
+    List<ContentStatusCount> countByStatus();
 
     @EntityGraph(attributePaths = { "subtopic", "publishedVersion" })
     @Query("""

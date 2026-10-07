@@ -2,6 +2,7 @@ package com.fesherprep.fesherprep_api.learningpath.repository;
 
 import com.fesherprep.fesherprep_api.learningpath.domain.LearningPath;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
+import com.fesherprep.fesherprep_api.shared.dto.ContentStatusCount;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,6 +35,9 @@ public interface LearningPathRepository extends JpaRepository<LearningPath, UUID
     @Override
     @EntityGraph(attributePaths = "technology")
     Page<LearningPath> findAll(Pageable pageable);
+
+    @Query("select path.status as status, count(path.id) as total from LearningPath path group by path.status")
+    List<ContentStatusCount> countByStatus();
 
     boolean existsBySlug(String slug);
 

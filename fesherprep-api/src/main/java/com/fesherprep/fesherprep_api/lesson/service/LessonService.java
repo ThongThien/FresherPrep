@@ -22,6 +22,7 @@ import com.fesherprep.fesherprep_api.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -185,6 +186,7 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.ADMIN_LESSON_TREE, key = "'all'", sync = true)
     public List<LessonSummaryResponse> getAllLessonsForTree() {
         return lessonRepository.findAllForAdminTree().stream()
                 .map(LessonSummaryResponse::from)
@@ -199,7 +201,8 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LessonDetailResponse createLesson(@Valid CreateLessonRequest request) {
         KnowledgeNode subtopic = requireSubtopicForUpdate(request.subtopicId());
         String slug = generateUniqueSlug(request.title());
@@ -226,7 +229,8 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LessonDetailResponse updateLesson(UUID lessonId, @Valid UpdateLessonRequest request) {
         Lesson lesson = requireLesson(lessonId);
         KnowledgeNode subtopic = requireSubtopic(request.subtopicId());
@@ -250,7 +254,8 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LessonDetailResponse changeStatus(
             UUID lessonId,
             @Valid ChangeLessonStatusRequest request
@@ -271,21 +276,24 @@ public class LessonService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LessonDetailResponse publishLesson(UUID lessonId) {
         return changeStatus(lessonId, new ChangeLessonStatusRequest(ContentStatus.PUBLISHED));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public LessonDetailResponse archiveLesson(UUID lessonId) {
         return changeStatus(lessonId, new ChangeLessonStatusRequest(ContentStatus.ARCHIVED));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.LESSON_DETAIL, CacheNames.LEARNING_PATH_DETAIL,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public void deleteLesson(UUID lessonId) {
         Lesson lesson = requireLesson(lessonId);
         if (lesson.getStatus() != ContentStatus.DRAFT && lesson.getStatus() != ContentStatus.ARCHIVED) {

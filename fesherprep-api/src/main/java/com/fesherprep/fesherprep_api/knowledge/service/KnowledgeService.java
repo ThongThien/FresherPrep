@@ -67,6 +67,7 @@ public class KnowledgeService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.PUBLISHED_KNOWLEDGE_NODES, key = "'type:' + #type.name()", sync = true)
     public List<KnowledgeNodeResponse> getPublishedNodesByType(NodeType type) {
         return knowledgeNodeRepository
                 .findAllByTypeAndStatusOrderByDisplayOrderAscNameAsc(
@@ -79,6 +80,7 @@ public class KnowledgeService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.PUBLISHED_KNOWLEDGE_NODES, key = "'children:' + #parentId", sync = true)
     public List<KnowledgeNodeResponse> getPublishedChildren(UUID parentId) {
         requirePublished(parentId);
         return knowledgeNodeRepository
@@ -93,6 +95,7 @@ public class KnowledgeService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.ADMIN_KNOWLEDGE_NODES, key = "'all'", sync = true)
     public List<KnowledgeNodeResponse> getAllNodes() {
         return knowledgeNodeRepository.findAllByOrderByDisplayOrderAscNameAsc()
                 .stream()
@@ -108,7 +111,10 @@ public class KnowledgeService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE,
+            CacheNames.PUBLISHED_KNOWLEDGE_NODES, CacheNames.ADMIN_KNOWLEDGE_NODES,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public KnowledgeNodeResponse createNode(@Valid CreateKnowledgeNodeRequest request) {
         String slug = generateUniqueSlug(request.name());
         KnowledgeNode parent = resolveParent(request.parentId());
@@ -130,7 +136,10 @@ public class KnowledgeService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE,
+            CacheNames.PUBLISHED_KNOWLEDGE_NODES, CacheNames.ADMIN_KNOWLEDGE_NODES,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public KnowledgeNodeResponse updateNode(UUID id, @Valid UpdateKnowledgeNodeRequest request) {
         KnowledgeNode node = requireNode(id);
         String slug = node.getSlug();
@@ -146,7 +155,10 @@ public class KnowledgeService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE,
+            CacheNames.PUBLISHED_KNOWLEDGE_NODES, CacheNames.ADMIN_KNOWLEDGE_NODES,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public KnowledgeNodeResponse changeStatus(
             UUID id,
             @Valid ChangeKnowledgeNodeStatusRequest request
@@ -170,21 +182,30 @@ public class KnowledgeService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE,
+            CacheNames.PUBLISHED_KNOWLEDGE_NODES, CacheNames.ADMIN_KNOWLEDGE_NODES,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public KnowledgeNodeResponse publishNode(UUID id) {
         return changeStatus(id, new ChangeKnowledgeNodeStatusRequest(ContentStatus.PUBLISHED));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE,
+            CacheNames.PUBLISHED_KNOWLEDGE_NODES, CacheNames.ADMIN_KNOWLEDGE_NODES,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public KnowledgeNodeResponse archiveNode(UUID id) {
         return changeStatus(id, new ChangeKnowledgeNodeStatusRequest(ContentStatus.ARCHIVED));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE }, allEntries = true)
+    @CacheEvict(cacheNames = { CacheNames.KNOWLEDGE_TREE, CacheNames.KNOWLEDGE_NODE,
+            CacheNames.PUBLISHED_KNOWLEDGE_NODES, CacheNames.ADMIN_KNOWLEDGE_NODES,
+            CacheNames.ADMIN_LESSON_TREE, CacheNames.QUIZ_CATALOG,
+            CacheNames.ADMIN_DASHBOARD }, allEntries = true)
     public void deleteNode(UUID id) {
         KnowledgeNode node = requireNode(id);
         if (node.getStatus() != ContentStatus.DRAFT && node.getStatus() != ContentStatus.ARCHIVED) {

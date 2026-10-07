@@ -4,6 +4,7 @@ import com.fesherprep.fesherprep_api.quiz.domain.Quiz;
 import com.fesherprep.fesherprep_api.question.domain.QuestionLanguage;
 import com.fesherprep.fesherprep_api.quiz.domain.QuizCategory;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
+import com.fesherprep.fesherprep_api.shared.dto.ContentStatusCount;
 import com.fesherprep.fesherprep_api.quiz.dto.PublishedQuizProjection;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -98,6 +99,9 @@ public interface QuizRepository extends JpaRepository<Quiz, UUID> {
 
     @Override
     Page<Quiz> findAll(Pageable pageable);
+
+    @Query("select quiz.status as status, count(quiz.id) as total from Quiz quiz group by quiz.status")
+    List<ContentStatusCount> countByStatus();
 
     @Query("""
             select quiz from Quiz quiz

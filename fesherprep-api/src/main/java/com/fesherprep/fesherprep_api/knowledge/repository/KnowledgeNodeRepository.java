@@ -3,6 +3,7 @@ package com.fesherprep.fesherprep_api.knowledge.repository;
 import com.fesherprep.fesherprep_api.knowledge.domain.KnowledgeNode;
 import com.fesherprep.fesherprep_api.knowledge.domain.NodeType;
 import com.fesherprep.fesherprep_api.shared.domain.ContentStatus;
+import com.fesherprep.fesherprep_api.shared.dto.ContentStatusCount;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -45,6 +46,9 @@ public interface KnowledgeNodeRepository extends JpaRepository<KnowledgeNode, UU
 
     @EntityGraph(attributePaths = "parent")
     List<KnowledgeNode> findAllByOrderByDisplayOrderAscNameAsc();
+
+    @Query("select node.status as status, count(node.id) as total from KnowledgeNode node group by node.status")
+    List<ContentStatusCount> countByStatus();
 
     boolean existsBySlug(String slug);
 
